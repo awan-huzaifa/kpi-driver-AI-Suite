@@ -239,9 +239,8 @@ export async function POST(req: NextRequest) {
   console.log("[ingest] success — call_id:", call.id);
   console.log("[ingest] ────────────────────────────────────────────────");
 
-  const whisperCostUsd = (duration_sec / 60) * 0.006;
-  const aiCostUsd      = result._usage.costUsd;
-  const totalRawCost   = aiCostUsd + whisperCostUsd;
+  const aiCostUsd    = result._usage.costUsd;
+  const totalRawCost = aiCostUsd;
 
   if (isScorable && totalRawCost > 0 && user.company_id) {
     // Fetch billing multiplier
@@ -265,8 +264,7 @@ export async function POST(req: NextRequest) {
       cost_usd:      deductionUsd,
       model:         result._usage.model,
       cost_breakdown: {
-        ai:            parseFloat((aiCostUsd      * multiplier).toFixed(6)),
-        transcription: parseFloat((whisperCostUsd * multiplier).toFixed(6)),
+        ai: parseFloat((aiCostUsd * multiplier).toFixed(6)),
       },
     });
 

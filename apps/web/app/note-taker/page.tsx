@@ -31,6 +31,7 @@ export default async function NoteTakerPage() {
     return (
       <NoteTakerClient
         calls={[]}
+        companies={[]}
         accessRole={profile?.access_role ?? "user"}
       />
     );

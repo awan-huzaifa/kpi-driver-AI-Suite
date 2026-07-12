@@ -29,6 +29,7 @@ interface NoteTakerPayload {
   input_tokens:   number | null;
   output_tokens:  number | null;
   duration_sec?:  number | null;  // call duration for Whisper transcription cost
+  agent_name?:    string | null;  // rep who made the call
   call_id?:       string | null;  // optional idempotency key
 }
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { location_id, call_direction, to, from, summary, normal_summary, input_tokens, output_tokens, duration_sec, call_id } = body;
+  const { location_id, call_direction, to, from, summary, normal_summary, input_tokens, output_tokens, duration_sec, agent_name, call_id } = body;
 
   if (!location_id) {
     return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
@@ -105,6 +106,7 @@ export async function POST(req: NextRequest) {
       from_number:     from,
       ai_summary:      summary,
       normal_summary,
+      agent_name:      agent_name ?? null,
       input_tokens:    inTokens,
       output_tokens:   outTokens,
       cost_usd:        baseCostUsd,

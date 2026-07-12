@@ -7,9 +7,10 @@ import PageTransition from "@/components/ui/page-transition";
 import { C } from "@/components/platform/brand";
 
 const PATH_TITLES: Record<string, string> = {
-  "/training-coach":            "Calls",
-  "/training-coach/agents":     "AI Agents",
-  "/training-coach/my-numbers": "My Numbers",
+  "/training-coach":                       "Calls",
+  "/training-coach/agents":                "AI Agents",
+  "/training-coach/my-numbers":            "My Numbers",
+  "/training-coach/admin/user-phones":     "User Phones",
 };
 
 function getTitle(pathname: string): string {

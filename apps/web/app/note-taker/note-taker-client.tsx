@@ -18,6 +18,7 @@ interface NoteCall {
   call_direction:  string | null;
   to_number:       string | null;
   from_number:     string | null;
+  agent_name:      string | null;
   ai_summary:      string | null;
   normal_summary:  string | null;
   input_tokens:    number;
@@ -142,12 +143,13 @@ function DetailModal({ call, onClose }: { call: NoteCall; onClose: () => void })
 
           {/* Meta row */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24,
+            display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24,
           }}>
             {[
+              { label: "Agent",     value: call.agent_name ?? "—"                     },
               { label: "Direction", value: <DirectionBadge dir={call.call_direction} /> },
-              { label: "From",      value: call.from_number ?? "—" },
-              { label: "To",        value: call.to_number   ?? "—" },
+              { label: "From",      value: call.from_number ?? "—"                    },
+              { label: "To",        value: call.to_number   ?? "—"                    },
             ].map(({ label, value }) => (
               <div key={label} style={{
                 background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
@@ -228,10 +230,16 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
   const [period,     setPeriod]     = useState<DatePeriod>("month");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
-  const [companyId, setCompanyId] = useState<string>("all");
-  const [direction, setDirection] = useState<Direction>("all");
-  const [search,    setSearch]    = useState("");
-  const [selected,  setSelected]  = useState<NoteCall | null>(null);
+  const [companyId,   setCompanyId]   = useState<string>("all");
+  const [direction,   setDirection]   = useState<Direction>("all");
+  const [agentFilter, setAgentFilter] = useState<string>("all");
+  const [search,      setSearch]      = useState("");
+  const [selected,    setSelected]    = useState<NoteCall | null>(null);
+
+  const agentNames = useMemo(() => {
+    const names = calls.map(c => c.agent_name).filter((n): n is string => !!n);
+    return [...new Set(names)].sort();
+  }, [calls]);
 
   useEffect(() => {
     const callId = searchParams.get("callId");
@@ -248,9 +256,11 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
       if (start && new Date(c.created_at) < start) return false;
       if (end   && new Date(c.created_at) > end)   return false;
       if (direction !== "all" && c.call_direction !== direction) return false;
+      if (agentFilter !== "all" && c.agent_name !== agentFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         if (
+          !c.agent_name?.toLowerCase().includes(q) &&
           !c.from_number?.toLowerCase().includes(q) &&
           !c.to_number?.toLowerCase().includes(q) &&
           !c.ai_summary?.toLowerCase().includes(q) &&
@@ -259,7 +269,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
       }
       return true;
     });
-  }, [calls, companyId, period, customFrom, customTo, direction, search]);
+  }, [calls, companyId, period, customFrom, customTo, direction, agentFilter, search]);
 
   const totalCost = filtered.reduce((s, c) => s + (c.cost_usd ?? 0), 0);
 
@@ -334,6 +344,17 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           ))}
         </div>
 
+        {/* Agent filter */}
+        {agentNames.length > 0 && (
+          <Select value={agentFilter} onValueChange={setAgentFilter}>
+            <SelectTrigger placeholder="All Agents" className="w-auto min-w-[140px] text-xs py-1.5" />
+            <SelectContent>
+              <SelectItem value="all">All Agents</SelectItem>
+              {agentNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+
         {/* Search */}
         <div style={{ position: "relative", marginLeft: "auto" }}>
           <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.dimText, pointerEvents: "none" }} />
@@ -372,7 +393,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date & Time", "Direction", "From", "To", "AI Summary", "Tokens", "Cost"].map((h) => (
+              {["Date & Time", "Agent", "Direction", "From", "To", "AI Summary", "Tokens", "Cost"].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
                   fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
@@ -384,7 +405,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: "56px 16px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
+                <td colSpan={8} style={{ padding: "56px 16px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
                   No call logs yet{period !== "all" ? " for this period" : ""}.
                 </td>
               </tr>
@@ -402,6 +423,9 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
               >
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.mutedText, whiteSpace: "nowrap" }}>
                   {fmt(c.created_at)}
+                </td>
+                <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: c.agent_name ? C.text : C.dimText, whiteSpace: "nowrap" }}>
+                  {c.agent_name ?? "—"}
                 </td>
                 <td style={{ padding: "12px 16px" }}>
                   <DirectionBadge dir={c.call_direction} />

@@ -75,9 +75,10 @@ export const APP_REGISTRY: AppEntry[] = [
     features: ['AI role-play scoring', 'Per-agent practice history', 'Same rubric as live calls'],
     href: '/training-coach', icon: GraduationCap, accessKey: 'trainingCoach', accentRgb: '252,175,23',
     subNav: [
-      { href: '/training-coach',             label: 'My Calls',   icon: Phone,   exact: true },
-      { href: '/training-coach/my-numbers',  label: 'My Numbers', icon: Hash                },
-      { href: '/training-coach/agents',      label: 'AI Agents',  icon: Bot                 },
+      { href: '/training-coach',                        label: 'My Calls',    icon: Phone,   exact: true           },
+      { href: '/training-coach/my-numbers',             label: 'My Numbers',  icon: Hash                          },
+      { href: '/training-coach/agents',                 label: 'AI Agents',   icon: Bot                           },
+      { href: '/training-coach/admin/user-phones',      label: 'User Phones', icon: Users,   minRole: 'super_admin' },
     ],
   },
   {
