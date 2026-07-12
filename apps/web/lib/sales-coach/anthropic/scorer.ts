@@ -54,7 +54,7 @@ export interface ScoreResult {
   _usage: { inputTokens: number; outputTokens: number; costUsd: number; model: string };
 }
 
-const UNSCORABLE: AgentType[] = ["tc", "cc", "none"];
+const SCORABLE: AgentType[] = ["fus", "acq"];
 
 const MASTER_SYSTEM_PROMPT = `You are an expert QA evaluator and sales coach for a real estate investment company.
 
@@ -138,7 +138,7 @@ export async function scoreCall(
 ): Promise<ScoreResult> {
   const call_stage = context?.opportunity_stage ?? null;
 
-  if (UNSCORABLE.includes(agent_type)) {
+  if (!SCORABLE.includes(agent_type)) {
     return {
       scorable: false,
       reason: "No rubric available for this agent type",

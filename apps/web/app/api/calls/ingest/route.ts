@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
   console.log("[ingest] looking up user with name:", agent_name, "in company:", company.id);
   const { data: user, error: userErr } = await admin
     .from("users")
-    .select("id, full_name, agent_type, company_id")
+    .select("id, full_name, agent_type, company_id, app_sales_coach")
     .eq("company_id", company.id)
     .eq("is_active", true)
     .ilike("full_name", agent_name.trim())
@@ -122,9 +122,9 @@ export async function POST(req: NextRequest) {
   }
   console.log("[ingest] user found:", { id: user.id, full_name: user.full_name, agent_type: user.agent_type, company_id: user.company_id });
 
-  // 4. Wallet balance pre-check (scorable agent types only)
-  const UNSCORABLE_TYPES = ["tc", "cc", "none"];
-  if (!UNSCORABLE_TYPES.includes(user.agent_type)) {
+  // 4. Wallet balance pre-check (fus/acq with app access only)
+  const isScorable = ["fus", "acq"].includes(user.agent_type) && !!user.app_sales_coach;
+  if (isScorable) {
     if ((company.wallet_balance ?? 0) <= 0) {
       console.warn("[ingest] insufficient wallet balance for company:", company.id);
       return NextResponse.json({ error: "Insufficient wallet balance" }, { status: 402 });
@@ -243,7 +243,7 @@ export async function POST(req: NextRequest) {
   const aiCostUsd      = result._usage.costUsd;
   const totalRawCost   = aiCostUsd + whisperCostUsd;
 
-  if (totalRawCost > 0 && user.company_id) {
+  if (isScorable && totalRawCost > 0 && user.company_id) {
     // Fetch billing multiplier
     const { data: cfgRows } = await admin
       .from("billing_config")
