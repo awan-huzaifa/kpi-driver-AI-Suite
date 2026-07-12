@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { Building2, Plus, Pencil, X, Loader2, Users, Wallet } from 'lucide-react'
+import { Building2, Plus, Pencil, Trash2, X, Loader2, AlertTriangle } from 'lucide-react'
 import type { PlanId } from '@kpidriver/auth/types'
 import PlatformShell, { type Access } from '@/components/platform/PlatformShell'
 import { C } from '@/components/platform/brand'
-import { createCompany, updateCompanyAdmin } from '@/app/actions/super-admin/companies'
+import { createCompany, updateCompanyAdmin, deleteCompany } from '@/app/actions/super-admin/companies'
 
 interface Company {
   id:                  string
@@ -36,8 +36,9 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
   const [companies, setCompanies] = useState(initial)
   const [modal, setModal]         = useState<'create' | Company | null>(null)
   const [form, setForm]           = useState<FormState>(EMPTY_FORM)
-  const [error, setError]         = useState<string | null>(null)
-  const [isPending, startTransition] = useTransition()
+  const [error, setError]             = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Company | null>(null)
+  const [isPending, startTransition]  = useTransition()
 
   function openCreate() {
     setForm(EMPTY_FORM)
@@ -56,6 +57,20 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
   }
 
   function closeModal() { setModal(null); setError(null) }
+
+  function handleDelete() {
+    if (!deleteTarget) return
+    startTransition(async () => {
+      try {
+        await deleteCompany(deleteTarget.id)
+        setCompanies((prev) => prev.filter((c) => c.id !== deleteTarget.id))
+        setDeleteTarget(null)
+      } catch (e) {
+        setDeleteTarget(null)
+        setError(e instanceof Error ? e.message : 'Delete failed')
+      }
+    })
+  }
 
   function handleSubmit() {
     if (!form.name.trim()) { setError('Company name is required'); return }
@@ -169,14 +184,24 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                     </span>
                   </td>
                   <td style={{ padding: '14px 22px', textAlign: 'right' }}>
-                    <button
-                      onClick={() => openEdit(c)}
-                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.dimText, padding: 4 }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = C.blue)}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = C.dimText)}
-                    >
-                      <Pencil size={14} />
-                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                      <button
+                        onClick={() => openEdit(c)}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.dimText, padding: 4 }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = C.blue)}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = C.dimText)}
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(c)}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.dimText, padding: 4 }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = C.red)}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = C.dimText)}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -232,6 +257,52 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
               </button>
               <button
                 onClick={closeModal}
+                disabled={isPending}
+                style={{ padding: '10px 18px', borderRadius: 10, background: 'transparent', border: `1px solid ${C.border}`, color: C.mutedText, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 100,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+        }} onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}>
+          <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(237,31,36,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <AlertTriangle size={18} style={{ color: C.red }} />
+              </div>
+              <div>
+                <p style={{ fontSize: 16, fontWeight: 800, color: C.white, margin: 0 }}>Delete Company</p>
+                <p style={{ fontSize: 12, color: C.dimText, margin: '2px 0 0' }}>This action cannot be undone</p>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: C.bodyText, margin: '0 0 24px', lineHeight: 1.6 }}>
+              Are you sure you want to delete <strong style={{ color: C.white }}>{deleteTarget.name}</strong>?
+              All associated users, calls, and wallet data will be permanently removed.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={handleDelete}
+                disabled={isPending}
+                style={{
+                  flex: 1, padding: '10px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                  background: C.red, color: '#fff', fontSize: 13, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  opacity: isPending ? 0.6 : 1,
+                }}
+              >
+                {isPending && <Loader2 size={13} className="animate-spin" />}
+                Delete Company
+              </button>
+              <button
+                onClick={() => setDeleteTarget(null)}
                 disabled={isPending}
                 style={{ padding: '10px 18px', borderRadius: 10, background: 'transparent', border: `1px solid ${C.border}`, color: C.mutedText, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >

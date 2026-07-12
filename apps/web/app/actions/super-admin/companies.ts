@@ -36,6 +36,15 @@ export async function createCompany(data: {
   revalidatePath("/super-admin/companies");
 }
 
+export async function deleteCompany(id: string) {
+  await requireSuperAdmin();
+  const admin = createAdminClient();
+
+  const { error } = await admin.from("companies").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/super-admin/companies");
+}
+
 export async function updateCompanyAdmin(id: string, data: {
   name:                string;
   ghl_sub_account_id?: string;
