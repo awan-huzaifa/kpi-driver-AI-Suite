@@ -1,0 +1,152 @@
+import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { autoTopupIfNeeded } from "@/lib/wallet";
+
+function verifySecret(header: string | null): boolean {
+  const secret = process.env.WEBHOOK_SECRET;
+  if (!secret || !header) return false;
+  try {
+    return crypto.timingSafeEqual(Buffer.from(header), Buffer.from(secret));
+  } catch {
+    return false;
+  }
+}
+
+type FlowType = "apn" | "dnc" | "skiptrace";
+
+function detectFlowType(body: Record<string, unknown>): FlowType | null {
+  if ("parcel_id" in body)    return "apn";
+  if ("national_dnc" in body) return "dnc";
+  if ("address" in body)      return "skiptrace";
+  return null;
+}
+
+export async function POST(req: NextRequest) {
+  console.log("[skip-tracing:ingest] ── incoming request ──────────────────────────");
+
+  if (!verifySecret(req.headers.get("x-webhook-secret"))) {
+    console.warn("[skip-tracing:ingest] unauthorized — bad or missing x-webhook-secret");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const location_id = body.location_id as string | null | undefined;
+  const contact_id  = body.contact_id  as string | null | undefined;
+
+  if (!location_id) {
+    return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
+  }
+
+  const flowType = detectFlowType(body);
+  if (!flowType) {
+    return NextResponse.json({ error: "Unrecognized payload shape — expected parcel_id, national_dnc, or address" }, { status: 400 });
+  }
+
+  const admin = createAdminClient();
+
+  // Resolve company by GHL sub-account ID
+  const { data: company, error: companyErr } = await admin
+    .from("companies")
+    .select("id, wallet_balance")
+    .eq("ghl_sub_account_id", location_id)
+    .maybeSingle();
+
+  if (companyErr) {
+    console.error("[skip-tracing:ingest] company lookup error:", companyErr.message);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
+  if (!company) {
+    return NextResponse.json({ error: `No company found for location_id ${location_id}` }, { status: 404 });
+  }
+
+  const hit             = (body.hit              as boolean)  ?? false;
+  const creditsDeducted = (body.credits_deducted as number)   ?? 0;
+  const personsCount    = (body.persons_count    as number)   ?? 0;
+
+  // Fetch billing config — prefer company-specific override, fall back to global default
+  const { data: cfgRows } = await admin
+    .from("billing_config")
+    .select("multiplier, credit_cost_usd, company_id")
+    .eq("app", "skip_tracing")
+    .or(`company_id.eq.${company.id},company_id.is.null`);
+
+  const companyCfg    = cfgRows?.find(r => r.company_id === company.id);
+  const globalCfg     = cfgRows?.find(r => r.company_id === null);
+  const activeCfg     = companyCfg ?? globalCfg;
+  const creditCostUsd = Number((activeCfg as Record<string, unknown>)?.credit_cost_usd ?? 0.02);
+  const multiplier    = Number(activeCfg?.multiplier ?? 3.0);
+  const baseCostUsd   = creditsDeducted * creditCostUsd;
+  const deductionUsd  = baseCostUsd * multiplier;
+
+  // Wallet pre-check only when credits will be deducted
+  if (creditsDeducted > 0 && (company.wallet_balance ?? 0) <= 0) {
+    console.warn("[skip-tracing:ingest] insufficient wallet balance for company:", company.id);
+    return NextResponse.json({ error: "Insufficient wallet balance" }, { status: 402 });
+  }
+
+  // Build log row — common fields
+  const logRow: Record<string, unknown> = {
+    company_id:       company.id,
+    contact_id:       contact_id ?? null,
+    flow_type:        flowType,
+    hit,
+    credits_deducted: creditsDeducted,
+    cost_usd:         deductionUsd,
+    persons_count:    personsCount,
+    payload:          body,
+  };
+
+  // Extract type-specific indexed fields
+  if (flowType === "apn") {
+    logRow.parcel_id = body.parcel_id ?? null;
+    logRow.county    = body.county    ?? null;
+    logRow.state     = body.state     ?? null;
+  } else if (flowType === "dnc") {
+    logRow.phone        = body.phone        ?? null;
+    logRow.is_clean     = body.is_clean     ?? null;
+    logRow.national_dnc = body.national_dnc ?? null;
+    logRow.state_dnc    = body.state_dnc    ?? null;
+    logRow.dma          = body.dma          ?? null;
+    logRow.litigator    = body.litigator    ?? null;
+    logRow.phone_type   = body.phone_type   ?? null;
+  } else {
+    logRow.address    = body.address    ?? null;
+    logRow.city       = body.city       ?? null;
+    logRow.state      = body.state      ?? null;
+    logRow.zip        = body.zip        ?? null;
+    logRow.find_owner = body.find_owner ?? null;
+  }
+
+  const { data: log, error: insertErr } = await admin
+    .from("skip_tracing_logs")
+    .insert(logRow)
+    .select("id")
+    .single();
+
+  if (insertErr) {
+    console.error("[skip-tracing:ingest] insert error:", insertErr.message);
+    return NextResponse.json({ error: "Failed to save log" }, { status: 500 });
+  }
+
+  // Deduct from wallet
+  if (deductionUsd > 0) {
+    const { data: newBalance, error: deductErr } = await admin.rpc("deduct_wallet_balance", {
+      p_company_id:  company.id,
+      p_amount_usd:  deductionUsd,
+      p_description: `Skip trace (${flowType}) — ${creditsDeducted} credit${creditsDeducted !== 1 ? "s" : ""}`,
+      p_app:         "skip_tracing",
+    });
+    if (deductErr) console.error("[skip-tracing:ingest] wallet deduction failed:", deductErr.message);
+    else void autoTopupIfNeeded(company.id, Number(newBalance));
+  }
+
+  console.log(`[skip-tracing:ingest] saved ${log.id}, type=${flowType}, hit=${hit}, credits=${creditsDeducted}, cost=$${deductionUsd.toFixed(6)}`);
+  return NextResponse.json({ success: true, log_id: log.id, flow_type: flowType, hit }, { status: 200 });
+}

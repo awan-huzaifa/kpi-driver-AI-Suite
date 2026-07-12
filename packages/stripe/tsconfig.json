@@ -1,0 +1,4 @@
+{
+  "extends": "@kpidriver/tsconfig/nextjs.json",
+  "include": ["src/**/*.ts"]
+}
