@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
       ai_agent_id:      aiAgentId,
       external_call_id: call_id ?? null,
       direction,
-      duration_sec:     call_time_seconds ?? null,
+      duration_sec:     call_time_seconds != null ? Math.round(call_time_seconds) : null,
       call_stage:       result.call_stage ?? null,
       scorable:         result.scorable,
       score:            result.score,
