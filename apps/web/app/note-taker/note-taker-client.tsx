@@ -81,7 +81,7 @@ function DirectionBadge({ dir }: { dir: string | null }) {
 
 /* ── Detail Modal ─────────────────────────────────────────────────── */
 
-function DetailModal({ call, onClose }: { call: NoteCall; onClose: () => void }) {
+function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: () => void; accessRole: AccessRole }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -170,7 +170,7 @@ function DetailModal({ call, onClose }: { call: NoteCall; onClose: () => void })
             {[
               { label: "Input Tokens",  value: call.input_tokens.toLocaleString()  },
               { label: "Output Tokens", value: call.output_tokens.toLocaleString() },
-              { label: "AI Cost",       value: fmtCost(call.cost_usd)              },
+              ...(accessRole !== "user" ? [{ label: "AI Cost", value: fmtCost(call.cost_usd) }] : []),
             ].map(({ label, value }) => (
               <div key={label} style={{
                 flex: 1, background: "rgba(48,125,192,0.06)", border: "1px solid rgba(48,125,192,0.15)",
@@ -379,15 +379,17 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
             />
           </div>
 
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
-            padding: "7px 14px", borderRadius: 8,
-            background: "rgba(252,175,23,0.08)", border: "1px solid rgba(252,175,23,0.2)",
-            fontSize: 12, fontWeight: 700, color: "#FCAF17",
-          }}>
-            <Coins size={13} />
-            {fmtCost(totalCost)} total
-          </div>
+          {accessRole !== "user" && (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+              padding: "7px 14px", borderRadius: 8,
+              background: "rgba(252,175,23,0.08)", border: "1px solid rgba(252,175,23,0.2)",
+              fontSize: 12, fontWeight: 700, color: "#FCAF17",
+            }}>
+              <Coins size={13} />
+              {fmtCost(totalCost)} total
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -401,7 +403,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date & Time", "Agent", "Direction", "From", "To", "AI Summary", "Tokens", "Cost"].map((h) => (
+              {["Date & Time", "Agent", "Direction", "From", "To", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
                   fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
@@ -455,9 +457,11 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap" }}>
                   {(c.input_tokens + c.output_tokens).toLocaleString()}
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: "#FCAF17", whiteSpace: "nowrap" }}>
-                  {fmtCost(c.cost_usd)}
-                </td>
+                {accessRole !== "user" && (
+                  <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: "#FCAF17", whiteSpace: "nowrap" }}>
+                    {fmtCost(c.cost_usd)}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -474,7 +478,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
       </motion.div>
 
       {/* Detail modal */}
-      {selected && <DetailModal call={selected} onClose={() => setSelected(null)} />}
+      {selected && <DetailModal call={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
     </div>
   );
 }

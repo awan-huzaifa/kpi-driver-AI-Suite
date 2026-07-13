@@ -110,7 +110,7 @@ function CopyButton({ value }: { value: string }) {
 }
 
 /* ── Detail Modal ─────────────────────────────────────────────────── */
-function DetailModal({ log, onClose }: { log: EnrichmentLog; onClose: () => void }) {
+function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose: () => void; accessRole: AccessRole }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -214,16 +214,18 @@ function DetailModal({ log, onClose }: { log: EnrichmentLog; onClose: () => void
                   <p style={{ fontSize: 16, fontWeight: 800, color: C.green, margin: 0 }}>Enriched</p>
                 </div>
               </div>
-              <div style={{
-                display: "flex", alignItems: "center", gap: 8,
-                background: "rgba(252,175,23,0.06)", border: "1px solid rgba(252,175,23,0.15)",
-                borderRadius: 10, padding: "8px 14px",
-              }}>
-                <div>
-                  <p style={{ fontSize: 10, color: C.dimText, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost</p>
-                  <p style={{ fontSize: 16, fontWeight: 800, color: "#FCAF17", margin: 0 }}>{fmtCost(log.cost_usd)}</p>
+              {accessRole !== "user" && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: "rgba(252,175,23,0.06)", border: "1px solid rgba(252,175,23,0.15)",
+                  borderRadius: 10, padding: "8px 14px",
+                }}>
+                  <div>
+                    <p style={{ fontSize: 10, color: C.dimText, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cost</p>
+                    <p style={{ fontSize: 16, fontWeight: 800, color: "#FCAF17", margin: 0 }}>{fmtCost(log.cost_usd)}</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -466,7 +468,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
-              {["Date & Time", "Contact / Record", "Field Preview", "Fields", "Cost"].map((h, i) => (
+              {["Date & Time", "Contact / Record", "Field Preview", "Fields", ...(accessRole !== "user" ? ["Cost"] : [])].map((h, i) => (
                 <th key={h} style={{
                   padding: "11px 16px", textAlign: i >= 3 ? "center" : "left",
                   fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
@@ -566,11 +568,13 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                   </td>
 
                   {/* Cost */}
-                  <td style={{ padding: "13px 16px", textAlign: "center" }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#FCAF17" }}>
-                      {fmtCost(l.cost_usd ?? 0)}
-                    </span>
-                  </td>
+                  {accessRole !== "user" && (
+                    <td style={{ padding: "13px 16px", textAlign: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#FCAF17" }}>
+                        {fmtCost(l.cost_usd ?? 0)}
+                      </span>
+                    </td>
+                  )}
 
                   {/* Arrow */}
                   <td style={{ padding: "13px 12px 13px 0", width: 32 }}>
@@ -589,12 +593,12 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
             display: "flex", alignItems: "center", gap: 6,
           }}>
             <Database size={11} />
-            {filtered.length} record{filtered.length !== 1 ? "s" : ""} · {totalFields} fields enriched · {fmtCost(totalCost)} total cost
+            {filtered.length} record{filtered.length !== 1 ? "s" : ""} · {totalFields} fields enriched{accessRole !== "user" ? ` · ${fmtCost(totalCost)} total cost` : ""}
           </div>
         )}
       </motion.div>
 
-      {selected && <DetailModal log={selected} onClose={() => setSelected(null)} />}
+      {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
     </div>
   );
 }
