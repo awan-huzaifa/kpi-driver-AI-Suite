@@ -24,6 +24,12 @@ export async function POST(request: Request) {
     : null
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+  const admin  = createAdminClient()
+
+  // Fetch company name for Stripe description
+  const { data: companyRow } = await admin.from('companies').select('name').eq('id', companyId).single()
+  const companyName = companyRow?.name ?? 'Unknown Company'
+  const description = `$${option.amount} AI Suite top-up — ${companyName} (KPI DRIVER)`
 
   // ── One-click path: saved default card ──────────────────────────────────────
   if (defaultPm) {
@@ -33,10 +39,9 @@ export async function POST(request: Request) {
         defaultPm.id,
         option.amount * 100,
         companyId,
+        description,
       )
 
-
-      const admin = createAdminClient()
       const { data: newBalance } = await admin.rpc('add_wallet_balance', {
         p_company_id:              companyId,
         p_amount_usd:              option.amount,
@@ -53,11 +58,12 @@ export async function POST(request: Request) {
   // ── Checkout fallback: no saved card or charge failed ───────────────────────
   const session = await createTopUpCheckoutSession({
     companyId,
-    customerId: customer.id,
-    userEmail:  user.email!,
+    customerId:  customer.id,
+    userEmail:   user.email!,
     priceId,
-    successUrl: `${appUrl}/billing?topup=success`,
-    cancelUrl:  `${appUrl}/billing`,
+    successUrl:  `${appUrl}/billing?topup=success`,
+    cancelUrl:   `${appUrl}/billing`,
+    description,
   })
 
   return NextResponse.json({ url: session.url })

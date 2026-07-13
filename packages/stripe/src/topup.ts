@@ -17,12 +17,13 @@ export const TOP_UP_OPTIONS: TopUpOption[] = [
 ]
 
 interface CreateTopUpSessionOptions {
-  companyId:  string
-  customerId: string
-  userEmail:  string
-  priceId:    string
-  successUrl: string
-  cancelUrl:  string
+  companyId:   string
+  customerId:  string
+  userEmail:   string
+  priceId:     string
+  successUrl:  string
+  cancelUrl:   string
+  description?: string
 }
 
 export async function createTopUpCheckoutSession({
@@ -31,6 +32,7 @@ export async function createTopUpCheckoutSession({
   priceId,
   successUrl,
   cancelUrl,
+  description,
 }: CreateTopUpSessionOptions) {
   const option = TOP_UP_OPTIONS.find((o) => o.priceId === priceId)
   if (!option) throw new Error(`Unknown top-up price: ${priceId}`)
@@ -47,6 +49,7 @@ export async function createTopUpCheckoutSession({
     metadata: { companyId, amount: String(option.amount) },
     payment_intent_data: {
       metadata: { companyId },
+      ...(description ? { description } : {}),
     },
   })
 }
@@ -60,6 +63,7 @@ export async function chargeWithSavedMethod(
   paymentMethodId: string,
   amountCents: number,
   companyId: string,
+  description?: string,
 ): Promise<Stripe.PaymentIntent> {
   const stripe = getStripe()
 
@@ -71,6 +75,7 @@ export async function chargeWithSavedMethod(
     confirm: true,
     off_session: true,
     metadata: { companyId },
+    ...(description ? { description } : {}),
   })
 
   if (intent.status !== 'succeeded') {
