@@ -5,16 +5,21 @@ export async function GET(req: NextRequest) {
 
   if (!url) return NextResponse.json({ error: "Missing url param" }, { status: 400 });
 
-  if (!url.startsWith("https://api.twilio.com/")) {
+  const isTwilio = url.startsWith("https://api.twilio.com/");
+  const isR2     = url.includes(".r2.dev/");
+
+  if (!isTwilio && !isR2) {
     return NextResponse.json({ error: "Invalid recording URL" }, { status: 400 });
   }
 
   const fetchHeaders: Record<string, string> = {};
 
-  const sid   = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (sid && token) {
-    fetchHeaders["Authorization"] = `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`;
+  if (isTwilio) {
+    const sid   = process.env.TWILIO_ACCOUNT_SID;
+    const token = process.env.TWILIO_AUTH_TOKEN;
+    if (sid && token) {
+      fetchHeaders["Authorization"] = `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`;
+    }
   }
 
   // Forward Range header so browser can seek

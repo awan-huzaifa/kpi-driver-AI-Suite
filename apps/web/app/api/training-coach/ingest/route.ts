@@ -153,19 +153,31 @@ export async function POST(req: NextRequest) {
 
   // 5. Resolve AI agent by its dedicated number — best-effort, never blocks scoring.
   let aiAgentId: string | null = null;
+  let aiAgentName: string | null = null;
+  let aiAgentDescription: string | null = null;
   if (to) {
     const { data: agent } = await admin
       .from("training_ai_agents")
-      .select("id")
+      .select("id, agent_name, description")
       .eq("phone_number", to)
       .maybeSingle();
-    aiAgentId = agent?.id ?? null;
+    aiAgentId          = agent?.id          ?? null;
+    aiAgentName        = agent?.agent_name  ?? null;
+    aiAgentDescription = agent?.description ?? null;
   }
 
   // 6. Score the call
   let result: ScoreResult;
   try {
-    result = await scoreCall(full_transcript, user.agent_type, { call_id: call_id ?? undefined });
+    result = await scoreCall(full_transcript, user.agent_type, {
+      call_id: call_id ?? undefined,
+      ...(aiAgentName ? {
+        training_context: {
+          agent_name:  aiAgentName,
+          description: aiAgentDescription,
+        },
+      } : {}),
+    });
   } catch (e) {
     console.error("[training-coach:ingest] scoring error:", e);
     result = fallbackScoreResult(

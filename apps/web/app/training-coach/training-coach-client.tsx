@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { GraduationCap, PhoneIncoming, PhoneOutgoing, X, TrendingUp, TrendingDown, ChevronDown } from "lucide-react";
 import AudioPlayer from "@/components/ui/AudioPlayer";
@@ -134,225 +135,224 @@ function SectionLabel({ children, color }: { children: React.ReactNode; color?: 
 
 const sectionLabelStyle = "text-[10px] font-semibold uppercase tracking-widest";
 
+function scoreColor(score: number | null) {
+  if (score === null || score < 40) return { color: "#ED1F24", bg: "rgba(237,31,36,0.1)",   rgb: "237,31,36"  };
+  if (score < 60)                   return { color: "#FCAF17", bg: "rgba(252,175,23,0.1)", rgb: "252,175,23" };
+  if (score < 80)                   return { color: "#307DC0", bg: "rgba(48,125,192,0.1)", rgb: "48,125,192" };
+  return                                   { color: "#43B749", bg: "rgba(67,183,73,0.1)",  rgb: "67,183,73"  };
+}
+
 function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => void }) {
   const [showTranscript, setShowTranscript] = useState(false);
   const ev = call.evaluation;
+  const sc = scoreColor(call.score);
 
-  const META = [
-    { label: "Direction",  value: call.direction             },
-    { label: "Duration",   value: fmtDuration(call.duration_sec) },
-    { label: "Stage",      value: call.call_stage  ?? "—"   },
-    { label: "AI Agent",   value: call.ai_agent?.agent_name ?? "Unknown" },
-    { label: "Rep",        value: call.agent?.full_name ?? "—" },
-    { label: "Date",       value: fmt(call.created_at)       },
-  ];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}
-      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(6px)" }}>
-      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
-        style={{ background: "rgba(13,28,42,0.99)", border: "1px solid rgba(48,125,192,0.15)" }}
-        onClick={(e) => e.stopPropagation()}>
-
+  return createPortal(
+    <div
+      style={{ position: "fixed", inset: 0, zIndex: 50, background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "80px 24px 24px" }}
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 900, maxHeight: "calc(100vh - 104px)", display: "flex", flexDirection: "column", background: "#070f1a", border: "1px solid rgba(48,125,192,0.2)", borderRadius: 22, boxShadow: "0 40px 100px rgba(0,0,0,0.7)", overflow: "hidden" }}
+      >
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
-          style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "rgba(48,125,192,0.15)" }}>
-              {call.direction === "inbound"
-                ? <PhoneIncoming size={16} style={{ color: "#78ABD6" }} />
-                : <PhoneOutgoing size={16} style={{ color: "#78ABD6" }} />}
+        <div style={{ padding: "20px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "linear-gradient(180deg, rgba(48,125,192,0.07) 0%, transparent 100%)", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0 }}>
+              {/* Score circle */}
+              <div style={{ width: 56, height: 56, borderRadius: 16, flexShrink: 0, background: sc.bg, border: `2px solid ${sc.color}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 0 20px rgba(${sc.rgb},0.2)` }}>
+                {call.score !== null ? (
+                  <>
+                    <span style={{ fontSize: 18, fontWeight: 900, color: sc.color, lineHeight: 1 }}>{call.score}</span>
+                    <span style={{ fontSize: 9, color: sc.color, opacity: 0.7, fontWeight: 600 }}>/100</span>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 10, color: "#475569", fontWeight: 600 }}>N/A</span>
+                )}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, color: "#fff", margin: 0 }}>{call.agent?.full_name ?? "Unknown Rep"}</h2>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#94a3b8", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    vs {call.ai_agent?.agent_name ?? "Unknown AI Agent"}
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, ...(call.direction === "outbound" ? { color: "#43B749", background: "rgba(67,183,73,0.12)", border: "1px solid rgba(67,183,73,0.2)" } : { color: "#307DC0", background: "rgba(48,125,192,0.12)", border: "1px solid rgba(48,125,192,0.2)" }) }}>
+                    {call.direction === "outbound" ? <PhoneOutgoing size={9} /> : <PhoneIncoming size={9} />}
+                    {call.direction.toUpperCase()}
+                  </span>
+                  {ev?.score_band && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#78ABD6", background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.15)" }}>{ev.score_band}</span>}
+                  {ev?.manager_review_needed && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#ED1F24", background: "rgba(237,31,36,0.1)", border: "1px solid rgba(237,31,36,0.2)" }}>Manager Review</span>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+                  {[
+                    { label: fmtDuration(call.duration_sec) },
+                    { label: fmt(call.created_at) },
+                    ...(call.call_stage ? [{ label: call.call_stage }] : []),
+                  ].map(({ label }) => (
+                    <span key={label} style={{ fontSize: 11, color: "#475569" }}>{label}</span>
+                  ))}
+                </div>
+              </div>
             </div>
-            <div>
-              <h2 className="text-sm font-bold text-white leading-tight">{call.agent?.full_name ?? "Unknown Rep"}</h2>
-              <p className="text-sm mt-0.5" style={{ color: "#475569" }}>vs {call.ai_agent?.agent_name ?? "Unknown AI Agent"}</p>
-            </div>
+            <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", cursor: "pointer", color: "#475569", display: "flex", alignItems: "center", justifyContent: "center" }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = "#475569"; }}
+            ><X size={14} /></button>
           </div>
-          <div className="flex items-center gap-3">
-            {ev?.score_band && (
-              <span className="px-2.5 py-1 rounded-lg text-sm font-semibold" style={{ background: "rgba(48,125,192,0.12)", color: "#78ABD6" }}>{ev.score_band}</span>
-            )}
-            <ScorePill score={call.score} />
-            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-white/5 transition-colors" style={{ color: "#475569" }}>
-              <X size={16} />
-            </button>
-          </div>
+          {call.recording_url && <div style={{ marginTop: 14 }}><AudioPlayer url={call.recording_url} /></div>}
         </div>
 
-        {/* ── Body: single column ── */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-6">
+        {/* ── Body ── */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-            {/* Meta — 6 items in one row */}
-            <div className="grid grid-cols-6 gap-2">
-              {META.map(({ label, value }) => (
-                <div key={label} className="px-3 py-2.5 rounded-xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                  <p className="text-[9px] uppercase tracking-widest mb-0.5" style={{ color: "#334155" }}>{label}</p>
-                  <p className="text-sm font-medium text-white capitalize truncate">{value}</p>
-                </div>
-              ))}
-            </div>
-
-            {/* Call summary */}
-            {call.call_summary && (
-              <div className="px-4 py-3 rounded-xl text-sm leading-relaxed"
-                style={{ color: "#94a3b8", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                {call.call_summary}
+          {/* Meta grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+            {[
+              { label: "Agent Type",   value: call.agent?.agent_type ?? "—" },
+              { label: "Opportunity",  value: ev?.opportunity_level  ?? "—" },
+              { label: "Call Type",    value: ev?.call_type          ?? "—" },
+              { label: "Confidence",   value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
+              { label: "AI Agent",     value: call.ai_agent?.agent_name ?? "—" },
+              { label: "Rep",          value: call.agent?.full_name ?? "—" },
+            ].map(({ label, value }) => (
+              <div key={label} style={{ padding: "10px 14px", borderRadius: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                <p style={{ fontSize: 9, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>{label}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0, textTransform: "capitalize" }}>{value}</p>
               </div>
-            )}
-
-            {/* Recording */}
-            {call.recording_url && <AudioPlayer url={call.recording_url} />}
-
-            {/* Evaluation */}
-            {ev && call.scorable ? (
-              <>
-                <div className="space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {ev.opportunity_level && (
-                      <span className="px-2.5 py-1 rounded-lg text-sm font-medium capitalize" style={{ background: "rgba(48,125,192,0.1)", color: "#307DC0" }}>{ev.opportunity_level} opportunity</span>
-                    )}
-                    {ev.call_type && (
-                      <span className="px-2.5 py-1 rounded-lg text-sm font-medium" style={{ background: "rgba(255,255,255,0.04)", color: "#64748b" }}>{ev.call_type}</span>
-                    )}
-                    {ev.confidence != null && (
-                      <span className="px-2.5 py-1 rounded-lg text-sm font-medium" style={{ background: "rgba(255,255,255,0.04)", color: "#475569" }}>Confidence {Math.round(ev.confidence * 100)}%</span>
-                    )}
-                    {ev.manager_review_needed && (
-                      <span className="px-2.5 py-1 rounded-lg text-sm font-semibold" style={{ background: "rgba(237,31,36,0.1)", color: "#ED1F24" }}>Manager Review</span>
-                    )}
-                  </div>
-                  {ev.score_reasoning && (
-                    <div className="px-4 py-3 rounded-xl text-sm italic leading-relaxed"
-                      style={{ color: "#64748b", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                      "{ev.score_reasoning}"
-                    </div>
-                  )}
-                </div>
-
-                {ev.category_scores && Object.keys(ev.category_scores).length > 0 && (
-                  <div>
-                    <SectionLabel>Category Scores</SectionLabel>
-                    <div className="grid grid-cols-3 gap-x-8 gap-y-3">
-                      {Object.entries(ev.category_scores).map(([name, score]) => (
-                        <CategoryBar key={name} name={name} score={score} />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {ev.strengths?.length > 0 && (
-                  <div>
-                    <div className={`flex items-center gap-1.5 mb-3 ${sectionLabelStyle}`} style={{ color: "#43B749" }}>
-                      <TrendingUp size={12} />
-                      <span>Strengths</span>
-                    </div>
-                    <ul className="space-y-2.5">
-                      {ev.strengths.map((s, i) => (
-                        <li key={i} className="text-sm px-2.5 py-1.5 rounded-lg leading-snug"
-                          style={{ color: "#94a3b8", background: "rgba(67,183,73,0.05)", border: "1px solid rgba(67,183,73,0.1)" }}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {ev.missed_opportunities?.length > 0 && (
-                  <div>
-                    <div className={`flex items-center gap-1.5 mb-3 ${sectionLabelStyle}`} style={{ color: "#FCAF17" }}>
-                      <TrendingDown size={12} />
-                      <span>Missed Opportunities</span>
-                    </div>
-                    <ul className="space-y-3">
-                      {ev.missed_opportunities.map((s, i) => (
-                        <li key={i} className="text-sm px-2.5 py-2 rounded-lg leading-snug"
-                          style={{ color: "#94a3b8", background: "rgba(252,175,23,0.05)", border: "1px solid rgba(252,175,23,0.1)" }}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {ev.coaching_actions?.length > 0 && (
-                  <div>
-                    <SectionLabel color="#94a3b8">Coaching Actions</SectionLabel>
-                    <ul className="grid grid-cols-3 gap-3">
-                      {ev.coaching_actions.map((a, i) => {
-                        const typeColor = a.type === "behavioral" ? "#307DC0" : a.type === "tactical" ? "#27679D" : "#43B749";
-                        const typeBg   = a.type === "behavioral" ? "rgba(48,125,192,0.08)" : a.type === "tactical" ? "rgba(39,103,157,0.08)" : "rgba(67,183,73,0.08)";
-                        return (
-                          <li key={i} className="flex flex-col gap-2 text-sm px-3 py-2.5 rounded-lg"
-                            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-bold capitalize self-start"
-                              style={{ color: typeColor, background: typeBg }}>{a.type}</span>
-                            <span style={{ color: "#94a3b8" }}>{a.action}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                )}
-
-                {ev.penalties?.length > 0 && (
-                  <div>
-                    <SectionLabel color="#ED1F24">Penalties</SectionLabel>
-                    <ul className="space-y-2.5">
-                      {ev.penalties.map((p, i) => (
-                        <li key={i} className="text-sm px-3 py-2 rounded-lg"
-                          style={{ color: "#94a3b8", background: "rgba(237,31,36,0.05)", border: "1px solid rgba(237,31,36,0.1)" }}>
-                          <span className="font-semibold" style={{ color: "#ED1F24" }}>−{p.points}pts</span>
-                          <span className="mx-1.5" style={{ color: "#334155" }}>·</span>
-                          {p.type} — {p.reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {ev.evidence_snippets?.length > 0 && (
-                  <div>
-                    <SectionLabel color="#94a3b8">Evidence</SectionLabel>
-                    <ul className="space-y-2.5">
-                      {ev.evidence_snippets.map((e, i) => (
-                        <li key={i} className="text-sm px-3 py-2.5 rounded-lg space-y-1.5"
-                          style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                          <p className="italic leading-snug" style={{ color: "#cbd5e1" }}>"{e.quote}"</p>
-                          <p className="leading-snug" style={{ color: "#475569" }}>{e.why_it_matters}</p>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="px-4 py-3 rounded-xl text-sm"
-                style={{ color: "#475569", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
-                {ev?.reason ?? "This call was not scored."}
-              </div>
-            )}
-
-            {/* Transcript */}
-            {call.transcript && (
-              <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "1.25rem" }}>
-                <button
-                  onClick={() => setShowTranscript((v) => !v)}
-                  className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest transition-colors hover:text-slate-300"
-                  style={{ color: "#94a3b8" }}>
-                  <ChevronDown size={12} className={`transition-transform ${showTranscript ? "rotate-180" : ""}`} />
-                  Transcript
-                </button>
-                {showTranscript && (
-                  <div className="mt-3 px-4 py-3 rounded-xl text-sm leading-relaxed whitespace-pre-wrap"
-                    style={{ color: "#64748b", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", maxHeight: 320, overflowY: "auto" }}>
-                    {call.transcript}
-                  </div>
-                )}
-              </div>
-            )}
-
+            ))}
           </div>
+
+          {/* Call summary */}
+          {call.call_summary && (
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Summary</p>
+              <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.7, margin: 0 }}>{call.call_summary}</p>
+            </div>
+          )}
+
+          {/* Not scorable */}
+          {!call.scorable && (
+            <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{ev?.reason ?? "This call was not scored."}</p>
+            </div>
+          )}
+
+          {/* Score reasoning */}
+          {call.scorable && ev?.score_reasoning && (
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(48,125,192,0.04)", border: "1px solid rgba(48,125,192,0.1)" }}>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#307DC0", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Score Reasoning</p>
+              <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.7, margin: 0, fontStyle: "italic" }}>"{ev.score_reasoning}"</p>
+            </div>
+          )}
+
+          {/* Category scores */}
+          {call.scorable && ev?.category_scores && Object.keys(ev.category_scores).length > 0 && (
+            <div>
+              <SectionLabel>Category Scores</SectionLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 32px", marginTop: 12 }}>
+                {Object.entries(ev.category_scores).map(([name, score]) => (
+                  <CategoryBar key={name} name={name} score={score} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Strengths + Missed */}
+          {call.scorable && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              {(ev?.strengths?.length ?? 0) > 0 && (
+                <div>
+                  <div className={`flex items-center gap-1.5 mb-3 ${sectionLabelStyle}`} style={{ color: "#43B749" }}><TrendingUp size={12} /><span>Strengths</span></div>
+                  <ul className="space-y-2">
+                    {ev!.strengths.map((s, i) => (
+                      <li key={i} style={{ fontSize: 12, padding: "8px 10px", borderRadius: 8, color: "#94a3b8", background: "rgba(67,183,73,0.05)", border: "1px solid rgba(67,183,73,0.1)", lineHeight: 1.5 }}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {(ev?.missed_opportunities?.length ?? 0) > 0 && (
+                <div>
+                  <div className={`flex items-center gap-1.5 mb-3 ${sectionLabelStyle}`} style={{ color: "#FCAF17" }}><TrendingDown size={12} /><span>Missed Opportunities</span></div>
+                  <ul className="space-y-2">
+                    {ev!.missed_opportunities.map((s, i) => (
+                      <li key={i} style={{ fontSize: 12, padding: "8px 10px", borderRadius: 8, color: "#94a3b8", background: "rgba(252,175,23,0.05)", border: "1px solid rgba(252,175,23,0.1)", lineHeight: 1.5 }}>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Coaching actions */}
+          {call.scorable && (ev?.coaching_actions?.length ?? 0) > 0 && (
+            <div>
+              <SectionLabel color="#94a3b8">Coaching Actions</SectionLabel>
+              <ul style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginTop: 10 }}>
+                {ev!.coaching_actions.map((a, i) => {
+                  const typeColor = a.type === "behavioral" ? "#307DC0" : a.type === "tactical" ? "#27679D" : "#43B749";
+                  const typeBg   = a.type === "behavioral" ? "rgba(48,125,192,0.08)" : a.type === "tactical" ? "rgba(39,103,157,0.08)" : "rgba(67,183,73,0.08)";
+                  return (
+                    <li key={i} style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12, padding: "10px 12px", borderRadius: 10, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, color: typeColor, background: typeBg, alignSelf: "flex-start", textTransform: "capitalize" }}>{a.type}</span>
+                      <span style={{ color: "#94a3b8", lineHeight: 1.5 }}>{a.action}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
+          {/* Penalties */}
+          {call.scorable && (ev?.penalties?.length ?? 0) > 0 && (
+            <div>
+              <SectionLabel color="#ED1F24">Penalties</SectionLabel>
+              <ul className="space-y-2" style={{ marginTop: 10 }}>
+                {ev!.penalties.map((p, i) => (
+                  <li key={i} style={{ fontSize: 12, padding: "8px 12px", borderRadius: 8, color: "#94a3b8", background: "rgba(237,31,36,0.05)", border: "1px solid rgba(237,31,36,0.1)" }}>
+                    <span style={{ fontWeight: 700, color: "#ED1F24" }}>−{p.points}pts</span>
+                    <span style={{ margin: "0 6px", color: "#334155" }}>·</span>
+                    {p.type} — {p.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Evidence */}
+          {call.scorable && (ev?.evidence_snippets?.length ?? 0) > 0 && (
+            <div>
+              <SectionLabel color="#94a3b8">Evidence</SectionLabel>
+              <ul className="space-y-2" style={{ marginTop: 10 }}>
+                {ev!.evidence_snippets.map((e, i) => (
+                  <li key={i} style={{ fontSize: 12, padding: "10px 12px", borderRadius: 8, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                    <p style={{ fontStyle: "italic", color: "#cbd5e1", margin: "0 0 4px", lineHeight: 1.5 }}>"{e.quote}"</p>
+                    <p style={{ color: "#475569", margin: 0, lineHeight: 1.5 }}>{e.why_it_matters}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Transcript */}
+          {call.transcript && (
+            <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+              <button onClick={() => setShowTranscript((v) => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#94a3b8", background: "none", border: "none", cursor: "pointer" }}>
+                <ChevronDown size={12} style={{ transform: showTranscript ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+                Transcript
+              </button>
+              {showTranscript && (
+                <div style={{ marginTop: 10, padding: "12px 16px", borderRadius: 12, fontSize: 12, color: "#64748b", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)", lineHeight: 1.7, whiteSpace: "pre-wrap", maxHeight: 320, overflowY: "auto" }}>
+                  {call.transcript}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

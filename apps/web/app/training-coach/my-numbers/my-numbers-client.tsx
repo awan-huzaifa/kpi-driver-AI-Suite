@@ -35,13 +35,15 @@ export default function MyNumbersClient({ phones: initial, isSuperAdmin, compani
   const [companyId,  setCompanyId]  = useState("all");
 
   async function handleAdd() {
-    if (!input.trim()) { setErr("Enter a phone number."); return; }
+    const trimmed = input.trim();
+    if (!trimmed) { setErr("Enter a phone number."); return; }
+    if (phones.some((p) => p.phone === trimmed)) { setErr("That number is already registered."); return; }
     setAdding(true); setErr(null);
     try {
-      await addPhone(input.trim());
+      await addPhone(trimmed);
       setPhones((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), phone: input.trim(), created_at: new Date().toISOString() },
+        { id: crypto.randomUUID(), phone: trimmed, created_at: new Date().toISOString() },
       ]);
       setInput("");
     } catch (e) {

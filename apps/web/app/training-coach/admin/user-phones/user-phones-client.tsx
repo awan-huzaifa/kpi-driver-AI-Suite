@@ -21,6 +21,7 @@ export default function UserPhonesClient({ companies, users, phones: initialPhon
   const [addingFor, setAddingFor]         = useState<string | null>(null)
   const [newPhone, setNewPhone]           = useState('')
   const [error, setError]                 = useState<string | null>(null)
+  const [rowError, setRowError]           = useState<string | null>(null)
   const [isPending, startTransition]      = useTransition()
 
   const companyMap = useMemo(() => Object.fromEntries(companies.map(c => [c.id, c.name])), [companies])
@@ -37,25 +38,31 @@ export default function UserPhonesClient({ companies, users, phones: initialPhon
   function openAdd(userId: string) {
     setAddingFor(userId)
     setNewPhone('')
-    setError(null)
+    setRowError(null)
   }
 
   function closeAdd() {
     setAddingFor(null)
     setNewPhone('')
-    setError(null)
+    setRowError(null)
   }
 
   function handleAdd(userId: string) {
-    if (!newPhone.trim()) return
-    setError(null)
+    const trimmed = newPhone.trim()
+    if (!trimmed) return
+    // Client-side duplicate check across all registered numbers (globally unique)
+    if (phones.some(p => p.phone === trimmed)) {
+      setRowError('That number is already registered to a user.')
+      return
+    }
+    setRowError(null)
     startTransition(async () => {
       try {
-        await addPhoneForUser(userId, newPhone.trim())
-        setPhones(prev => [...prev, { id: crypto.randomUUID(), user_id: userId, phone: newPhone.trim() }])
+        await addPhoneForUser(userId, trimmed)
+        setPhones(prev => [...prev, { id: crypto.randomUUID(), user_id: userId, phone: trimmed }])
         closeAdd()
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Failed to add phone')
+        setRowError(e instanceof Error ? e.message : 'Failed to add phone')
       }
     })
   }
@@ -118,6 +125,7 @@ export default function UserPhonesClient({ companies, users, phones: initialPhon
       )}
 
       {/* Table */}
+
       {filteredUsers.length === 0 ? (
         <div style={{ padding: 48, textAlign: 'center', color: C.dimText, fontSize: 13 }}>
           No active users found.
@@ -201,41 +209,47 @@ export default function UserPhonesClient({ companies, users, phones: initialPhon
                           ))}
 
                           {isAdding && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <input
-                                autoFocus
-                                type="text"
-                                value={newPhone}
-                                onChange={e => setNewPhone(e.target.value)}
-                                onKeyDown={e => {
-                                  if (e.key === 'Enter') handleAdd(u.id)
-                                  if (e.key === 'Escape') closeAdd()
-                                }}
-                                placeholder="+15550000000"
-                                style={{
-                                  padding: '5px 10px', borderRadius: 8, fontSize: 12, fontFamily: 'monospace',
-                                  background: 'rgba(255,255,255,0.06)', border: `1px solid ${C.border}`,
-                                  color: C.text, outline: 'none', width: 170,
-                                }}
-                              />
-                              <button
-                                onClick={() => handleAdd(u.id)}
-                                disabled={isPending || !newPhone.trim()}
-                                style={{
-                                  padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                                  background: C.blue, color: '#fff', fontSize: 12, fontWeight: 700,
-                                  display: 'flex', alignItems: 'center', gap: 4,
-                                  opacity: isPending || !newPhone.trim() ? 0.5 : 1,
-                                }}
-                              >
-                                {isPending ? <Loader2 size={11} className="animate-spin" /> : 'Save'}
-                              </button>
-                              <button
-                                onClick={closeAdd}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.dimText, padding: 2, display: 'flex' }}
-                              >
-                                <X size={14} />
-                              </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <input
+                                  autoFocus
+                                  type="text"
+                                  value={newPhone}
+                                  onChange={e => { setNewPhone(e.target.value); setRowError(null) }}
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter') handleAdd(u.id)
+                                    if (e.key === 'Escape') closeAdd()
+                                  }}
+                                  placeholder="+15550000000"
+                                  style={{
+                                    padding: '5px 10px', borderRadius: 8, fontSize: 12, fontFamily: 'monospace',
+                                    background: 'rgba(255,255,255,0.06)',
+                                    border: `1px solid ${rowError ? C.red : C.border}`,
+                                    color: C.text, outline: 'none', width: 170,
+                                  }}
+                                />
+                                <button
+                                  onClick={() => handleAdd(u.id)}
+                                  disabled={isPending || !newPhone.trim()}
+                                  style={{
+                                    padding: '5px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                                    background: C.blue, color: '#fff', fontSize: 12, fontWeight: 700,
+                                    display: 'flex', alignItems: 'center', gap: 4,
+                                    opacity: isPending || !newPhone.trim() ? 0.5 : 1,
+                                  }}
+                                >
+                                  {isPending ? <Loader2 size={11} className="animate-spin" /> : 'Save'}
+                                </button>
+                                <button
+                                  onClick={closeAdd}
+                                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.dimText, padding: 2, display: 'flex' }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                              {rowError && (
+                                <p style={{ fontSize: 11, color: C.red, margin: 0, paddingLeft: 2 }}>{rowError}</p>
+                              )}
                             </div>
                           )}
                         </div>

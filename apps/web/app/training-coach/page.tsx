@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import TrainingCoachClient from "./training-coach-client";
 
 export default async function TrainingCoachPage() {
@@ -13,11 +14,14 @@ export default async function TrainingCoachPage() {
     .eq("id", user.id)
     .single();
 
-  let query = supabase
+  const isSuperAdmin = profile?.access_role === "super_admin";
+  const db = isSuperAdmin ? createAdminClient() : supabase;
+
+  let query = db
     .from("training_calls")
     .select(`*, agent:users(full_name, agent_type), ai_agent:training_ai_agents(agent_name)`)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(500);
 
   if (profile?.access_role === "admin" && profile.company_id) {
     query = query.eq("company_id", profile.company_id);
@@ -26,12 +30,14 @@ export default async function TrainingCoachPage() {
   } else if (profile?.access_role === "user") {
     query = query.eq("user_id", profile.id);
   }
+  // super_admin: no filter — sees all calls
 
   const { data: calls } = await query;
 
   let companies: { id: string; name: string }[] = [];
-  if (profile?.access_role === "super_admin") {
-    const { data: cos } = await supabase.from("companies").select("id, name").order("name");
+  if (isSuperAdmin) {
+    const admin = createAdminClient();
+    const { data: cos } = await admin.from("companies").select("id, name").order("name");
     companies = cos ?? [];
   }
 

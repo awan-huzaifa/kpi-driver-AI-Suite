@@ -134,6 +134,10 @@ export async function scoreCall(
     lead_source?: string;
     known_outcome?: string;
     opportunity_stage?: string;
+    training_context?: {
+      agent_name: string;
+      description: string | null;
+    };
   }
 ): Promise<ScoreResult> {
   const call_stage = context?.opportunity_stage ?? null;
@@ -170,12 +174,20 @@ export async function scoreCall(
   const user_role = agent_type === "fus" ? "follow_up_specialist" : "acquisition_specialist";
   const rubric_version = agent_type === "fus" ? "rubric-a-fus-v1" : "rubric-b-acq-v1";
 
-  const userPrompt = `Evaluate this real estate sales call.
+  const tc = context?.training_context;
+  const trainingBlock = tc
+    ? `\nTRAINING CALL CONTEXT:
+This is a role-play practice call, NOT a live call with a real seller.
+The rep was practicing with an AI voice agent named "${tc.agent_name}".${tc.description ? `\nAI Agent Persona: ${tc.description}` : ""}
+Score the rep's technique and decision-making as you normally would, but understand the "seller" responses came from an AI playing a character.\n`
+    : "";
+
+  const userPrompt = `Evaluate this real estate ${tc ? "training/role-play" : "sales"} call.
 
 USER ROLE: ${user_role}
 CALL STAGE: ${call_stage ?? "Unknown"}
 RUBRIC VERSION: ${rubric_version}
-
+${trainingBlock}
 SCORING RUBRIC:
 ${rubric}
 
