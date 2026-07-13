@@ -296,90 +296,98 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         </p>
       </motion.div>
 
-      {/* Filters + search */}
+      {/* Filter card */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.05 }}
-        style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap" }}
+        style={{
+          background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
+          borderRadius: 14, padding: "16px 20px", marginBottom: 20,
+          display: "flex", flexDirection: "column", gap: 12,
+        }}
       >
-        {/* Date range */}
-        <DateRangePicker
-          period={period}
-          customFrom={customFrom}
-          customTo={customTo}
-          onPeriod={setPeriod}
-          onCustomFrom={setCustomFrom}
-          onCustomTo={setCustomTo}
-          activeColor={C.blue}
-        />
+        {/* Row 1 — filters */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* Date range */}
+          <DateRangePicker
+            period={period}
+            customFrom={customFrom}
+            customTo={customTo}
+            onPeriod={setPeriod}
+            onCustomFrom={setCustomFrom}
+            onCustomTo={setCustomTo}
+            activeColor={C.blue}
+          />
 
-        {/* Company — super_admin only */}
-        {accessRole === "super_admin" && companies.length > 0 && (
-          <Select value={companyId} onValueChange={setCompanyId}>
-            <SelectTrigger placeholder="All Companies" className="w-auto min-w-[140px] text-xs py-1.5" />
-            <SelectContent>
-              <SelectItem value="all">All Companies</SelectItem>
-              {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        )}
+          {/* Company — super_admin only */}
+          {accessRole === "super_admin" && companies.length > 0 && (
+            <Select value={companyId} onValueChange={setCompanyId}>
+              <SelectTrigger placeholder="All Companies" className="w-auto min-w-[140px] text-xs py-1.5" />
+              <SelectContent>
+                <SelectItem value="all">All Companies</SelectItem>
+                {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
 
-        {/* Direction */}
-        <div style={{ display: "flex", gap: 4 }}>
-          {DIRECTIONS.map((d) => (
-            <button
-              key={d.value}
-              onClick={() => setDirection(d.value)}
-              style={{
-                padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
-                cursor: "pointer",
-                background: direction === d.value ? "rgba(48,125,192,0.18)" : "rgba(255,255,255,0.04)",
-                color:      direction === d.value ? C.blue : C.mutedText,
-                border:     `1px solid ${direction === d.value ? "rgba(48,125,192,0.4)" : "rgba(255,255,255,0.08)"}`,
-              }}
-            >
-              {d.label}
-            </button>
-          ))}
-        </div>
+          {/* Direction */}
+          <div style={{ display: "flex", gap: 4 }}>
+            {DIRECTIONS.map((d) => (
+              <button
+                key={d.value}
+                onClick={() => setDirection(d.value)}
+                style={{
+                  padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  cursor: "pointer",
+                  background: direction === d.value ? "rgba(48,125,192,0.18)" : "rgba(255,255,255,0.04)",
+                  color:      direction === d.value ? C.blue : C.mutedText,
+                  border:     `1px solid ${direction === d.value ? "rgba(48,125,192,0.4)" : "rgba(255,255,255,0.08)"}`,
+                }}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
 
-        {/* Agent filter */}
-        {agentNames.length > 0 && (
+          {/* Agent filter */}
           <Select value={agentFilter} onValueChange={setAgentFilter}>
-            <SelectTrigger placeholder="All Agents" className="w-auto min-w-[140px] text-xs py-1.5" />
+            <SelectTrigger placeholder="All Agents" className="w-auto min-w-[130px] text-xs py-1.5" />
             <SelectContent>
               <SelectItem value="all">All Agents</SelectItem>
               {agentNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
             </SelectContent>
           </Select>
-        )}
-
-        {/* Search */}
-        <div style={{ position: "relative", marginLeft: "auto" }}>
-          <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.dimText, pointerEvents: "none" }} />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search numbers or summaries…"
-            style={{
-              paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
-              borderRadius: 8, fontSize: 12, background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)", color: C.white,
-              outline: "none", width: 240,
-            }}
-          />
         </div>
 
-        {/* Total cost badge */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          padding: "6px 12px", borderRadius: 8,
-          background: "rgba(252,175,23,0.08)", border: "1px solid rgba(252,175,23,0.2)",
-          fontSize: 12, fontWeight: 700, color: "#FCAF17",
-        }}>
-          <Coins size={13} />
-          {fmtCost(totalCost)} total
+        {/* Row 2 — search + cost */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ position: "relative", flex: 1 }}>
+            <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.dimText, pointerEvents: "none" }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search agent, numbers or summaries…"
+              style={{
+                width: "100%", boxSizing: "border-box",
+                paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
+                borderRadius: 8, fontSize: 12,
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                color: C.white, outline: "none",
+              }}
+            />
+          </div>
+
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+            padding: "7px 14px", borderRadius: 8,
+            background: "rgba(252,175,23,0.08)", border: "1px solid rgba(252,175,23,0.2)",
+            fontSize: 12, fontWeight: 700, color: "#FCAF17",
+          }}>
+            <Coins size={13} />
+            {fmtCost(totalCost)} total
+          </div>
         </div>
       </motion.div>
 

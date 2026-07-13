@@ -76,7 +76,7 @@ export const APP_REGISTRY: AppEntry[] = [
     href: '/training-coach', icon: GraduationCap, accessKey: 'trainingCoach', accentRgb: '252,175,23',
     subNav: [
       { href: '/training-coach',                        label: 'My Calls',    icon: Phone,   exact: true           },
-      { href: '/training-coach/my-numbers',             label: 'My Numbers',  icon: Hash                          },
+      { href: '/training-coach/my-numbers',             label: 'My Numbers',  icon: Hash,  maxRole: 'admin'      },
       { href: '/training-coach/agents',                 label: 'AI Agents',   icon: Bot                           },
       { href: '/training-coach/admin/user-phones',      label: 'User Phones', icon: Users,   minRole: 'super_admin' },
     ],
@@ -123,6 +123,6 @@ export const APP_REGISTRY: AppEntry[] = [
     tagline: "Your team's brain, always on",
     desc: 'Centralize scripts, objection handlers, and playbooks. AI-powered search so reps find the right answer instantly.',
     features: ['AI-powered search', 'Script & playbook library', 'Team knowledge sharing'],
-    href: 'https://www.kpidriver.com/knowledge-base', target: '_blank', icon: BookOpen, accessKey: null, accentRgb: '48,125,192',
+    href: '/knowledge-base', icon: BookOpen, accessKey: null, accentRgb: '48,125,192',
   },
 ]
