@@ -18,15 +18,15 @@ function verifySecret(header: string | null): boolean {
 
 // Shape of Assistable AI's post-call webhook body.
 interface AssistablePayload {
-  call_id:           string | null;
-  location_id:       string | null; // GHL location ID — same field live calls use
-  direction:         "inbound" | "outbound" | null;
-  to:                string | null; // AI agent's dedicated number
-  from:              string | null; // rep's phone number
-  recording_url?:    string | null;
+  call_id:            string | null;
+  location_id?:       string | null; // optional — no longer used for company lookup
+  direction:          "inbound" | "outbound" | null;
+  to:                 string | null; // AI agent's dedicated number
+  from:               string | null; // rep's phone number — used to resolve user + company
+  recording_url?:     string | null;
   call_time_seconds?: number | null;
-  full_transcript:   string | null;
-  call_summary?:     string | null;
+  full_transcript:    string | null;
+  call_summary?:      string | null;
 }
 
 function fallbackScoreResult(agentType: AgentType, reason: string): ScoreResult {
@@ -75,37 +75,20 @@ export async function POST(req: NextRequest) {
   }
 
   const {
-    call_id, location_id, direction, to, from,
+    call_id, direction, to, from,
     recording_url, call_time_seconds, full_transcript, call_summary,
   } = body;
 
-  if (!location_id || !from || !full_transcript || !direction) {
+  if (!from || !full_transcript || !direction) {
     return NextResponse.json(
-      { error: "Missing required fields: location_id, from, direction, full_transcript" },
+      { error: "Missing required fields: from, direction, full_transcript" },
       { status: 400 }
     );
   }
 
   const admin = createAdminClient();
 
-  // 3. Resolve company by GHL location_id (same lookup live calls use)
-  const { data: company, error: companyErr } = await admin
-    .from("companies")
-    .select("id, wallet_balance")
-    .eq("ghl_sub_account_id", location_id)
-    .maybeSingle();
-
-  if (companyErr) {
-    console.error("[training-coach:ingest] company lookup error:", companyErr.message);
-    return NextResponse.json({ error: "Database error" }, { status: 500 });
-  }
-  if (!company) {
-    return NextResponse.json({ error: `No company found for location_id ${location_id}` }, { status: 404 });
-  }
-
-  // 4. Resolve rep via user_phones table — supports multiple numbers per user.
-  //    No match → bail out before calling Claude, and don't insert anything
-  //    (training_calls.user_id is NOT NULL, so there's nothing valid to save anyway).
+  // 3. Resolve rep via user_phones — from number is the source of truth for both user + company.
   const { data: phoneRow, error: phoneErr } = await admin
     .from("user_phones")
     .select("user_id")
@@ -125,9 +108,8 @@ export async function POST(req: NextRequest) {
 
   const { data: user, error: userErr } = await admin
     .from("users")
-    .select("id, agent_type")
+    .select("id, agent_type, company_id")
     .eq("id", phoneRow.user_id)
-    .eq("company_id", company.id)
     .eq("is_active", true)
     .maybeSingle();
 
@@ -137,9 +119,30 @@ export async function POST(req: NextRequest) {
   }
   if (!user) {
     return NextResponse.json(
-      { error: `User for phone ${from} is not active or not in this company` },
+      { error: `User for phone ${from} is not active` },
       { status: 404 }
     );
+  }
+  if (!user.company_id) {
+    return NextResponse.json(
+      { error: `User for phone ${from} has no company assigned` },
+      { status: 404 }
+    );
+  }
+
+  // 4. Fetch company (for wallet balance)
+  const { data: company, error: companyErr } = await admin
+    .from("companies")
+    .select("id, wallet_balance")
+    .eq("id", user.company_id)
+    .maybeSingle();
+
+  if (companyErr) {
+    console.error("[training-coach:ingest] company lookup error:", companyErr.message);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
+  if (!company) {
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
   // 4b. Wallet balance pre-check before calling Claude
