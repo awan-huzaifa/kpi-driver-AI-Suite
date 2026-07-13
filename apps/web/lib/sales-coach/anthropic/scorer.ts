@@ -37,6 +37,7 @@ export interface ScoreResult {
   user_role: string | null;
   call_stage: string | null;
   call_type: string | null;
+  call_result: string | null;
   opportunity_level: "low" | "medium" | "high" | null;
   rubric_version: string | null;
   score: number | null;
@@ -94,6 +95,7 @@ const JSON_SCHEMA = `{
   "scorable": true,
   "reason": "string",
   "call_type": "string",
+  "call_result": "No Progress | Follow Up | Appointment Set | Offer Made | Contract Sent | Other",
   "opportunity_level": "low | medium | high",
   "overall_score": 0,
   "score_band": "Elite | Strong | Workable | Weak | Needs Coaching",
@@ -152,6 +154,7 @@ export async function scoreCall(
       user_role: agent_type,
       call_stage,
       call_type: null,
+      call_result: null,
       opportunity_level: null,
       rubric_version: null,
       score: null,
@@ -288,6 +291,7 @@ ${JSON_SCHEMA}`;
     user_role,
     call_stage,
     call_type: parsed.call_type ?? null,
+    call_result: parsed.call_result ?? null,
     opportunity_level: parsed.opportunity_level ?? null,
     rubric_version,
     score: parsed.overall_score ?? null,

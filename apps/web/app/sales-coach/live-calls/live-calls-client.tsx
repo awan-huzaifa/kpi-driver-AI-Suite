@@ -809,22 +809,10 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
 
                   {/* Agent */}
                   <td style={{ padding: "12px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                        background: "rgba(48,125,192,0.12)", border: "1px solid rgba(48,125,192,0.2)",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 10, fontWeight: 800, color: "#78ABD6",
-                      }}>
-                        {initials(agentName)}
-                      </div>
-                      <div>
-                        <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>{agentName}</p>
-                        {c.agent?.agent_type && c.agent.agent_type !== "none" && (
-                          <Badge variant={c.agent.agent_type as any} />
-                        )}
-                      </div>
-                    </div>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>{agentName}</p>
+                    {c.agent?.agent_type && c.agent.agent_type !== "none" && (
+                      <Badge variant={c.agent.agent_type as any} />
+                    )}
                   </td>
 
                   {/* Direction */}
@@ -883,9 +871,27 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                     <p style={{ fontSize: 10, color: "#334155", margin: 0 }}>{fmtTime(c.created_at)}</p>
                   </td>
 
-                  {/* Arrow */}
-                  <td style={{ padding: "12px 10px 12px 0", width: 28 }}>
-                    <ChevronRight size={13} style={{ color: "#334155" }} />
+                  {/* CRM + Arrow */}
+                  <td style={{ padding: "12px 10px", whiteSpace: "nowrap" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      {c.crm_link && (
+                        <a
+                          href={c.crm_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 4,
+                            fontSize: 11, fontWeight: 600, color: "#307DC0",
+                            textDecoration: "none", padding: "4px 8px", borderRadius: 7,
+                            background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
+                          }}
+                        >
+                          <ExternalLink size={11} /> CRM
+                        </a>
+                      )}
+                      <ChevronRight size={13} style={{ color: "#334155" }} />
+                    </div>
                   </td>
                 </motion.tr>
               );

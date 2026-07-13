@@ -166,6 +166,7 @@ export async function POST(req: NextRequest) {
       user_role:             user.agent_type,
       call_stage:            stage ?? null,
       call_type:             null,
+      call_result:           null,
       opportunity_level:     null,
       rubric_version:        null,
       score:                 null,

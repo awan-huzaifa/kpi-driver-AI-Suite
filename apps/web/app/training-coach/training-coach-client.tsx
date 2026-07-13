@@ -50,6 +50,8 @@ interface TrainingCall {
   call_stage:    string | null;
   scorable:      boolean;
   score:         number | null;
+  call_result:   string | null;
+  from_phone:    string | null;
   call_summary:  string | null;
   transcript:    string | null;
   recording_url: string | null;
@@ -177,10 +179,6 @@ function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => voi
                   <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#94a3b8", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     vs {call.ai_agent?.agent_name ?? "Unknown AI Agent"}
                   </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, ...(call.direction === "outbound" ? { color: "#43B749", background: "rgba(67,183,73,0.12)", border: "1px solid rgba(67,183,73,0.2)" } : { color: "#307DC0", background: "rgba(48,125,192,0.12)", border: "1px solid rgba(48,125,192,0.2)" }) }}>
-                    {call.direction === "outbound" ? <PhoneOutgoing size={9} /> : <PhoneIncoming size={9} />}
-                    {call.direction.toUpperCase()}
-                  </span>
                   {ev?.score_band && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#78ABD6", background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.15)" }}>{ev.score_band}</span>}
                   {ev?.manager_review_needed && <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#ED1F24", background: "rgba(237,31,36,0.1)", border: "1px solid rgba(237,31,36,0.2)" }}>Manager Review</span>}
                 </div>
@@ -188,7 +186,6 @@ function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => voi
                   {[
                     { label: fmtDuration(call.duration_sec) },
                     { label: fmt(call.created_at) },
-                    ...(call.call_stage ? [{ label: call.call_stage }] : []),
                   ].map(({ label }) => (
                     <span key={label} style={{ fontSize: 11, color: "#475569" }}>{label}</span>
                   ))}
@@ -209,12 +206,12 @@ function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => voi
           {/* Meta grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             {[
-              { label: "Agent Type",   value: call.agent?.agent_type ?? "—" },
-              { label: "Opportunity",  value: ev?.opportunity_level  ?? "—" },
-              { label: "Call Type",    value: ev?.call_type          ?? "—" },
-              { label: "Confidence",   value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
-              { label: "AI Agent",     value: call.ai_agent?.agent_name ?? "—" },
-              { label: "Rep",          value: call.agent?.full_name ?? "—" },
+              { label: "Rep",         value: call.agent?.full_name     ?? "—" },
+              { label: "Agent Role",  value: (call.agent?.agent_type ?? "—").toUpperCase() },
+              { label: "Agent Phone", value: call.from_phone           ?? "—" },
+              { label: "AI Agent",    value: call.ai_agent?.agent_name ?? "—" },
+              { label: "Call Result", value: call.call_result          ?? "—" },
+              { label: "Time",        value: fmt(call.created_at)               },
             ].map(({ label, value }) => (
               <div key={label} style={{ padding: "10px 14px", borderRadius: 12, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
                 <p style={{ fontSize: 9, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>{label}</p>
@@ -530,17 +527,15 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
             <TableRow>
               <TableHead>Rep</TableHead>
               <TableHead>AI Agent</TableHead>
-              <TableHead>Direction</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Score</TableHead>
-              <TableHead>Stage</TableHead>
               <TableHead>Date</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell className="text-center py-16" style={{ color: "#334155" }} colSpan={7}>
+                <TableCell className="text-center py-16" style={{ color: "#334155" }} colSpan={5}>
                   <GraduationCap size={32} className="mx-auto mb-2 opacity-20" />
                   <p className="text-sm">No training calls found</p>
                 </TableCell>
@@ -560,22 +555,9 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
                   <span className="text-xs" style={{ color: "#94a3b8" }}>{c.ai_agent?.agent_name ?? "Unknown"}</span>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1.5">
-                    {c.direction === "inbound"
-                      ? <PhoneIncoming size={13} style={{ color: "#43B749" }} />
-                      : <PhoneOutgoing size={13} style={{ color: "#307DC0" }} />}
-                    <span className="text-xs capitalize" style={{ color: c.direction === "inbound" ? "#43B749" : "#307DC0" }}>
-                      {c.direction}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
                   <span className="text-xs font-mono" style={{ color: "#64748b" }}>{fmtDuration(c.duration_sec)}</span>
                 </TableCell>
                 <TableCell><ScorePill score={c.score} /></TableCell>
-                <TableCell>
-                  <span className="text-xs" style={{ color: "#475569" }}>{c.call_stage ?? "—"}</span>
-                </TableCell>
                 <TableCell>
                   <span className="text-xs" style={{ color: "#334155" }}>{fmt(c.created_at)}</span>
                 </TableCell>
