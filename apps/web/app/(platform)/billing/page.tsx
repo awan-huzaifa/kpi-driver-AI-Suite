@@ -32,10 +32,10 @@ export default async function BillingPage() {
     companyId
       ? admin
           .from('company_wallet_transactions')
-          .select('id, type, amount_usd, description, created_at')
+          .select('id, type, amount_usd, description, created_at, app')
           .eq('company_id', companyId)
           .order('created_at', { ascending: false })
-          .limit(50)
+          .limit(500)
       : Promise.resolve({ data: [], error: null }),
 
     supabase

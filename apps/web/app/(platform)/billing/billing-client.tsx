@@ -16,6 +16,7 @@ export interface Transaction {
   amount_usd:  number
   description: string | null
   created_at:  string
+  app:         string | null
 }
 
 interface AutoTopup {
@@ -90,7 +91,7 @@ export default function BillingClient({ user, planId, access, accessRole, balanc
         transition={{ duration: 0.25 }}
       >
         {tab === 'wallet' ? (
-          <WalletTab balance={balance} transactions={transactions} topUpOptions={topUpOptions} autoTopup={autoTopup} />
+          <WalletTab balance={balance} transactions={transactions} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} />
         ) : (
           <UsageTab rows={usageLogs} />
         )}

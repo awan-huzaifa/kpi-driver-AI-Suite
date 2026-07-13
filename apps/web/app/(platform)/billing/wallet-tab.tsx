@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { CreditCard, Plus, Trash2, Check, Loader2, ArrowUpRight, ArrowDownLeft, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react'
+import { CreditCard, Plus, Trash2, Check, Loader2, ArrowUpRight, CheckCircle2, AlertCircle, RefreshCw, Mic, Building2, GraduationCap, NotebookPen, Database, Search } from 'lucide-react'
 import { C } from '@/components/platform/brand'
 import type { Transaction } from './billing-client'
+import type { Access } from '@/components/platform/PlatformShell'
 import type { TopUpOption } from '@kpidriver/stripe/topup'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -49,9 +50,10 @@ interface Props {
   transactions: Transaction[]
   topUpOptions: TopUpOption[]
   autoTopup:    AutoTopup
+  access:       Access
 }
 
-export default function WalletTab({ balance: initialBalance, transactions, topUpOptions, autoTopup }: Props) {
+export default function WalletTab({ balance: initialBalance, transactions, topUpOptions, autoTopup, access }: Props) {
   const [balance, setBalance]         = useState(initialBalance)
   const [toppingUp, setToppingUp]     = useState<string | null>(null)
   const [topupMessage, setTopupMessage] = useState<string | null>(null)
@@ -146,7 +148,7 @@ export default function WalletTab({ balance: initialBalance, transactions, topUp
 
       <AutoTopUpCard topUpOptions={topUpOptions} autoTopup={autoTopup} />
       <PaymentMethodsCard />
-      <TransactionsCard transactions={transactions} />
+      <AppSpendCard transactions={transactions} access={access} />
     </div>
   )
 }
@@ -497,40 +499,64 @@ function AddCardForm({ clientSecret, onSuccess, onCancel }: { clientSecret: stri
   )
 }
 
-/* ── Recent transactions ────────────────────────────────────────── */
+/* ── App spend summary ──────────────────────────────────────────── */
 
-function TransactionsCard({ transactions }: { transactions: Transaction[] }) {
+const APP_ENTRIES: { appKey: string; accessKey: keyof Access; label: string; color: string; bg: string; Icon: React.ElementType }[] = [
+  { appKey: 'sales_coach',     accessKey: 'salesCoach',     label: 'Sales Coach',      color: C.blue,    bg: 'rgba(48,125,192,0.12)',  Icon: Mic          },
+  { appKey: 'training_coach',  accessKey: 'trainingCoach',  label: 'Training Coach',   color: '#FCAF17', bg: 'rgba(252,175,23,0.12)',  Icon: GraduationCap },
+  { appKey: 'underwriting',    accessKey: 'underwriting',   label: 'Deal Underwriter', color: C.green,   bg: 'rgba(67,183,73,0.12)',   Icon: Building2    },
+  { appKey: 'note_taker',      accessKey: 'noteTaker',      label: 'Note Taker',       color: C.blue,    bg: 'rgba(48,125,192,0.12)',  Icon: NotebookPen  },
+  { appKey: 'data_enrichment', accessKey: 'dataEnrichment', label: 'Data Enrichment',  color: C.green,   bg: 'rgba(67,183,73,0.12)',   Icon: Database     },
+  { appKey: 'skip_tracing',    accessKey: 'skipTracing',    label: 'Skip Tracing',     color: '#FCAF17', bg: 'rgba(252,175,23,0.12)',  Icon: Search       },
+]
+
+function AppSpendCard({ transactions, access }: { transactions: Transaction[]; access: Access }) {
+  const spend = useMemo(() => {
+    const map: Record<string, { total: number; runs: number }> = {}
+    for (const t of transactions) {
+      if (t.type !== 'deduction' || !t.app) continue
+      if (!map[t.app]) map[t.app] = { total: 0, runs: 0 }
+      map[t.app].total += t.amount_usd
+      map[t.app].runs  += 1
+    }
+    return map
+  }, [transactions])
+
+  const rows = APP_ENTRIES.filter(e => access[e.accessKey])
+
   return (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}` }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>Recent Transactions</p>
+        <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>App Usage</p>
+        <p style={{ fontSize: 12, color: C.dimText, margin: '3px 0 0' }}>Total wallet spend per app, all time</p>
       </div>
-      {transactions.length === 0 ? (
+      {rows.length === 0 ? (
         <div style={{ padding: '32px 22px', textAlign: 'center' }}>
-          <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>No transactions yet.</p>
+          <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>No apps unlocked yet.</p>
         </div>
       ) : (
         <div>
-          {transactions.map((t) => {
-            const isTopup = t.type === 'topup'
+          {rows.map((e, i) => {
+            const s = spend[e.appKey]
+            const total = s?.total ?? 0
+            const runs  = s?.runs  ?? 0
+            const Icon  = e.Icon
             return (
-              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '13px 22px', borderBottom: `1px solid ${C.border}` }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: isTopup ? 'rgba(67,183,73,0.12)' : 'rgba(48,125,192,0.12)',
-                }}>
-                  {isTopup ? <ArrowUpRight size={14} style={{ color: C.green }} /> : <ArrowDownLeft size={14} style={{ color: C.blue }} />}
+              <div key={e.appKey} style={{
+                display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px',
+                borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : 'none',
+              }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0, background: e.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={15} style={{ color: e.color }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: 13, fontWeight: 500, color: C.text, margin: 0 }}>
-                    {t.description ?? (isTopup ? 'Top-up' : 'Usage deduction')}
-                  </p>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: 0 }}>{e.label}</p>
                   <p style={{ fontSize: 11, color: C.dimText, margin: '2px 0 0' }}>
-                    {new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    {runs > 0 ? `${runs} run${runs !== 1 ? 's' : ''}` : 'No usage yet'}
                   </p>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 700, color: isTopup ? C.green : C.blue, fontVariantNumeric: 'tabular-nums' }}>
-                  {isTopup ? '+' : '−'}${Math.abs(t.amount_usd).toFixed(4)}
+                <span style={{ fontSize: 14, fontWeight: 800, color: total > 0 ? C.text : C.dimText, fontVariantNumeric: 'tabular-nums' }}>
+                  ${total.toFixed(2)}
                 </span>
               </div>
             )
