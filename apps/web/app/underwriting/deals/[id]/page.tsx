@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, XCircle, AlertCircle, AlertTriangle } from "lucide-react";
 import { DownloadPDFButton } from "@/components/underwriting/download-pdf-button";
 import { RerunDealModal } from "@/components/underwriting/rerun-deal-modal";
-import type { ConditionGrade } from "@/lib/underwriting/types";
+import type { ConditionGrade, RepairMode } from "@/lib/underwriting/types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -138,6 +138,24 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   const investorProfitPctVal = calc.maxOfferResult?.investorProfitPct
     ?? (report?.investor_profit && report?.net_sales_price ? report.investor_profit / report.net_sales_price : 0.15);
 
+  const initialRepairMode: RepairMode =
+    repairs.sqft === 0 && repairs.baseLow > 0 ? "known_cost" :
+    repairs.sqft === 0 ? "scope_known" : "standard";
+  const initialKnownRepairCost = initialRepairMode === "known_cost" ? (repairs.low ?? 0) : 0;
+  const initialCustomPerSqft =
+    initialRepairMode === "standard" &&
+    repairs.per_sqft_low != null && repairs.per_sqft_low > 0 &&
+    repairs.per_sqft_low === repairs.per_sqft_high
+      ? repairs.per_sqft_low : 0;
+  const DEFAULT_ITEM_LABELS = new Set([
+    "Entire Roof Replacement", "HVAC Replacement",
+    "Entire Plumbing Replacement", "Entire Electrical Replacement",
+    "Light Foundation", "Heavy Foundation",
+    "Septic Tank Replacement", "Well Replacement",
+  ]);
+  const initialCustomItems: { label: string; cost: number }[] =
+    (repairs.checkedExtraItems ?? []).filter((i: { label: string; cost: number }) => !DEFAULT_ITEM_LABELS.has(i.label));
+
   return (
     <div className="space-y-5 max-w-6xl mx-auto w-full">
 
@@ -171,6 +189,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 initialAssignmentFee={calc.maxOfferResult?.assignmentFee ?? 22_500}
                 initialNotes={prop.notes ?? ""}
                 existingComps={comps}
+                initialRepairMode={initialRepairMode}
+                initialKnownRepairCost={initialKnownRepairCost}
+                initialCustomPerSqft={initialCustomPerSqft}
+                initialCustomItems={initialCustomItems}
               />
             )}
             <DownloadPDFButton dealId={id} />

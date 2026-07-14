@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Loader2, CheckCircle2, AlertCircle, RefreshCw, Upload, Plus, ChevronDown } from "lucide-react";
-import type { ConditionGrade, ExtraItem, UploadedPhoto, NormalizedComp, ManualComp, CompCategory } from "@/lib/underwriting/types";
+import {
+  X, Loader2, CheckCircle2, AlertCircle, RefreshCw, Upload, Plus, ChevronDown,
+  Home, SlidersHorizontal, Wrench as WrenchIcon, Check, Trash2,
+} from "lucide-react";
+import type { ConditionGrade, ExtraItem, UploadedPhoto, NormalizedComp, ManualComp, CompCategory, RepairMode } from "@/lib/underwriting/types";
+import { SingleDateInput } from "@/components/ui/date-range-picker";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -14,12 +18,27 @@ type State =
   | { phase: "success" }
   | { phase: "error"; message: string };
 
-const CONDITION_OPTIONS: { value: ConditionGrade; label: string }[] = [
-  { value: "excellent", label: "Excellent (Fully Renovated / Turnkey) — $0–$15/sqft" },
-  { value: "good",      label: "Good (Minor Cosmetic Updates Needed) — $25–$35/sqft" },
-  { value: "fair",      label: "Fair (Moderate Repairs Needed) — $40–$50/sqft" },
-  { value: "poor",      label: "Poor (Major Repairs Needed) — $55–$65/sqft" },
+const CONDITION_OPTIONS: { value: ConditionGrade; label: string; sqft: string; color: string; rgb: string }[] = [
+  { value: "excellent", label: "Excellent", sqft: "$0–$15/sqft",  color: "#43B749", rgb: "67,183,73"  },
+  { value: "good",      label: "Good",      sqft: "$25–$35/sqft", color: "#307DC0", rgb: "48,125,192" },
+  { value: "fair",      label: "Fair",      sqft: "$40–$50/sqft", color: "#FCAF17", rgb: "252,175,23" },
+  { value: "poor",      label: "Poor",      sqft: "$55–$65/sqft", color: "#ED1F24", rgb: "237,31,36"  },
 ];
+
+const REPAIR_MODES: { value: RepairMode; label: string; desc: string }[] = [
+  { value: "known_cost",  label: "Cost Known",  desc: "I know the exact repair cost" },
+  { value: "scope_known", label: "Scope Known", desc: "Itemise what needs fixing"    },
+  { value: "standard",    label: "Standard",    desc: "Condition-based estimate"     },
+];
+
+function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
+  return (
+    <div className="flex items-center gap-2 mb-1">
+      <Icon size={13} className="text-brand" strokeWidth={2} />
+      <span className="text-[11px] font-bold text-white/90 uppercase tracking-wider">{title}</span>
+    </div>
+  );
+}
 
 const COMP_TYPE_OPTIONS: { value: CompCategory | ""; label: string }[] = [
   { value: "",        label: "— Let AI decide —" },
@@ -86,6 +105,10 @@ interface Props {
   initialAssignmentFee: number;
   initialNotes: string;
   existingComps: NormalizedComp[];
+  initialRepairMode: RepairMode;
+  initialKnownRepairCost: number;
+  initialCustomPerSqft: number;
+  initialCustomItems: { label: string; cost: number }[];
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -167,6 +190,7 @@ async function compressImage(file: File): Promise<UploadedPhoto> {
 export function RerunDealModal({
   dealId, address, initialCondition, initialMultiplier, initialCheckedItems,
   initialInvestorProfitPct, initialAssignmentFee, initialNotes, existingComps,
+  initialRepairMode, initialKnownRepairCost, initialCustomPerSqft, initialCustomItems,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -180,6 +204,15 @@ export function RerunDealModal({
   const [assignmentFee, setAssignmentFee] = useState(initialAssignmentFee);
   const [extraItems, setExtraItems] = useState<ExtraItem[]>(() => buildInitialItems(initialCheckedItems));
   const [propertyPhotos, setPropertyPhotos] = useState<UploadedPhoto[]>([]);
+
+  // Repair mode
+  const [repairMode, setRepairMode] = useState<RepairMode>(initialRepairMode);
+  const [knownRepairCost, setKnownRepairCost] = useState(initialKnownRepairCost);
+  const [customPerSqft, setCustomPerSqft] = useState(initialCustomPerSqft);
+  const [customItems, setCustomItems] = useState<{ label: string; cost: number }[]>(initialCustomItems);
+  const [newItemLabel, setNewItemLabel] = useState("");
+  const [newItemCost, setNewItemCost] = useState("");
+  const [addItemErr, setAddItemErr] = useState("");
 
   const [arvSqftOverride, setArvSqftOverride] = useState("");
 
@@ -198,6 +231,11 @@ export function RerunDealModal({
     setAssignmentFee(initialAssignmentFee);
     setExtraItems(buildInitialItems(initialCheckedItems));
     setPropertyPhotos([]);
+    setRepairMode(initialRepairMode);
+    setKnownRepairCost(initialKnownRepairCost);
+    setCustomPerSqft(initialCustomPerSqft);
+    setCustomItems(initialCustomItems);
+    setNewItemLabel(""); setNewItemCost(""); setAddItemErr("");
     setArvSqftOverride("");
     setEditableComps(buildEditableComps(existingComps));
     setManualComps([]);
@@ -212,6 +250,19 @@ export function RerunDealModal({
   function updateItemCost(i: number, raw: string) {
     const cost = parseInt(raw.replace(/[^0-9]/g, ""), 10) || 0;
     setExtraItems((prev) => prev.map((item, idx) => idx === i ? { ...item, cost } : item));
+  }
+
+  function addCustomItem() {
+    const label = newItemLabel.trim();
+    const cost  = parseInt(newItemCost.replace(/[^0-9]/g, ""), 10) || 0;
+    if (!label)    { setAddItemErr("Item name is required."); return; }
+    if (cost <= 0) { setAddItemErr("Cost must be greater than $0."); return; }
+    setCustomItems((prev) => [...prev, { label, cost }]);
+    setNewItemLabel(""); setNewItemCost(""); setAddItemErr("");
+  }
+
+  function removeCustomItem(i: number) {
+    setCustomItems((prev) => prev.filter((_, idx) => idx !== i));
   }
 
   // Photos
@@ -292,26 +343,51 @@ export function RerunDealModal({
         ...(c.constructionType ? { constructionType: c.constructionType }         : {}),
       }));
 
+    // Build extra items for submission
+    let submitExtraItems: ExtraItem[];
+    if (repairMode === "scope_known") {
+      submitExtraItems = [
+        ...extraItems.filter((i) => i.checked),
+        ...customItems.map((i) => ({ ...i, checked: true })),
+      ];
+    } else if (repairMode === "standard") {
+      submitExtraItems = [
+        ...extraItems,
+        ...customItems.map((i) => ({ ...i, checked: true })),
+      ];
+    } else {
+      submitExtraItems = extraItems;
+    }
+
     try {
+      const body: Record<string, unknown> = {
+        dealId,
+        address,
+        notes: notes.trim() || undefined,
+        repairMode,
+        marketMultiplier,
+        investorProfitPct: investorProfitPct / 100,
+        assignmentFee,
+        extraItems: submitExtraItems,
+        baseComps,
+        manualComps: manualCompsPayload.length > 0 ? manualCompsPayload : undefined,
+        propertyPhotos: propertyPhotos.length > 0 ? propertyPhotos : undefined,
+        arvOverride: arvSqftOverride
+          ? { mode: "per_sqft" as const, value: parseFloat(arvSqftOverride) }
+          : undefined,
+      };
+
+      if (repairMode === "known_cost") {
+        body.knownRepairCost = knownRepairCost;
+      } else {
+        body.condition = condition;
+        if (repairMode === "standard") body.customPerSqft = customPerSqft;
+      }
+
       const res = await fetch("/api/underwrite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          dealId,
-          address,
-          notes: notes.trim() || undefined,
-          condition,
-          marketMultiplier,
-          investorProfitPct: investorProfitPct / 100,
-          assignmentFee,
-          extraItems,
-          baseComps,
-          manualComps: manualCompsPayload.length > 0 ? manualCompsPayload : undefined,
-          propertyPhotos: propertyPhotos.length > 0 ? propertyPhotos : undefined,
-          arvOverride: arvSqftOverride
-            ? { mode: "per_sqft" as const, value: parseFloat(arvSqftOverride) }
-            : undefined,
-        }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();
@@ -329,6 +405,12 @@ export function RerunDealModal({
 
   const disabled = state.phase === "loading";
   const includedCount = editableComps.filter((c) => c.included).length;
+  const selectedOpt = CONDITION_OPTIONS.find((o) => o.value === condition)!;
+  const standardItemsTotal = extraItems.filter((i) => i.checked).reduce((s, i) => s + i.cost, 0);
+  const customItemsTotal   = customItems.reduce((s, i) => s + i.cost, 0);
+  const checkedDefaultTotal = standardItemsTotal;
+  const scopeTotal = checkedDefaultTotal + customItemsTotal;
+  function fmtCost(n: number) { return "$" + n.toLocaleString(); }
 
   return (
     <Dialog.Root open={open} onOpenChange={(next) => { setOpen(next); if (!next) reset(); }}>
@@ -417,157 +499,388 @@ export function RerunDealModal({
                 {/* ── Settings tab ────────────────────────────────────────── */}
                 {activeTab === "settings" && (<>
 
-                {/* Row 1: Condition + Market Multiplier */}
-                <div className="grid grid-cols-2 gap-4">
-
-                  {/* Condition */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Property Condition</label>
-                    <select value={condition} onChange={(e) => setCondition(e.target.value as ConditionGrade)}
-                      disabled={disabled}
-                      className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm focus:outline-none focus:border-brand transition-colors disabled:opacity-50 appearance-none"
-                    >
-                      {CONDITION_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </div>
-
-                  {/* Market Multiplier */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Market Multiplier</label>
-                      <span className="text-brand text-[13px] font-semibold tabular-nums">{marketMultiplier.toFixed(1)}×</span>
-                    </div>
-                    <input type="range" min={0.5} max={3.0} step={0.1} value={marketMultiplier}
-                      onChange={(e) => setMarketMultiplier(parseFloat(e.target.value))}
-                      disabled={disabled} className="w-full accent-brand disabled:opacity-50"
-                    />
-                    <div className="flex justify-between text-muted text-[10px]">
-                      <span>0.5× Low-cost</span><span>3.0× High-end</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Row 2: Investor Profit + Assignment Fee + ARV Override */}
-                <div className="grid grid-cols-3 gap-4">
-
-                  {/* Investor Profit */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Investor Profit</label>
-                    <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
-                      <input type="number" min={1} max={99} value={investorProfitPct === 0 ? '' : investorProfitPct}
-                        onChange={(e) => { if (e.target.value === '') { setInvestorProfitPct(0); return; } const n = parseInt(e.target.value, 10); if (!isNaN(n)) setInvestorProfitPct(n); }}
-                        onBlur={() => setInvestorProfitPct(prev => Math.max(1, Math.min(99, prev || 20)))}
-                        disabled={disabled}
-                        className="flex-1 bg-transparent px-3.5 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-muted text-[13px] pr-3.5">%</span>
-                    </div>
-                    <p className="text-muted text-[10px]">% of net sales price (ARV × 0.92)</p>
-                  </div>
-
-                  {/* Assignment Fee */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Min. Assignment Fee</label>
-                    <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
-                      <span className="text-muted text-[13px] pl-3">$</span>
-                      <input type="text" value={assignmentFee.toLocaleString()}
-                        onChange={(e) => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); setAssignmentFee(isNaN(v) ? 0 : v); }}
-                        disabled={disabled}
-                        className="flex-1 bg-transparent px-2 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums"
-                      />
-                    </div>
-                    <p className="text-muted text-[10px]">Deducted from Max Offer (low &amp; high)</p>
-                  </div>
-
-                  {/* ARV $/sqft override */}
-                  <div className="space-y-1.5">
-                    <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-                      ARV $/sqft Override <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
-                    </label>
-                    <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
-                      <input type="text" value={arvSqftOverride}
-                        onChange={(e) => setArvSqftOverride(e.target.value.replace(/[^0-9.]/g, ""))}
-                        placeholder="e.g. 170"
-                        disabled={disabled}
-                        className="flex-1 bg-transparent px-3.5 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums"
-                      />
-                      <span className="text-muted text-[13px] pr-3.5">$/sqft</span>
-                    </div>
-                    <p className="text-muted text-[10px]">Overrides comp-based ARV. Leave blank to use comps.</p>
-                  </div>
-                </div>
-
-                {/* Repair items — 2-col split */}
+                {/* Repair mode toggle */}
                 <div className="space-y-2">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Additional Repair Items</label>
-                  {condition === "poor" && (
-                    <p className="text-[11px] text-uw-warn/80 leading-snug">
-                      Poor condition already includes full gut costs (<strong className="text-uw-warn">left column</strong>). Only check infrastructure items if applicable — they are always additive regardless of condition.
-                    </p>
-                  )}
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                  <div className="space-y-1.5">
-
-                    {/* Col 1: standard renovation items (0–3) */}
-                    {extraItems.slice(0, 4).map((item, i) => (
-                      <div key={item.label} className="flex items-center gap-2.5">
-                        <input type="checkbox" id={`rerun-item-${i}`} checked={item.checked}
-                          onChange={() => toggleItem(i)} disabled={disabled}
-                          className="w-4 h-4 accent-brand shrink-0 disabled:opacity-50"
-                        />
-                        <label htmlFor={`rerun-item-${i}`} className={`flex-1 text-[13px] cursor-pointer select-none ${item.checked ? "text-white" : "text-muted"}`}>
-                          {item.label}
-                        </label>
-                        <div className="flex items-center">
-                          <span className="text-muted text-[12px] mr-1">$</span>
-                          <input type="text" value={item.cost.toLocaleString()}
-                            onChange={(e) => updateItemCost(i, e.target.value)}
-                            disabled={disabled || !item.checked}
-                            className="w-20 bg-surface border border-edge rounded px-2 py-1 text-white text-[12px] text-right focus:outline-none focus:border-brand transition-colors disabled:opacity-40 tabular-nums"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Col 2: infrastructure items (4–7) */}
-                  <div className="space-y-1.5">
-                    {extraItems.slice(4).map((item, j) => {
-                      const i = j + 4;
+                  <SectionHeader icon={WrenchIcon} title="Repair Cost Method" />
+                  <div className="grid grid-cols-3 gap-2">
+                    {REPAIR_MODES.map((m) => {
+                      const active = repairMode === m.value;
                       return (
-                        <div key={item.label} className="flex items-center gap-2.5">
-                          <input type="checkbox" id={`rerun-item-${i}`} checked={item.checked}
-                            onChange={() => toggleItem(i)} disabled={disabled}
-                            className="w-4 h-4 accent-brand shrink-0 disabled:opacity-50"
-                          />
-                          <label htmlFor={`rerun-item-${i}`} className={`flex-1 text-[13px] cursor-pointer select-none ${item.checked ? "text-white" : "text-muted"}`}>
-                            {item.label}
-                          </label>
-                          <div className="flex items-center">
-                            <span className="text-muted text-[12px] mr-1">$</span>
-                            <input type="text" value={item.cost.toLocaleString()}
-                              onChange={(e) => updateItemCost(i, e.target.value)}
-                              disabled={disabled || !item.checked}
-                              className="w-20 bg-surface border border-edge rounded px-2 py-1 text-white text-[12px] text-right focus:outline-none focus:border-brand transition-colors disabled:opacity-40 tabular-nums"
-                            />
-                          </div>
-                        </div>
+                        <button
+                          key={m.value} type="button" disabled={disabled}
+                          onClick={() => setRepairMode(m.value)}
+                          className="text-left rounded-lg px-3 py-2.5 border transition-all disabled:opacity-50"
+                          style={{
+                            background:  active ? "rgba(48,125,192,0.12)" : "transparent",
+                            borderColor: active ? "rgba(48,125,192,0.5)"  : "var(--color-edge)",
+                          }}
+                        >
+                          <p className="text-[12px] font-bold" style={{ color: active ? "#307DC0" : "#fff" }}>{m.label}</p>
+                          <p className="text-[10px] text-muted mt-0.5">{m.desc}</p>
+                        </button>
                       );
                     })}
                   </div>
-                  </div>
                 </div>
 
-                {/* Notes */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-                    Notes <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
-                  </label>
-                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Updated observations, new info from site visit..."
-                    rows={3} disabled={disabled}
-                    className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-brand transition-colors resize-none disabled:opacity-50"
-                  />
+                {/* 2-col: Deal Settings + Repair UI */}
+                <div className="grid grid-cols-2 gap-6">
+
+                  {/* ── Left: Deal Settings ── */}
+                  <div className="space-y-4">
+                    <SectionHeader icon={SlidersHorizontal} title="Deal Settings" />
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Market Multiplier</label>
+                        <span className="text-brand text-[13px] font-semibold tabular-nums">{marketMultiplier.toFixed(1)}×</span>
+                      </div>
+                      <input type="range" min={0.5} max={3.0} step={0.1} value={marketMultiplier}
+                        onChange={(e) => setMarketMultiplier(parseFloat(e.target.value))}
+                        disabled={disabled} className="w-full accent-brand disabled:opacity-50"
+                      />
+                      <div className="flex justify-between text-muted text-[10px]">
+                        <span>0.5× Low-cost</span><span>3.0× High-end</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Investor Profit</label>
+                      <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
+                        <input type="number" min={1} max={99} value={investorProfitPct === 0 ? "" : investorProfitPct}
+                          onChange={(e) => { if (e.target.value === "") { setInvestorProfitPct(0); return; } const n = parseInt(e.target.value, 10); if (!isNaN(n)) setInvestorProfitPct(n); }}
+                          onBlur={() => setInvestorProfitPct((prev) => Math.max(1, Math.min(99, prev || 20)))}
+                          disabled={disabled}
+                          className="flex-1 bg-transparent px-3.5 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <span className="text-muted text-[13px] pr-3.5">%</span>
+                      </div>
+                      <p className="text-muted text-[10px]">% of net sales price (ARV × 0.92)</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Min. Assignment Fee</label>
+                      <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
+                        <span className="text-muted text-[13px] pl-3">$</span>
+                        <input type="text" value={assignmentFee.toLocaleString()}
+                          onChange={(e) => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); setAssignmentFee(isNaN(v) ? 0 : v); }}
+                          disabled={disabled}
+                          className="flex-1 bg-transparent px-2 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums"
+                        />
+                      </div>
+                      <p className="text-muted text-[10px]">Deducted from Max Offer (low &amp; high)</p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                        ARV $/sqft Override <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
+                      </label>
+                      <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
+                        <input type="text" value={arvSqftOverride}
+                          onChange={(e) => setArvSqftOverride(e.target.value.replace(/[^0-9.]/g, ""))}
+                          placeholder="e.g. 170"
+                          disabled={disabled}
+                          className="flex-1 bg-transparent px-3.5 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums"
+                        />
+                        <span className="text-muted text-[13px] pr-3.5">$/sqft</span>
+                      </div>
+                      <p className="text-muted text-[10px]">Overrides comp-based ARV. Leave blank to use comps.</p>
+                    </div>
+
+                    {(repairMode === "scope_known" || repairMode === "standard") && (
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                          Notes <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
+                        </label>
+                        <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                          placeholder="Updated observations, new info from site visit..."
+                          rows={3} disabled={disabled}
+                          className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-brand transition-colors resize-none disabled:opacity-50"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Right: mode-specific repair UI ── */}
+                  <div className="space-y-4">
+
+                    {/* ── MODE 1: Cost Known ── */}
+                    {repairMode === "known_cost" && (
+                      <>
+                        <div className="space-y-2">
+                          <SectionHeader icon={WrenchIcon} title="Known Repair Cost" />
+                          <p className="text-muted text-[11px]">Enter the exact repair cost you already have for this property.</p>
+                          <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
+                            <span className="text-muted text-[13px] pl-3">$</span>
+                            <input
+                              type="text"
+                              value={knownRepairCost === 0 ? "" : knownRepairCost.toLocaleString()}
+                              onChange={(e) => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); setKnownRepairCost(isNaN(v) ? 0 : v); }}
+                              placeholder="0"
+                              disabled={disabled}
+                              className="flex-1 bg-transparent px-2 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums"
+                            />
+                          </div>
+                          {knownRepairCost > 0 && (
+                            <p className="text-brand text-[12px] font-semibold tabular-nums">{fmtCost(knownRepairCost)} in repair costs</p>
+                          )}
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
+                            Notes <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
+                          </label>
+                          <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Updated observations, new info from site visit..."
+                            rows={3} disabled={disabled}
+                            className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-brand transition-colors resize-none disabled:opacity-50"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* ── MODE 2: Scope Known ── */}
+                    {repairMode === "scope_known" && (
+                      <>
+                        <div className="space-y-2">
+                          <SectionHeader icon={Home} title="Property Condition" />
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {CONDITION_OPTIONS.map((o) => {
+                              const active = condition === o.value;
+                              return (
+                                <button
+                                  key={o.value} type="button" disabled={disabled}
+                                  onClick={() => setCondition(o.value)}
+                                  className="relative text-center rounded-lg px-2 py-2 border transition-all disabled:opacity-50"
+                                  style={{
+                                    background:  active ? `rgba(${o.rgb},0.12)` : "transparent",
+                                    borderColor: active ? `rgba(${o.rgb},0.5)`  : "var(--color-edge)",
+                                  }}
+                                >
+                                  {active && (
+                                    <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center" style={{ background: o.color }}>
+                                      <Check size={8} className="text-white" strokeWidth={3} />
+                                    </div>
+                                  )}
+                                  <p className="text-[11px] font-bold" style={{ color: active ? o.color : "#fff" }}>{o.label}</p>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <SectionHeader icon={WrenchIcon} title="Repair Items" />
+                            {scopeTotal > 0 && <p className="text-brand text-[12px] font-semibold tabular-nums">+{fmtCost(scopeTotal)} total</p>}
+                          </div>
+                          <div className="space-y-1.5">
+                            {extraItems.map((item, i) => (
+                              <React.Fragment key={item.label}>
+                                {i === 4 && <div className="pt-1"><div className="border-t border-edge" /></div>}
+                                <div className="flex items-center gap-2.5">
+                                  <input type="checkbox" id={`rerun-item-${i}`} checked={item.checked}
+                                    onChange={() => toggleItem(i)} disabled={disabled}
+                                    className="w-4 h-4 accent-brand shrink-0 disabled:opacity-50"
+                                  />
+                                  <label htmlFor={`rerun-item-${i}`} className={`flex-1 text-[12px] cursor-pointer select-none ${item.checked ? "text-white" : "text-muted"}`}>
+                                    {item.label}
+                                  </label>
+                                  <div className="flex items-center">
+                                    <span className="text-muted text-[11px] mr-1">$</span>
+                                    <input type="text" value={item.cost.toLocaleString()}
+                                      onChange={(e) => updateItemCost(i, e.target.value)}
+                                      disabled={disabled || !item.checked}
+                                      className="w-20 bg-surface border border-edge rounded px-2 py-1 text-white text-[12px] text-right focus:outline-none focus:border-brand transition-colors disabled:opacity-40 tabular-nums"
+                                    />
+                                  </div>
+                                </div>
+                              </React.Fragment>
+                            ))}
+
+                            {customItems.length > 0 && (
+                              <div className="pt-1">
+                                <div className="border-t border-edge mb-1.5" />
+                                {customItems.map((item, i) => (
+                                  <div key={i} className="flex items-center gap-2.5 mb-1.5">
+                                    <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                                      <div className="w-2 h-2 rounded-full bg-brand" />
+                                    </div>
+                                    <span className="flex-1 text-[12px] text-white">{item.label}</span>
+                                    <span className="text-[12px] text-brand font-semibold tabular-nums">{fmtCost(item.cost)}</span>
+                                    <button type="button" onClick={() => removeCustomItem(i)} disabled={disabled}
+                                      className="text-muted hover:text-uw-danger transition-colors disabled:opacity-50">
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="pt-1.5 border-t border-edge">
+                              <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1.5">Add Custom Item</p>
+                              <div className="flex gap-2">
+                                <input type="text" value={newItemLabel}
+                                  onChange={(e) => { setNewItemLabel(e.target.value); setAddItemErr(""); }}
+                                  placeholder="Item name" disabled={disabled}
+                                  className="flex-1 bg-surface border border-edge rounded px-2.5 py-1.5 text-white text-[12px] placeholder:text-muted focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
+                                />
+                                <div className="flex items-center bg-surface border border-edge rounded overflow-hidden focus-within:border-brand transition-colors">
+                                  <span className="text-muted text-[11px] pl-2">$</span>
+                                  <input type="text" value={newItemCost}
+                                    onChange={(e) => { setNewItemCost(e.target.value.replace(/[^0-9]/g, "")); setAddItemErr(""); }}
+                                    placeholder="0" disabled={disabled}
+                                    className="w-20 bg-transparent px-1.5 py-1.5 text-white text-[12px] focus:outline-none disabled:opacity-50 tabular-nums"
+                                  />
+                                </div>
+                                <button type="button" onClick={addCustomItem} disabled={disabled}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[12px] font-semibold transition-colors disabled:opacity-50"
+                                  style={{ background: "rgba(48,125,192,0.15)", border: "1px solid rgba(48,125,192,0.3)", color: "#307DC0" }}
+                                >
+                                  <Plus size={11} /> Add
+                                </button>
+                              </div>
+                              {addItemErr && <p className="text-uw-danger text-[11px] mt-1">{addItemErr}</p>}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* ── MODE 3: Standard ── */}
+                    {repairMode === "standard" && (
+                      <>
+                        <div className="space-y-2">
+                          <SectionHeader icon={Home} title="Property Condition" />
+                          <div className="grid grid-cols-4 gap-2">
+                            {CONDITION_OPTIONS.map((o) => {
+                              const active = condition === o.value;
+                              return (
+                                <button
+                                  key={o.value} type="button" disabled={disabled}
+                                  onClick={() => setCondition(o.value)}
+                                  className="relative text-left rounded-lg px-3 py-2.5 border transition-all disabled:opacity-50"
+                                  style={{
+                                    background:  active ? `rgba(${o.rgb},0.12)` : "transparent",
+                                    borderColor: active ? `rgba(${o.rgb},0.5)`  : "var(--color-edge)",
+                                  }}
+                                >
+                                  {active && (
+                                    <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: o.color }}>
+                                      <Check size={10} className="text-white" strokeWidth={3} />
+                                    </div>
+                                  )}
+                                  <p className="text-[12px] font-bold" style={{ color: active ? o.color : "#fff" }}>{o.label}</p>
+                                  <p className="text-[10px] text-muted mt-0.5">{o.sqft}</p>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <div className="flex items-center gap-3 pt-1">
+                            <label className="text-[11px] font-semibold text-muted uppercase tracking-wider whitespace-nowrap">Custom $/sqft</label>
+                            <div className="flex items-center bg-surface border border-edge rounded overflow-hidden focus-within:border-brand transition-colors">
+                              <span className="text-muted text-[12px] pl-2">$</span>
+                              <input type="text"
+                                value={customPerSqft === 0 ? "" : customPerSqft}
+                                onChange={(e) => { const v = parseInt(e.target.value.replace(/[^0-9]/g, ""), 10); setCustomPerSqft(isNaN(v) ? 0 : v); }}
+                                placeholder="—" disabled={disabled}
+                                className="w-12 bg-transparent px-1 py-1.5 text-white text-[12px] focus:outline-none disabled:opacity-50 tabular-nums"
+                              />
+                              <span className="text-muted text-[11px] pr-2">/sqft</span>
+                            </div>
+                            <span className="text-muted text-[10px] whitespace-nowrap">Default: {selectedOpt.sqft}</span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <SectionHeader icon={WrenchIcon} title="Additional Repair Items" />
+                            {(standardItemsTotal + customItemsTotal) > 0 && (
+                              <p className="text-brand text-[12px] font-semibold tabular-nums">+{fmtCost(standardItemsTotal + customItemsTotal)} selected</p>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            {extraItems.map((item, i) => (
+                              <React.Fragment key={item.label}>
+                                {i === 4 && (
+                                  <div className="pt-1">
+                                    <div className="border-t border-edge" />
+                                    {condition === "poor" && (
+                                      <p className="mt-2 text-[11px] text-uw-warn/80 leading-snug">
+                                        Poor condition already includes full gut costs above. Only check foundation if applicable.
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-2.5">
+                                  <input type="checkbox" id={`rerun-item-${i}`} checked={item.checked}
+                                    onChange={() => toggleItem(i)} disabled={disabled}
+                                    className="w-4 h-4 accent-brand shrink-0 disabled:opacity-50"
+                                  />
+                                  <label htmlFor={`rerun-item-${i}`} className={`flex-1 text-[13px] cursor-pointer select-none ${item.checked ? "text-white" : "text-muted"}`}>
+                                    {item.label}
+                                  </label>
+                                  <div className="flex items-center">
+                                    <span className="text-muted text-[12px] mr-1">$</span>
+                                    <input type="text" value={item.cost.toLocaleString()}
+                                      onChange={(e) => updateItemCost(i, e.target.value)}
+                                      disabled={disabled || !item.checked}
+                                      className="w-20 bg-surface border border-edge rounded px-2 py-1 text-white text-[12px] text-right focus:outline-none focus:border-brand transition-colors disabled:opacity-40 tabular-nums"
+                                    />
+                                  </div>
+                                </div>
+                              </React.Fragment>
+                            ))}
+
+                            {customItems.length > 0 && (
+                              <div className="pt-1">
+                                <div className="border-t border-edge mb-1.5" />
+                                {customItems.map((item, i) => (
+                                  <div key={i} className="flex items-center gap-2.5 mb-1.5">
+                                    <div className="w-4 h-4 shrink-0 flex items-center justify-center">
+                                      <div className="w-2 h-2 rounded-full bg-brand" />
+                                    </div>
+                                    <span className="flex-1 text-[12px] text-white">{item.label}</span>
+                                    <span className="text-[12px] text-brand font-semibold tabular-nums">{fmtCost(item.cost)}</span>
+                                    <button type="button" onClick={() => removeCustomItem(i)} disabled={disabled}
+                                      className="text-muted hover:text-uw-danger transition-colors disabled:opacity-50">
+                                      <Trash2 size={12} />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="pt-1.5 border-t border-edge">
+                              <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mb-1.5">Add Custom Item</p>
+                              <div className="flex gap-2">
+                                <input type="text" value={newItemLabel}
+                                  onChange={(e) => { setNewItemLabel(e.target.value); setAddItemErr(""); }}
+                                  placeholder="Item name" disabled={disabled}
+                                  className="flex-1 bg-surface border border-edge rounded px-2.5 py-1.5 text-white text-[12px] placeholder:text-muted focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
+                                />
+                                <div className="flex items-center bg-surface border border-edge rounded overflow-hidden focus-within:border-brand transition-colors">
+                                  <span className="text-muted text-[11px] pl-2">$</span>
+                                  <input type="text" value={newItemCost}
+                                    onChange={(e) => { setNewItemCost(e.target.value.replace(/[^0-9]/g, "")); setAddItemErr(""); }}
+                                    placeholder="0" disabled={disabled}
+                                    className="w-20 bg-transparent px-1.5 py-1.5 text-white text-[12px] focus:outline-none disabled:opacity-50 tabular-nums"
+                                  />
+                                </div>
+                                <button type="button" onClick={addCustomItem} disabled={disabled}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 rounded text-[12px] font-semibold transition-colors disabled:opacity-50"
+                                  style={{ background: "rgba(48,125,192,0.15)", border: "1px solid rgba(48,125,192,0.3)", color: "#307DC0" }}
+                                >
+                                  <Plus size={11} /> Add
+                                </button>
+                              </div>
+                              {addItemErr && <p className="text-uw-danger text-[11px] mt-1">{addItemErr}</p>}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 </>)}
@@ -610,7 +923,7 @@ export function RerunDealModal({
                               value={comp.category}
                               onChange={(e) => updateEditableComp(i, "category", e.target.value)}
                               disabled={disabled || !comp.included}
-                              className="bg-card border border-edge rounded px-2 py-1 text-white text-[11px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
+                              className="bg-card border border-edge rounded-md px-2 py-0.5 text-white text-[10px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
                             >
                               {COMP_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                             </select>
@@ -621,7 +934,7 @@ export function RerunDealModal({
                             {/* Price */}
                             <div className="col-span-2">
                               <label className="text-[9px] text-muted uppercase tracking-wider">Price</label>
-                              <div className="flex items-center bg-card border border-edge rounded overflow-hidden focus-within:border-brand transition-colors mt-0.5">
+                              <div className="flex items-center bg-card border border-edge rounded-md overflow-hidden focus-within:border-brand transition-colors mt-0.5">
                                 <span className="text-muted text-[11px] pl-1.5">$</span>
                                 <input
                                   type="text"
@@ -641,7 +954,7 @@ export function RerunDealModal({
                                 value={comp.sqft}
                                 onChange={(e) => updateEditableComp(i, "sqft", e.target.value.replace(/[^0-9]/g, ""))}
                                 disabled={disabled || !comp.included}
-                                className="mt-0.5 w-full bg-card border border-edge rounded px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                                className="mt-0.5 w-full bg-card border border-edge rounded-md px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
 
@@ -653,7 +966,7 @@ export function RerunDealModal({
                                 value={comp.pricePerSqft}
                                 onChange={(e) => updateEditableComp(i, "pricePerSqft", e.target.value.replace(/[^0-9]/g, ""))}
                                 disabled={disabled || !comp.included}
-                                className="mt-0.5 w-full bg-brand/5 border border-brand/40 rounded px-1.5 py-1 text-brand text-[11px] font-semibold focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                                className="mt-0.5 w-full bg-brand/5 border border-brand/40 rounded-md px-1.5 py-1 text-brand text-[11px] font-semibold focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
 
@@ -665,7 +978,7 @@ export function RerunDealModal({
                                 value={comp.beds}
                                 onChange={(e) => updateEditableComp(i, "beds", e.target.value.replace(/[^0-9.]/g, ""))}
                                 disabled={disabled || !comp.included}
-                                className="mt-0.5 w-full bg-card border border-edge rounded px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                                className="mt-0.5 w-full bg-card border border-edge rounded-md px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
 
@@ -677,7 +990,7 @@ export function RerunDealModal({
                                 value={comp.baths}
                                 onChange={(e) => updateEditableComp(i, "baths", e.target.value.replace(/[^0-9.]/g, ""))}
                                 disabled={disabled || !comp.included}
-                                className="mt-0.5 w-full bg-card border border-edge rounded px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                                className="mt-0.5 w-full bg-card border border-edge rounded-md px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
 
@@ -690,19 +1003,19 @@ export function RerunDealModal({
                                 placeholder="—"
                                 onChange={(e) => updateEditableComp(i, "lotSizeSqft", e.target.value.replace(/[^0-9]/g, ""))}
                                 disabled={disabled || !comp.included}
-                                className="mt-0.5 w-full bg-card border border-edge rounded px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                                className="mt-0.5 w-full bg-card border border-edge rounded-md px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
 
                             {/* Date */}
                             <div>
                               <label className="text-[9px] text-muted uppercase tracking-wider">Date</label>
-                              <input
-                                type="date"
+                              <SingleDateInput
                                 value={comp.saleDate}
-                                onChange={(e) => updateEditableComp(i, "saleDate", e.target.value)}
+                                onChange={(v) => updateEditableComp(i, "saleDate", v)}
                                 disabled={disabled || !comp.included}
-                                className="mt-0.5 w-full bg-card border border-edge rounded px-1.5 py-1 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
+                                placeholder="—"
+                                className="mt-0.5 w-full bg-card border border-edge rounded-md px-1.5 py-1 text-white text-[11px] focus:outline-none transition-colors disabled:opacity-50"
                               />
                             </div>
                           </div>
@@ -766,94 +1079,92 @@ export function RerunDealModal({
                               value={comp.compType}
                               onChange={(e) => updateComp(comp.id, "compType", e.target.value)}
                               disabled={disabled}
-                              className="mt-1 w-full bg-card border border-edge rounded px-2.5 py-1.5 text-white text-[12px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
+                              className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1 text-white text-[11px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
                             >
                               {COMP_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                             </select>
                           </div>
 
-                          {/* Price + Date */}
-                          <div className="grid grid-cols-2 gap-2">
+                          {/* Row: Price + Date + Beds + Baths */}
+                          <div className="grid grid-cols-4 gap-2">
                             <div>
                               <label className="text-[10px] text-muted uppercase tracking-wider">Price Sold</label>
-                              <div className="mt-1 flex items-center bg-card border border-edge rounded overflow-hidden focus-within:border-brand transition-colors">
-                                <span className="text-muted text-[12px] pl-2">$</span>
+                              <div className="mt-1 flex items-center bg-card border border-edge rounded-md overflow-hidden focus-within:border-brand transition-colors">
+                                <span className="text-muted text-[11px] pl-2">$</span>
                                 <input
                                   type="text"
                                   placeholder="0"
                                   value={comp.salePrice}
                                   onChange={(e) => updateComp(comp.id, "salePrice", e.target.value.replace(/[^0-9]/g, ""))}
                                   disabled={disabled}
-                                  className="flex-1 bg-transparent px-1.5 py-1.5 text-white text-[12px] focus:outline-none disabled:opacity-50 tabular-nums"
+                                  className="flex-1 min-w-0 bg-transparent px-1.5 py-1.5 text-white text-[11px] focus:outline-none disabled:opacity-50 tabular-nums"
                                 />
                               </div>
                             </div>
                             <div>
-                              <label className="text-[10px] text-muted uppercase tracking-wider">Last Sold Date</label>
-                              <input
-                                type="date"
+                              <label className="text-[10px] text-muted uppercase tracking-wider">Sold Date</label>
+                              <SingleDateInput
                                 value={comp.saleDate}
-                                onChange={(e) => updateComp(comp.id, "saleDate", e.target.value)}
+                                onChange={(v) => updateComp(comp.id, "saleDate", v)}
                                 disabled={disabled}
-                                className="mt-1 w-full bg-card border border-edge rounded px-2.5 py-1.5 text-white text-[12px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
+                                placeholder="—"
+                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none transition-colors disabled:opacity-50"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted uppercase tracking-wider">Beds</label>
+                              <input type="text" placeholder="—" value={comp.beds}
+                                onChange={(e) => updateComp(comp.id, "beds", e.target.value.replace(/[^0-9.]/g, ""))}
+                                disabled={disabled}
+                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted uppercase tracking-wider">Baths</label>
+                              <input type="text" placeholder="—" value={comp.baths}
+                                onChange={(e) => updateComp(comp.id, "baths", e.target.value.replace(/[^0-9.]/g, ""))}
+                                disabled={disabled}
+                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
                           </div>
 
-                          {/* Beds / Baths / Sqft */}
-                          <div className="grid grid-cols-3 gap-2">
-                            {(["beds", "baths", "sqft"] as const).map((field) => (
-                              <div key={field}>
-                                <label className="text-[10px] text-muted uppercase tracking-wider capitalize">{field}</label>
-                                <input
-                                  type="text"
-                                  placeholder="—"
-                                  value={comp[field]}
-                                  onChange={(e) => updateComp(comp.id, field, e.target.value.replace(/[^0-9.]/g, ""))}
-                                  disabled={disabled}
-                                  className="mt-1 w-full bg-card border border-edge rounded px-2.5 py-1.5 text-white text-[12px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
-                                />
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Lot Size / Year Built */}
-                          <div className="grid grid-cols-2 gap-2">
+                          {/* Row: Sqft + Lot Size + Year Built + Construction */}
+                          <div className="grid grid-cols-4 gap-2">
                             <div>
-                              <label className="text-[10px] text-muted uppercase tracking-wider">Lot Size (sqft)</label>
-                              <input
-                                type="text"
-                                placeholder="—"
-                                value={comp.lotSizeSqft}
+                              <label className="text-[10px] text-muted uppercase tracking-wider">Sqft</label>
+                              <input type="text" placeholder="—" value={comp.sqft}
+                                onChange={(e) => updateComp(comp.id, "sqft", e.target.value.replace(/[^0-9.]/g, ""))}
+                                disabled={disabled}
+                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] text-muted uppercase tracking-wider">Lot sqft</label>
+                              <input type="text" placeholder="—" value={comp.lotSizeSqft}
                                 onChange={(e) => updateComp(comp.id, "lotSizeSqft", e.target.value.replace(/[^0-9]/g, ""))}
                                 disabled={disabled}
-                                className="mt-1 w-full bg-card border border-edge rounded px-2.5 py-1.5 text-white text-[12px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
                             <div>
                               <label className="text-[10px] text-muted uppercase tracking-wider">Year Built</label>
-                              <input
-                                type="text"
-                                placeholder="—"
-                                value={comp.yearBuilt}
+                              <input type="text" placeholder="—" value={comp.yearBuilt}
                                 onChange={(e) => updateComp(comp.id, "yearBuilt", e.target.value.replace(/[^0-9]/g, ""))}
                                 disabled={disabled}
-                                className="mt-1 w-full bg-card border border-edge rounded px-2.5 py-1.5 text-white text-[12px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
+                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-brand transition-colors disabled:opacity-50 tabular-nums"
                               />
                             </div>
-                          </div>
-
-                          {/* Construction Type */}
-                          <div>
-                            <label className="text-[10px] text-muted uppercase tracking-wider">Construction Type</label>
-                            <select
-                              value={comp.constructionType}
-                              onChange={(e) => updateComp(comp.id, "constructionType", e.target.value)}
-                              disabled={disabled}
-                              className="mt-1 w-full bg-card border border-edge rounded px-2.5 py-1.5 text-white text-[12px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
-                            >
-                              {CONSTRUCTION_OPTIONS.map((o) => <option key={o} value={o}>{o || "— None —"}</option>)}
-                            </select>
+                            <div>
+                              <label className="text-[10px] text-muted uppercase tracking-wider">Construction</label>
+                              <select value={comp.constructionType}
+                                onChange={(e) => updateComp(comp.id, "constructionType", e.target.value)}
+                                disabled={disabled}
+                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
+                              >
+                                {CONSTRUCTION_OPTIONS.map((o) => <option key={o} value={o}>{o || "— None —"}</option>)}
+                              </select>
+                            </div>
                           </div>
                         </div>
                       )}

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateCompany } from "@/app/actions/admin/company";
+import LogoUpload from "./logo-upload";
 import type { PlanId } from "@kpidriver/auth/types";
 import type { AccessRole } from "@/types/database";
 import { C } from "@/components/platform/brand";
@@ -19,6 +20,7 @@ interface Company {
   wallet_balance:     number;
   created_at:         string;
   member_count:       number;
+  logo_url:           string | null;
 }
 
 interface Props {
@@ -118,6 +120,12 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
                 Found in your GoHighLevel sub-account URL. Used to route incoming calls to this company.
               </p>
             </div>
+
+            {company && (
+              <div style={{ paddingTop: 4, borderTop: `1px solid ${C.border}` }}>
+                <LogoUpload companyId={company.id} currentLogoUrl={company.logo_url} />
+              </div>
+            )}
           </div>
 
           {err && (

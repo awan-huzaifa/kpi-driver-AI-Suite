@@ -26,7 +26,7 @@ export default async function CompanySettingsPage() {
   const { data: company } = profile?.company_id
     ? await supabase
         .from("companies")
-        .select("id, name, ghl_sub_account_id, wallet_balance, created_at")
+        .select("id, name, ghl_sub_account_id, wallet_balance, created_at, logo_url")
         .eq("id", profile.company_id)
         .single()
     : { data: null };
@@ -59,6 +59,7 @@ export default async function CompanySettingsPage() {
         wallet_balance:     company.wallet_balance,
         created_at:         company.created_at,
         member_count:       memberCount ?? 0,
+        logo_url:           (company as any).logo_url ?? null,
       } : null}
     />
   );

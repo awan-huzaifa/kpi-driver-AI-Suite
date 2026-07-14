@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -9,6 +9,7 @@ import {
   Home, Users, CreditCard, Settings,
   ChevronDown, Lock, LogOut, ShieldCheck, SlidersHorizontal,
 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { C } from './brand'
 import { APP_REGISTRY, type Access, type AppEntry, type SubNavItem } from './app-data'
 
@@ -199,7 +200,31 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
   const isSuperAdmin = accessRole === 'super_admin'
   const pathname     = usePathname()
   const router       = useRouter()
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsOpen,    setSettingsOpen]    = useState(false)
+  const [companyLogoUrl,  setCompanyLogoUrl]  = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user: u } }) => {
+      if (!u) return
+      supabase
+        .from('users')
+        .select('company_id')
+        .eq('id', u.id)
+        .single()
+        .then(({ data: profile }) => {
+          if (!profile?.company_id) return
+          supabase
+            .from('companies')
+            .select('logo_url')
+            .eq('id', profile.company_id)
+            .single()
+            .then(({ data: co }) => {
+              if ((co as any)?.logo_url) setCompanyLogoUrl((co as any).logo_url)
+            })
+        })
+    })
+  }, [])
 
   const display  = user.fullName ?? user.email.split('@')[0]
   const initials = display[0]?.toUpperCase() ?? 'U'
@@ -228,16 +253,27 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
 
       {/* Logo */}
       <div style={{
-        padding: '16px 18px', borderBottom: `1px solid ${C.border}`,
-        display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+        padding: '14px 18px', borderBottom: `1px solid ${C.border}`,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: 6, flexShrink: 0,
       }}>
-        <Image src="/logo.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: 'contain', flexShrink: 0 }} priority />
-        <p style={{ fontSize: 12, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
-          <span style={{ color: C.green }}>Built By </span>
-          <span style={{ color: C.dimText }}>RE Investors</span>
-          <span style={{ color: C.green }}>, For </span>
-          <span style={{ color: C.dimText }}>RE Investors</span>
-        </p>
+        {companyLogoUrl ? (
+          <img
+            src={companyLogoUrl}
+            alt="Company logo"
+            style={{ maxWidth: 160, maxHeight: 44, objectFit: 'contain' }}
+          />
+        ) : (
+          <>
+            <Image src="/logo.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: 'contain' }} priority />
+            <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5, textAlign: 'center' }}>
+              <span style={{ color: C.green }}>Built By </span>
+              <span style={{ color: C.dimText }}>RE Investors</span>
+              <span style={{ color: C.green }}>, For </span>
+              <span style={{ color: C.dimText }}>RE Investors</span>
+            </p>
+          </>
+        )}
       </div>
 
       {/* Home */}

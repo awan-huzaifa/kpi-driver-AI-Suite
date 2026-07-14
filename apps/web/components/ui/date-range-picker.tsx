@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type DatePeriod = "today" | "yesterday" | "7d" | "30d" | "month" | "all" | "custom";
 
@@ -71,9 +72,11 @@ interface CalendarPopupProps {
   to:        string;
   onSelect:  (ymd: string) => void;
   onClose:   () => void;
+  compact?:  boolean;
+  align?:    "left" | "right";
 }
 
-function CalendarPopup({ value, from, to, onSelect, onClose }: CalendarPopupProps) {
+function CalendarPopup({ value, from, to, onSelect, onClose, compact, align = "left" }: CalendarPopupProps) {
   const now      = new Date();
   const initDate = parseYMD(value) ?? now;
   const [viewYear,  setViewYear]  = useState(initDate.getFullYear());
@@ -125,47 +128,49 @@ function CalendarPopup({ value, from, to, onSelect, onClose }: CalendarPopupProp
     <div
       ref={ref}
       style={{
-        position: "absolute", zIndex: 9999, top: "calc(100% + 6px)", left: 0,
+        position: "absolute", zIndex: 9999, top: "calc(100% + 6px)",
+        ...(align === "right" ? { right: 0 } : { left: 0 }),
         background: BG, border: "1px solid rgba(48,125,192,0.25)",
-        borderRadius: 14, padding: "16px 14px",
+        borderRadius: compact ? 10 : 14,
+        padding: compact ? "10px 10px" : "16px 14px",
         boxShadow: "0 20px 60px rgba(0,0,0,0.6), 0 4px 16px rgba(0,0,0,0.4)",
-        minWidth: 260,
+        minWidth: compact ? 210 : 260,
         userSelect: "none",
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >
       {/* Month nav */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: compact ? 8 : 12 }}>
         <button
           onClick={prevMonth}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", padding: "2px 6px", borderRadius: 6, lineHeight: 1 }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", padding: "2px 4px", borderRadius: 6, lineHeight: 1 }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#e2e8f0")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
         >
-          <ChevronLeft size={15} />
+          <ChevronLeft size={compact ? 13 : 15} />
         </button>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "#e2e8f0" }}>
+        <span style={{ fontSize: compact ? 11 : 13, fontWeight: 700, color: "#e2e8f0" }}>
           {MONTH_NAMES[viewMonth]} {viewYear}
         </span>
         <button
           onClick={nextMonth}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", padding: "2px 6px", borderRadius: 6, lineHeight: 1 }}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", padding: "2px 4px", borderRadius: 6, lineHeight: 1 }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#e2e8f0")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
         >
-          <ChevronRight size={15} />
+          <ChevronRight size={compact ? 13 : 15} />
         </button>
       </div>
 
       {/* Day-of-week headers */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: compact ? 1 : 2, marginBottom: compact ? 2 : 4 }}>
         {DAY_NAMES.map((d) => (
-          <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#334155", paddingBottom: 4 }}>{d}</div>
+          <div key={d} style={{ textAlign: "center", fontSize: 9, fontWeight: 700, color: "#334155", paddingBottom: compact ? 2 : 4 }}>{d}</div>
         ))}
       </div>
 
       {/* Day grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: compact ? 1 : 2 }}>
         {cells.map((day, i) => {
           if (!day) return <div key={i} />;
           const state = dayState(day);
@@ -178,8 +183,8 @@ function CalendarPopup({ value, from, to, onSelect, onClose }: CalendarPopupProp
               key={i}
               onClick={() => { onSelect(ymd); onClose(); }}
               style={{
-                width: "100%", aspectRatio: "1", border: "none", borderRadius: 7,
-                fontSize: 12, fontWeight: isSelected ? 700 : 400,
+                width: "100%", aspectRatio: "1", border: "none", borderRadius: compact ? 5 : 7,
+                fontSize: compact ? 10 : 12, fontWeight: isSelected ? 700 : 400,
                 cursor: "pointer",
                 transition: "background 0.1s, color 0.1s",
                 background: isSelected ? "#307DC0"
@@ -207,12 +212,12 @@ function CalendarPopup({ value, from, to, onSelect, onClose }: CalendarPopupProp
       </div>
 
       {/* Today shortcut */}
-      <div style={{ marginTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 10, textAlign: "center" }}>
+      <div style={{ marginTop: compact ? 8 : 12, borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: compact ? 7 : 10, textAlign: "center" }}>
         <button
           onClick={() => { onSelect(toYMD(now)); onClose(); }}
           style={{
             background: "none", border: "none", cursor: "pointer",
-            fontSize: 11, fontWeight: 600, color: "#307DC0",
+            fontSize: compact ? 10 : 11, fontWeight: 600, color: "#307DC0",
             letterSpacing: "0.03em",
           }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#78ABD6")}
@@ -285,6 +290,51 @@ interface Props {
   onCustomTo:   (v: string) => void;
   /** Highlight color for the active preset. Defaults to #307DC0 (blue). */
   activeColor?: string;
+}
+
+/* ── SingleDateInput — styled trigger + same CalendarPopup ─── */
+
+interface SingleDateInputProps {
+  value:      string;           // YYYY-MM-DD or ""
+  onChange:   (ymd: string) => void;
+  disabled?:  boolean;
+  className?: string;           // applied to the trigger button
+  placeholder?: string;
+}
+
+export function SingleDateInput({ value, onChange, disabled, className, placeholder = "Pick date" }: SingleDateInputProps) {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+
+  const display = value ? fmtDisplay(value) : placeholder;
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        type="button"
+        onClick={() => { if (!disabled) setOpen((o) => !o); }}
+        disabled={disabled}
+        className={cn(
+          "w-full text-left",
+          !value && "text-[#475569]",
+          className,
+        )}
+      >
+        {display}
+      </button>
+      {open && (
+        <CalendarPopup
+          value={value}
+          from=""
+          to=""
+          onSelect={(ymd) => { onChange(ymd); }}
+          onClose={close}
+          compact
+          align="right"
+        />
+      )}
+    </div>
+  );
 }
 
 export default function DateRangePicker({

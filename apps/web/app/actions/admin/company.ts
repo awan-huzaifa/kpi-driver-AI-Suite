@@ -37,3 +37,17 @@ export async function updateCompany(data: { name: string; ghl_sub_account_id: st
   if (error) throw new Error(error.message);
   revalidatePath("/settings/company");
 }
+
+export async function saveCompanyLogo(logoUrl: string | null) {
+  const caller = await getCallerProfile();
+  if (!caller.company_id) throw new Error("Your account is not assigned to a company.");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("companies")
+    .update({ logo_url: logoUrl })
+    .eq("id", caller.company_id);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/settings/company");
+}

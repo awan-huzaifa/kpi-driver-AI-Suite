@@ -298,10 +298,16 @@ export interface ManualComp {
   constructionType?: string;
 }
 
+export type RepairMode = 'known_cost' | 'scope_known' | 'standard';
+
 export interface UnderwriteRequest {
   address: string;
   notes?: string;
-  condition: ConditionGrade;
+  overrides?: { beds?: number; baths?: number; sqft?: number }; // override Zillow values
+  repairMode?: RepairMode;      // defaults to 'standard'
+  condition?: ConditionGrade;   // required for scope_known + standard; optional for known_cost
+  knownRepairCost?: number;     // Mode 1 only: user-provided definite repair cost
+  customPerSqft?: number;       // Mode 3 only: overrides the default per-sqft range
   marketMultiplier: number;
   extraItems: ExtraItem[];
   investorProfitPct?: number;   // 0–1, defaults to 0.15

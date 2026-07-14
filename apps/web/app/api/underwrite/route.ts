@@ -5,7 +5,7 @@ import { logUsage } from "@/lib/ai-usage";
 import { autoTopupIfNeeded } from "@/lib/wallet";
 import { searchProperty, fetchPhotosByAddress } from "@/lib/underwriting/axesso";
 import { searchComps } from "@/lib/underwriting/rentcast";
-import { calcRepairCosts, calcMaxOffer, calcARVAdjustments, ARV_LOW_FACTOR, ARV_HIGH_FACTOR } from "@/lib/underwriting/calculations";
+import { calcRepairCosts, calcRepairCostsKnown, calcRepairCostsScope, calcMaxOffer, calcARVAdjustments, ARV_LOW_FACTOR, ARV_HIGH_FACTOR } from "@/lib/underwriting/calculations";
 import {
   assessPropertyCondition,
   validateAndCategorizeComps,
@@ -16,6 +16,7 @@ import {
 import type {
   NormalizedComp,
   ARVResult,
+  RepairCosts,
   ConditionGrade,
   ManualComp,
   PropertyDetails,
@@ -139,15 +140,23 @@ export async function POST(request: NextRequest) {
   }
 
   const validGrades: ConditionGrade[] = ["excellent", "good", "fair", "poor"];
-  if (!validGrades.includes(body.condition)) {
-    return NextResponse.json<UnderwriteErrorResponse>(
-      { error: "condition must be excellent, good, fair, or poor" },
-      { status: 400 }
-    );
+  const repairMode = body.repairMode ?? "standard";
+
+  let condition: ConditionGrade;
+  if (repairMode === "known_cost") {
+    // Condition not required — will be derived from Claude's assessment after Call 1
+    condition = (body.condition && validGrades.includes(body.condition)) ? body.condition : "fair";
+  } else {
+    if (!body.condition || !validGrades.includes(body.condition)) {
+      return NextResponse.json<UnderwriteErrorResponse>(
+        { error: "condition is required for this repair mode" },
+        { status: 400 }
+      );
+    }
+    condition = body.condition;
   }
 
   const notes              = body.notes?.trim() || undefined;
-  const condition          = body.condition;
   const marketMultiplier   = typeof body.marketMultiplier === "number" ? body.marketMultiplier : 1.0;
   const extraItems         = Array.isArray(body.extraItems) ? body.extraItems : [];
   const investorProfitPct  = typeof body.investorProfitPct === "number"
@@ -259,6 +268,13 @@ export async function POST(request: NextRequest) {
       throw new Error("Property not found — please enter a valid property address.");
     }
     if (notes) property.notes = notes;
+
+    // Apply user overrides for beds/baths/sqft (Zillow sometimes returns wrong data)
+    const ov = body.overrides;
+    if (ov?.beds  && ov.beds  > 0) property.beds  = ov.beds;
+    if (ov?.baths && ov.baths > 0) property.baths = ov.baths;
+    if (ov?.sqft  && ov.sqft  > 0) property.sqft  = ov.sqft;
+
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[STEP 2] PROPERTY", JSON.stringify(property, null, 2));
 
@@ -324,10 +340,20 @@ export async function POST(request: NextRequest) {
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("[STEP 7] CLAUDE CALL 1 — CONDITION ASSESSMENT", JSON.stringify(conditionAssessment, null, 2));
 
-    // ── STEP 8: Calculate repair costs from user-selected condition grade ─────
+    // ── STEP 8: Calculate repair costs — branch on repair mode ───────────────
     const arvAdjustment = calcARVAdjustments(property);
-    const repairCosts   = calcRepairCosts(condition, property.sqft, marketMultiplier, extraItems);
+
+    let repairCosts: RepairCosts;
+    if (repairMode === "known_cost") {
+      repairCosts = calcRepairCostsKnown(typeof body.knownRepairCost === "number" ? body.knownRepairCost : 0);
+    } else if (repairMode === "scope_known") {
+      repairCosts = calcRepairCostsScope(condition, extraItems);
+    } else {
+      repairCosts = calcRepairCosts(condition, property.sqft, marketMultiplier, extraItems, body.customPerSqft);
+    }
+
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    console.log("[STEP 8] REPAIR MODE:", repairMode);
     console.log("[STEP 8] ARV ADJUSTMENT:", arvAdjustment);
     console.log("[STEP 8] REPAIR COSTS", JSON.stringify(repairCosts, null, 2));
 
@@ -420,9 +446,15 @@ export async function POST(request: NextRequest) {
     console.log("[STEP 11] MAX OFFER RESULT", JSON.stringify(maxOfferResult, null, 2));
 
     // ── STEP 12: Claude Call 4 — Final underwriting report ───────────────────
+    // For "known_cost" mode, derive condition grade from Claude's visual score
+    // rather than the placeholder 'fair' used during repair calculation.
+    const reportConditionGrade: ConditionGrade = repairMode === "known_cost"
+      ? (conditionAssessment.score >= 8 ? "excellent" : conditionAssessment.score >= 6 ? "good" : conditionAssessment.score >= 4 ? "fair" : "poor")
+      : condition;
+
     const { _tokens: call4Tokens, ...report } = await generateUnderwritingReport({
       property,
-      conditionGrade: condition,
+      conditionGrade: reportConditionGrade,
       marketMultiplier,
       condition: conditionAssessment,
       repairs: repairCosts,
@@ -482,7 +514,7 @@ export async function POST(request: NextRequest) {
         baths: property.baths,
         sqft: Number(property.sqft),
         year_built: property.yearBuilt,
-        condition: condition,
+        condition: reportConditionGrade,
         arv_low: arvResult.arvLow,
         arv_high: arvResult.arvHigh,
         avg_price_per_sqft: arvResult.avgPricePerSqft,

@@ -23,28 +23,76 @@ const REPAIR_PER_SQFT: Record<ConditionGrade, { low: number; high: number }> = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STEP 7 — Repair costs from user-selected condition grade
+// STEP 7a — Mode: "known_cost" — user supplied a definite repair dollar amount
+// ─────────────────────────────────────────────────────────────────────────────
+export function calcRepairCostsKnown(knownCost: number): RepairCosts {
+  console.log("\n" + "─".repeat(50));
+  console.log("CALC — calcRepairCostsKnown — knownCost:", knownCost);
+  return {
+    condition:        "fair",  // placeholder — not used financially in this mode
+    sqft:             0,
+    marketMultiplier: 1,
+    per_sqft_low:     0,
+    per_sqft_high:    0,
+    baseLow:          knownCost,
+    baseHigh:         knownCost,
+    extraItemsTotal:  0,
+    low:              knownCost,
+    high:             knownCost,
+    checkedExtraItems: [],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP 7b — Mode: "scope_known" — cost comes entirely from itemised repair list
+// extraItems arriving here are pre-filtered to only the checked/added ones
+// ─────────────────────────────────────────────────────────────────────────────
+export function calcRepairCostsScope(condition: ConditionGrade, extraItems: ExtraItem[]): RepairCosts {
+  const checkedExtraItems = extraItems.map(({ label, cost }) => ({ label, cost }));
+  const total = checkedExtraItems.reduce((sum, i) => sum + i.cost, 0);
+  console.log("\n" + "─".repeat(50));
+  console.log("CALC — calcRepairCostsScope — condition:", condition, "| items:", checkedExtraItems.length, "| total:", total);
+  return {
+    condition,
+    sqft:             0,
+    marketMultiplier: 1,
+    per_sqft_low:     0,
+    per_sqft_high:    0,
+    baseLow:          0,
+    baseHigh:         0,
+    extraItemsTotal:  total,
+    low:              total,
+    high:             total,
+    checkedExtraItems,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP 7c — Mode: "standard" — condition grade × sqft, optional custom per-sqft
 // ─────────────────────────────────────────────────────────────────────────────
 export function calcRepairCosts(
   condition: ConditionGrade,
   sqft: number,
   marketMultiplier: number,
-  extraItems: ExtraItem[]
+  extraItems: ExtraItem[],
+  customPerSqft?: number,
 ): RepairCosts {
-  const range = REPAIR_PER_SQFT[condition];
+  const range       = REPAIR_PER_SQFT[condition];
+  const perSqftLow  = (customPerSqft !== undefined && customPerSqft > 0) ? customPerSqft : range.low;
+  const perSqftHigh = (customPerSqft !== undefined && customPerSqft > 0) ? customPerSqft : range.high;
 
   console.log("\n" + "─".repeat(50));
   console.log("CALC — calcRepairCosts");
   console.log("─".repeat(50));
-  console.log("[calcRepairCosts] INPUTS → condition:", condition, "| sqft:", sqft, "| marketMultiplier:", marketMultiplier);
-  console.log("[calcRepairCosts] REPAIR RATE FOR CONDITION → low: $", range.low, "/sqft | high: $", range.high, "/sqft");
+  console.log("[calcRepairCosts] INPUTS → condition:", condition, "| sqft:", sqft, "| marketMultiplier:", marketMultiplier, "| customPerSqft:", customPerSqft);
+  console.log("[calcRepairCosts] REPAIR RATE → low: $", perSqftLow, "/sqft | high: $", perSqftHigh, "/sqft");
   console.log("[calcRepairCosts] ALL extraItems:", JSON.stringify(extraItems, null, 2));
 
-  const baseLow  = Math.round(range.low  * sqft * marketMultiplier);
-  const baseHigh = Math.round(range.high * sqft * marketMultiplier);
+  const baseLow  = Math.round(perSqftLow  * sqft * marketMultiplier);
+  const baseHigh = Math.round(perSqftHigh * sqft * marketMultiplier);
 
-  console.log("[calcRepairCosts] BASE CALC → baseLow:", range.low, "×", sqft, "×", marketMultiplier, "=", baseLow);
-  console.log("[calcRepairCosts] BASE CALC → baseHigh:", range.high, "×", sqft, "×", marketMultiplier, "=", baseHigh);
+  console.log("[calcRepairCosts] BASE CALC → baseLow:", perSqftLow, "×", sqft, "×", marketMultiplier, "=", baseLow);
+  console.log("[calcRepairCosts] BASE CALC → baseHigh:", perSqftHigh, "×", sqft, "×", marketMultiplier, "=", baseHigh);
 
   const checkedExtraItems = extraItems
     .filter((item) => item.checked)
@@ -59,8 +107,8 @@ export function calcRepairCosts(
     condition,
     sqft,
     marketMultiplier,
-    per_sqft_low:  range.low,
-    per_sqft_high: range.high,
+    per_sqft_low:  perSqftLow,
+    per_sqft_high: perSqftHigh,
     baseLow,
     baseHigh,
     extraItemsTotal,

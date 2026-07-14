@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { User, Lock, CheckCircle2, Save, Phone, Mail } from "lucide-react";
+import { User, Lock, CheckCircle2, Save, Mail } from "lucide-react";
 import PlatformShell, { type Access } from "@/components/platform/PlatformShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import type { AccessRole } from "@/types/database";
 import { C } from "@/components/platform/brand";
 
 interface Props {
-  currentUser: { id: string; email: string; fullName: string | null; phone: string | null };
+  currentUser: { id: string; email: string; fullName: string | null };
   planId:      PlanId | null;
   access:      Access;
   accessRole:  AccessRole;
@@ -22,7 +22,6 @@ interface Props {
 export default function AccountSettingsClient({ currentUser, planId, access, accessRole }: Props) {
   /* ── Profile state ── */
   const [fullName, setFullName] = useState(currentUser.fullName ?? "");
-  const [phone,    setPhone]    = useState(currentUser.phone    ?? "");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaved,  setProfileSaved]  = useState(false);
   const [profileErr,    setProfileErr]    = useState<string | null>(null);
@@ -37,7 +36,7 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
   async function handleProfileSave() {
     setProfileSaving(true); setProfileSaved(false); setProfileErr(null);
     try {
-      await updateProfile({ full_name: fullName, phone });
+      await updateProfile({ full_name: fullName });
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
     } catch (e) {
@@ -114,25 +113,6 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
               </p>
             </div>
 
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <div style={{ position: "relative" }}>
-                <Phone size={14} style={{
-                  position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
-                  color: C.dimText, pointerEvents: "none",
-                }} />
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 555 000 0000"
-                  style={{ paddingLeft: 34 }}
-                />
-              </div>
-              <p style={{ fontSize: 11, fontWeight: 500, color: C.dimText, marginTop: 5 }}>
-                Used to match your training calls in the Training Coach.
-              </p>
-            </div>
           </div>
 
           {profileErr && <ErrorMsg>{profileErr}</ErrorMsg>}
