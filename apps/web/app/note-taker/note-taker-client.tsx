@@ -426,7 +426,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
-                  textTransform: "uppercase", color: "#e2e8f0",
+                  textTransform: "uppercase", color: "#e2e8f0", textAlign: "center",
                 }}>{h}</th>
               ))}
             </tr>

@@ -40,9 +40,9 @@ export function MultiSelect({ options, selected, onChange, placeholder, classNam
           className
         )}
         style={{
-          border: "1px solid rgba(255,255,255,0.08)",
-          color:  selected.length > 0 ? "#e2e8f0" : "#475569",
-          background: "transparent",
+          border:     "1px solid rgba(255,255,255,0.08)",
+          color:      "#f1f5f9",
+          background: "rgba(255,255,255,0.04)",
         }}
       >
         <span className="truncate">{label}</span>

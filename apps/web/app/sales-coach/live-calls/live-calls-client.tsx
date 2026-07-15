@@ -230,6 +230,7 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
                       { icon: Clock,    val: fmtDuration(call.duration_sec)          },
                       { icon: Calendar, val: `${fmtDate(call.created_at)} · ${fmtTime(call.created_at)}` },
                       { icon: Mic,      val: call.agent?.full_name ?? call.agent_phone },
+                      ...(call.agent_phone ? [{ icon: Phone, val: `Agent: ${call.agent_phone}` }] : []),
                     ].map(({ icon: Icon, val }) => (
                       <span key={val} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#475569" }}>
                         <Icon size={10} />

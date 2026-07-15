@@ -54,14 +54,6 @@ function meetsMinDuration(sec: number | null, minMinutes: typeof DURATIONS[numbe
   return sec >= Number(minMinutes) * 60;
 }
 
-function periodDays(period: DatePeriod): number {
-  if (period === "today" || period === "yesterday") return 1;
-  if (period === "7d")    return 7;
-  if (period === "30d")   return 30;
-  if (period === "month") return 30;
-  if (period === "all")   return 60;
-  return 30; // custom
-}
 
 const CHART_COLORS = {
   primary:   "#307DC0",
@@ -79,16 +71,36 @@ function dayLabel(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function computeAnalytics(calls: AnalyticsCall[], period: DatePeriod) {
+function computeAnalytics(calls: AnalyticsCall[], period: DatePeriod, customFrom = "", customTo = "") {
   const scorable = calls.filter(c => c.scorable && c.score !== null);
 
-  // ── Score trend (by day) ────────────────────────────────────────────────────
-  const days = periodDays(period);
-  const trendMap = new Map<string, { total: number; count: number }>();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    trendMap.set(d.toISOString().split("T")[0], { total: 0, count: 0 });
+  // ── Build date buckets from the actual period bounds ────────────────────────
+  const { from: pFrom, to: pTo } = periodBounds(period, customFrom, customTo);
+  const now = new Date();
+  const bucketEnd = pTo ?? now;
+  let bucketStart: Date;
+  if (pFrom) {
+    bucketStart = new Date(pFrom);
+  } else {
+    // "all" with no lower bound — use earliest call date or 60 days ago
+    const minTs = calls.length > 0
+      ? Math.min(...calls.map(c => new Date(c.created_at).getTime()))
+      : now.getTime() - 60 * 86400000;
+    bucketStart = new Date(minTs);
   }
+  bucketStart.setHours(0, 0, 0, 0);
+
+  const trendMap = new Map<string, { total: number; count: number }>();
+  const volMap   = new Map<string, { inbound: number; outbound: number }>();
+  const cur = new Date(bucketStart);
+  while (cur <= bucketEnd) {
+    const key = cur.toISOString().split("T")[0];
+    trendMap.set(key, { total: 0, count: 0 });
+    volMap.set(key,   { inbound: 0, outbound: 0 });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  // ── Score trend (by day) ────────────────────────────────────────────────────
   for (const c of scorable) {
     const key = c.created_at.split("T")[0];
     const ex  = trendMap.get(key);
@@ -101,15 +113,10 @@ function computeAnalytics(calls: AnalyticsCall[], period: DatePeriod) {
   }));
 
   // ── Call volume by day (inbound / outbound) ─────────────────────────────────
-  const volMap = new Map<string, { inbound: number; outbound: number }>();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    volMap.set(d.toISOString().split("T")[0], { inbound: 0, outbound: 0 });
-  }
   for (const c of calls) {
     const key = c.created_at.split("T")[0];
     const ex  = volMap.get(key);
-    if (ex) ex[c.direction]++;
+    if (ex) ex[c.direction as "inbound" | "outbound"]++;
   }
   const callVolume = Array.from(volMap.entries()).map(([date, v]) => ({
     date: dayLabel(date), ...v, total: v.inbound + v.outbound,
@@ -167,6 +174,27 @@ function computeAnalytics(calls: AnalyticsCall[], period: DatePeriod) {
     color: b.color,
   }));
 
+  // ── Lead source breakdown ────────────────────────────────────────────────────
+  const lsMap = new Map<string, { count: number; scoreTotal: number; scoreCount: number }>();
+  for (const c of calls) {
+    const ls = c.evaluation?.meta?.lead_source;
+    if (!ls) continue;
+    const ex = lsMap.get(ls);
+    if (ex) {
+      ex.count++;
+      if (c.score !== null) { ex.scoreTotal += c.score; ex.scoreCount++; }
+    } else {
+      lsMap.set(ls, { count: 1, scoreTotal: c.score ?? 0, scoreCount: c.score !== null ? 1 : 0 });
+    }
+  }
+  const leadSourceStats = Array.from(lsMap.entries())
+    .map(([source, { count, scoreTotal, scoreCount }]) => ({
+      source,
+      count,
+      avgScore: scoreCount > 0 ? Math.round((scoreTotal / scoreCount) * 10) / 10 : null,
+    }))
+    .sort((a, b) => b.count - a.count);
+
   // ── Summary stats ───────────────────────────────────────────────────────────
   const totalCalls     = calls.length;
   const avgScore       = scorable.length > 0 ? Math.round(scorable.reduce((s, c) => s + c.score!, 0) / scorable.length) : null;
@@ -177,7 +205,7 @@ function computeAnalytics(calls: AnalyticsCall[], period: DatePeriod) {
 
   return {
     scoreTrend, callVolume, scoreByType, callResults,
-    opportunityLevels, scoreDistribution,
+    opportunityLevels, scoreDistribution, leadSourceStats,
     totalCalls, avgScore, scorableRate, managerReviews,
     inboundCount, outboundCount,
   };
@@ -201,22 +229,55 @@ function ChartTooltip({ active, payload, label }: any) {
   );
 }
 
-function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+function StatCard({ label, value, sub, color = "#307DC0" }: { label: string; value: string | number; sub?: string; color?: string }) {
+  const [hovered, setHovered] = useState(false);
   return (
-    <div className="glass rounded-2xl px-5 py-4">
-      <p className="text-xs font-medium mb-1" style={{ color: "#475569" }}>{label}</p>
-      <p className="text-2xl font-black text-white">{value ?? "—"}</p>
-      {sub && <p className="text-xs mt-0.5" style={{ color: "#334155" }}>{sub}</p>}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderTop:   `2px solid ${color}30`,
+        borderLeft:  `3px solid ${color}`,
+        borderRight: "1px solid rgba(255,255,255,0.06)",
+        borderBottom:"1px solid rgba(255,255,255,0.06)",
+        background:  hovered ? `rgba(255,255,255,0.05)` : "rgba(255,255,255,0.03)",
+        borderRadius: 16,
+        padding: "16px 20px",
+        transform:   hovered ? "translateY(-2px)" : "translateY(0)",
+        boxShadow:   hovered ? `0 8px 24px ${color}20` : "none",
+        transition:  "all 0.2s ease",
+        cursor: "default",
+      }}
+    >
+      <p style={{ fontSize: 10, fontWeight: 700, color: "#475569", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>{label}</p>
+      <p style={{ fontSize: 26, fontWeight: 900, color, margin: 0 }}>{value ?? "—"}</p>
+      {sub && <p style={{ fontSize: 11, color: "#334155", marginTop: 4 }}>{sub}</p>}
     </div>
   );
 }
 
-function ChartCard({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) {
+function ChartCard({ title, sub, children, color = "#307DC0" }: { title: string; sub?: string; children: React.ReactNode; color?: string }) {
+  const [hovered, setHovered] = useState(false);
   return (
-    <div className="glass rounded-2xl p-5">
-      <div className="mb-4">
-        <p className="text-sm font-semibold text-white">{title}</p>
-        {sub && <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{sub}</p>}
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background:   hovered ? "rgba(255,255,255,0.045)" : "rgba(255,255,255,0.03)",
+        border:       `1px solid ${hovered ? `${color}30` : "rgba(255,255,255,0.07)"}`,
+        borderRadius: 16,
+        padding:      20,
+        transform:    hovered ? "translateY(-2px)" : "translateY(0)",
+        boxShadow:    hovered ? `0 8px 32px ${color}15` : "none",
+        transition:   "all 0.2s ease",
+      }}
+    >
+      <div style={{ marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <div style={{ width: 3, minHeight: 34, borderRadius: 99, background: color, flexShrink: 0 }} />
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#f1f5f9", margin: 0 }}>{title}</p>
+          {sub && <p style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{sub}</p>}
+        </div>
       </div>
       {children}
     </div>
@@ -233,12 +294,10 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
   const [view,        setView]        = useState<"my" | "company">("company");
   const [direction,   setDirection]   = useState<typeof DIRECTIONS[number]["value"]>("all");
   const [duration,    setDuration]    = useState<typeof DURATIONS[number]["value"]>("2");
-  const [role,        setRole]        = useState<string>(currentUserAgentType ?? "all");
-  const [scorable,    setScorable]    = useState<typeof SCORABLE_OPTS[number]["value"]>("scorable");
+  const [role,        setRole]        = useState<string>("all");
+  const [scorable,    setScorable]    = useState<typeof SCORABLE_OPTS[number]["value"]>("all");
   const [leadSource,  setLeadSource]  = useState<string>("all");
-  const [agentIds,    setAgentIds]    = useState<string[]>(
-    accessRole === "user" && currentUserId ? [currentUserId] : []
-  );
+  const [agentIds,    setAgentIds]    = useState<string[]>([]);
 
   const agents = useMemo(() => {
     const map = new Map<string, string>();
@@ -268,7 +327,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
     return c;
   }, [calls, companyId, view, accessRole, currentUserId, direction, duration, role, scorable, leadSource, agentIds, period, customFrom, customTo]);
 
-  const data = useMemo(() => computeAnalytics(filtered, period), [filtered, period]);
+  const data = useMemo(() => computeAnalytics(filtered, period, customFrom, customTo), [filtered, period, customFrom, customTo]);
 
   const showCompanyToggle = accessRole === "user";
   const axisStyle = { fontSize: 11, fill: CHART_COLORS.text };
@@ -381,38 +440,38 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
 
       {/* Summary stat cards */}
       <div className="grid grid-cols-2 xl:grid-cols-6 gap-3">
-        <StatCard label="Total Calls"     value={data.totalCalls} />
-        <StatCard label="Avg Score"       value={data.avgScore ?? "—"} sub="/100" />
-        <StatCard label="Scorable Rate"   value={`${data.scorableRate}%`} />
-        <StatCard label="Manager Reviews" value={data.managerReviews} sub="flagged" />
-        <StatCard label="Inbound"         value={data.inboundCount} />
-        <StatCard label="Outbound"        value={data.outboundCount} />
+        <StatCard label="Total Calls"     value={data.totalCalls}           color="#307DC0" />
+        <StatCard label="Avg Score"       value={data.avgScore ?? "—"} sub="/100" color="#43B749" />
+        <StatCard label="Scorable Rate"   value={`${data.scorableRate}%`}   color="#FCAF17" />
+        <StatCard label="Manager Reviews" value={data.managerReviews} sub="flagged" color="#ED1F24" />
+        <StatCard label="Inbound"         value={data.inboundCount}         color="#43B749" />
+        <StatCard label="Outbound"        value={data.outboundCount}        color="#307DC0" />
       </div>
 
       {/* Score trend */}
-      <ChartCard title="Score Trend" sub="Average score per day for scored calls">
+      <ChartCard title="Score Trend" sub="Average score per day for scored calls" color="#43B749">
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={data.scoreTrend} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
               <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor={CHART_COLORS.primary} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0}   />
+                <stop offset="5%"  stopColor={CHART_COLORS.green} stopOpacity={0.3} />
+                <stop offset="95%" stopColor={CHART_COLORS.green} stopOpacity={0}   />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} />
             <XAxis dataKey="date" tick={axisStyle} axisLine={false} tickLine={false} interval="preserveStartEnd" />
             <YAxis domain={[0, 100]} tick={axisStyle} axisLine={false} tickLine={false} />
             <Tooltip content={<ChartTooltip />} cursor={{ stroke: "rgba(255,255,255,0.08)" }} />
-            <Area type="monotone" dataKey="avgScore" name="Avg Score" stroke={CHART_COLORS.primary}
+            <Area type="monotone" dataKey="avgScore" name="Avg Score" stroke={CHART_COLORS.green}
               strokeWidth={2} fill="url(#scoreGrad)" dot={false}
-              activeDot={{ r: 4, fill: CHART_COLORS.primary, strokeWidth: 0 }}
+              activeDot={{ r: 4, fill: CHART_COLORS.green, strokeWidth: 0 }}
               connectNulls />
           </AreaChart>
         </ResponsiveContainer>
       </ChartCard>
 
       {/* Call volume */}
-      <ChartCard title="Call Volume" sub="Inbound vs outbound calls per day">
+      <ChartCard title="Call Volume" sub="Inbound vs outbound calls per day" color="#307DC0">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.callVolume} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barSize={14}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
@@ -430,7 +489,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {/* Score distribution */}
-        <ChartCard title="Score Distribution" sub="Calls by score band">
+        <ChartCard title="Score Distribution" sub="Calls by score band" color="#FCAF17">
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.scoreDistribution} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
@@ -445,7 +504,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         </ChartCard>
 
         {/* Score by agent type */}
-        <ChartCard title="Score by Agent Type" sub="Avg score — FUS vs ACQ">
+        <ChartCard title="Score by Agent Type" sub="Avg score — FUS vs ACQ" color="#307DC0">
           {data.scoreByType.length === 0 ? (
             <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: "#334155" }}>No data</div>
           ) : (
@@ -466,7 +525,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         </ChartCard>
 
         {/* Opportunity level */}
-        <ChartCard title="Opportunity Level" sub="Distribution across scored calls">
+        <ChartCard title="Opportunity Level" sub="Distribution across scored calls" color="#43B749">
           {data.opportunityLevels.every(o => o.count === 0) ? (
             <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: "#334155" }}>No data</div>
           ) : (
@@ -485,26 +544,59 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         </ChartCard>
       </div>
 
-      {/* Call results */}
-      <ChartCard title="Call Results" sub="Outcome breakdown for all calls">
-        {data.callResults.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-sm" style={{ color: "#334155" }}>No data</div>
+      {/* Lead source */}
+      <ChartCard title="Lead Source Breakdown" sub="Call volume and avg score per lead source" color="#FCAF17">
+        {data.leadSourceStats.length === 0 ? (
+          <div className="flex items-center justify-center py-12 text-sm" style={{ color: "#334155" }}>No lead source data — make sure n8n is sending the lead_source field</div>
         ) : (
-          <div className="space-y-2.5">
-            {data.callResults.map((r, i) => {
-              const max = data.callResults[0].count;
-              const pct = Math.round((r.count / max) * 100);
-              const color = RESULT_COLORS[i % RESULT_COLORS.length];
-              return (
-                <div key={r.result} className="flex items-center gap-3">
-                  <span className="text-sm w-44 truncate flex-shrink-0" style={{ color: "#94a3b8" }}>{r.result}</span>
-                  <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: CHART_COLORS.muted }}>
-                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-                  </div>
-                  <span className="text-sm font-semibold w-8 text-right flex-shrink-0" style={{ color }}>{r.count}</span>
-                </div>
-              );
-            })}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 40px" }}>
+            {/* Volume column */}
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Call Volume</p>
+              <div className="space-y-2.5">
+                {data.leadSourceStats.map((r, i) => {
+                  const max = data.leadSourceStats[0].count;
+                  const pct = Math.round((r.count / max) * 100);
+                  const color = RESULT_COLORS[i % RESULT_COLORS.length];
+                  return (
+                    <div key={r.source} className="flex items-center gap-3">
+                      <span className="text-xs w-28 truncate flex-shrink-0" style={{ color: "#94a3b8" }}>{r.source}</span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: CHART_COLORS.muted }}>
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                      <span className="text-xs font-semibold w-6 text-right flex-shrink-0" style={{ color }}>{r.count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Avg score column */}
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Avg Score</p>
+              <div className="space-y-2.5">
+                {data.leadSourceStats.map((r) => {
+                  const score = r.avgScore;
+                  const pct   = score != null ? Math.round((score / 100) * 100) : 0;
+                  const color = score == null ? "#334155"
+                    : score >= 80 ? "#43B749"
+                    : score >= 60 ? "#307DC0"
+                    : score >= 45 ? "#FCAF17"
+                    : "#ED1F24";
+                  return (
+                    <div key={r.source} className="flex items-center gap-3">
+                      <span className="text-xs w-28 truncate flex-shrink-0" style={{ color: "#94a3b8" }}>{r.source}</span>
+                      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: CHART_COLORS.muted }}>
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                      <span className="text-xs font-semibold w-8 text-right flex-shrink-0" style={{ color }}>
+                        {score != null ? score : "—"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </ChartCard>
