@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import type { ConditionGrade, ExtraItem, UploadedPhoto, NormalizedComp, ManualComp, CompCategory, RepairMode } from "@/lib/underwriting/types";
 import { SingleDateInput } from "@/components/ui/date-range-picker";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,9 @@ interface Props {
   initialKnownRepairCost: number;
   initialCustomPerSqft: number;
   initialCustomItems: { label: string; cost: number }[];
+  initialBeds?: number | null;
+  initialBaths?: number | null;
+  initialSqft?: number | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -191,6 +195,7 @@ export function RerunDealModal({
   dealId, address, initialCondition, initialMultiplier, initialCheckedItems,
   initialInvestorProfitPct, initialAssignmentFee, initialNotes, existingComps,
   initialRepairMode, initialKnownRepairCost, initialCustomPerSqft, initialCustomItems,
+  initialBeds, initialBaths, initialSqft,
 }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -216,6 +221,11 @@ export function RerunDealModal({
 
   const [arvSqftOverride, setArvSqftOverride] = useState("");
 
+  // Property overrides — empty = keep original, typed value = override
+  const [overrideBeds,  setOverrideBeds]  = useState("");
+  const [overrideBaths, setOverrideBaths] = useState("");
+  const [overrideSqft,  setOverrideSqft]  = useState("");
+
   // Comp management
   const [editableComps, setEditableComps] = useState<EditableCompForm[]>(() => buildEditableComps(existingComps));
   const [manualComps, setManualComps] = useState<ManualCompForm[]>([]);
@@ -237,6 +247,7 @@ export function RerunDealModal({
     setCustomItems(initialCustomItems);
     setNewItemLabel(""); setNewItemCost(""); setAddItemErr("");
     setArvSqftOverride("");
+    setOverrideBeds(""); setOverrideBaths(""); setOverrideSqft("");
     setEditableComps(buildEditableComps(existingComps));
     setManualComps([]);
     setActiveTab("settings");
@@ -360,10 +371,16 @@ export function RerunDealModal({
     }
 
     try {
+      const propOverrides: Record<string, number> = {};
+      if (overrideBeds.trim())  propOverrides.beds  = parseFloat(overrideBeds);
+      if (overrideBaths.trim()) propOverrides.baths = parseFloat(overrideBaths);
+      if (overrideSqft.trim())  propOverrides.sqft  = parseInt(overrideSqft.replace(/[^0-9]/g, ""), 10);
+
       const body: Record<string, unknown> = {
         dealId,
         address,
         notes: notes.trim() || undefined,
+        overrides: Object.keys(propOverrides).length > 0 ? propOverrides : undefined,
         repairMode,
         marketMultiplier,
         investorProfitPct: investorProfitPct / 100,
@@ -468,6 +485,26 @@ export function RerunDealModal({
                   <input type="text" value={address} readOnly
                     className="w-full bg-surface/50 border border-edge rounded-lg px-3.5 py-2.5 text-muted text-sm focus:outline-none cursor-not-allowed"
                   />
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <span className="text-[10px] font-semibold text-muted uppercase tracking-wider whitespace-nowrap">Override:</span>
+                    {[
+                      { label: "Beds",  value: overrideBeds,  set: setOverrideBeds,  ph: initialBeds  != null ? String(initialBeds)  : "—" },
+                      { label: "Baths", value: overrideBaths, set: setOverrideBaths, ph: initialBaths != null ? String(initialBaths) : "—" },
+                      { label: "Sqft",  value: overrideSqft,  set: setOverrideSqft,  ph: initialSqft  != null ? String(initialSqft)  : "—" },
+                    ].map(({ label, value, set, ph }) => (
+                      <div key={label} className="flex items-center bg-surface border border-edge rounded overflow-hidden focus-within:border-brand transition-colors">
+                        <span className="text-[10px] text-muted pl-2 pr-1 whitespace-nowrap">{label}</span>
+                        <input
+                          type="text" value={value}
+                          onChange={(e) => set(e.target.value.replace(/[^0-9.]/g, ""))}
+                          placeholder={ph}
+                          disabled={disabled}
+                          className="w-14 bg-transparent px-1 py-1.5 text-white text-[12px] focus:outline-none disabled:opacity-50 tabular-nums"
+                        />
+                      </div>
+                    ))}
+                    <span className="text-[10px] text-muted/50">(leave blank to keep original)</span>
+                  </div>
                 </div>
 
                 {/* Tab bar */}
@@ -547,9 +584,9 @@ export function RerunDealModal({
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Investor Profit</label>
                       <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
-                        <input type="number" min={1} max={99} value={investorProfitPct === 0 ? "" : investorProfitPct}
-                          onChange={(e) => { if (e.target.value === "") { setInvestorProfitPct(0); return; } const n = parseInt(e.target.value, 10); if (!isNaN(n)) setInvestorProfitPct(n); }}
-                          onBlur={() => setInvestorProfitPct((prev) => Math.max(1, Math.min(99, prev || 20)))}
+                        <input type="number" min={0} max={99} value={investorProfitPct}
+                          onChange={(e) => { const n = parseInt(e.target.value, 10); setInvestorProfitPct(isNaN(n) ? 0 : n); }}
+                          onBlur={() => setInvestorProfitPct((prev) => Math.max(0, Math.min(99, prev)))}
                           disabled={disabled}
                           className="flex-1 bg-transparent px-3.5 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />
@@ -573,7 +610,7 @@ export function RerunDealModal({
 
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-                        ARV $/sqft Override <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
+                        ARV Value Override <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
                       </label>
                       <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
                         <input type="text" value={arvSqftOverride}
@@ -584,7 +621,7 @@ export function RerunDealModal({
                         />
                         <span className="text-muted text-[13px] pr-3.5">$/sqft</span>
                       </div>
-                      <p className="text-muted text-[10px]">Overrides comp-based ARV. Leave blank to use comps.</p>
+                      <p className="text-muted text-[10px]">Overrides comp-based ARV estimate. Leave blank to use comps.</p>
                     </div>
 
                     {(repairMode === "scope_known" || repairMode === "standard") && (
@@ -919,14 +956,19 @@ export function RerunDealModal({
                               disabled={disabled || !comp.included}
                               className="flex-1 bg-transparent border-b border-edge text-white text-[12px] placeholder:text-muted/50 focus:outline-none focus:border-brand pb-0.5 transition-colors disabled:opacity-50"
                             />
-                            <select
-                              value={comp.category}
-                              onChange={(e) => updateEditableComp(i, "category", e.target.value)}
+                            <Select
+                              value={comp.category || "_ai"}
+                              onValueChange={(v) => updateEditableComp(i, "category", v === "_ai" ? "" : v)}
                               disabled={disabled || !comp.included}
-                              className="bg-card border border-edge rounded-md px-2 py-0.5 text-white text-[10px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
                             >
-                              {COMP_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
+                              <SelectTrigger placeholder="AI decides" className="w-auto min-w-[120px] text-[10px] py-1 px-2.5 rounded-lg" />
+                              <SelectContent>
+                                <SelectItem value="_ai">— Let AI decide —</SelectItem>
+                                <SelectItem value="arv">ARV Comp</SelectItem>
+                                <SelectItem value="turnkey">Turnkey</SelectItem>
+                                <SelectItem value="as_is">As-Is</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
 
                           {/* Row 2: editable fields */}
@@ -1075,14 +1117,21 @@ export function RerunDealModal({
                           {/* Type */}
                           <div>
                             <label className="text-[10px] text-muted uppercase tracking-wider">Comp Type</label>
-                            <select
-                              value={comp.compType}
-                              onChange={(e) => updateComp(comp.id, "compType", e.target.value)}
-                              disabled={disabled}
-                              className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1 text-white text-[11px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
-                            >
-                              {COMP_TYPE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
+                            <div className="mt-1">
+                              <Select
+                                value={comp.compType || "_ai"}
+                                onValueChange={(v) => updateComp(comp.id, "compType", v === "_ai" ? "" : v)}
+                                disabled={disabled}
+                              >
+                                <SelectTrigger placeholder="— Let AI decide —" className="text-xs py-2" />
+                                <SelectContent>
+                                  <SelectItem value="_ai">— Let AI decide —</SelectItem>
+                                  <SelectItem value="arv">ARV Comp</SelectItem>
+                                  <SelectItem value="turnkey">Turnkey</SelectItem>
+                                  <SelectItem value="as_is">As-Is</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
 
                           {/* Row: Price + Date + Beds + Baths */}
@@ -1157,13 +1206,21 @@ export function RerunDealModal({
                             </div>
                             <div>
                               <label className="text-[10px] text-muted uppercase tracking-wider">Construction</label>
-                              <select value={comp.constructionType}
-                                onChange={(e) => updateComp(comp.id, "constructionType", e.target.value)}
-                                disabled={disabled}
-                                className="mt-1 w-full bg-card border border-edge rounded-md px-2 py-1.5 text-white text-[11px] focus:outline-none focus:border-brand appearance-none disabled:opacity-50"
-                              >
-                                {CONSTRUCTION_OPTIONS.map((o) => <option key={o} value={o}>{o || "— None —"}</option>)}
-                              </select>
+                              <div className="mt-1">
+                                <Select
+                                  value={comp.constructionType || "_none"}
+                                  onValueChange={(v) => updateComp(comp.id, "constructionType", v === "_none" ? "" : v)}
+                                  disabled={disabled}
+                                >
+                                  <SelectTrigger placeholder="— None —" className="text-xs py-2" />
+                                  <SelectContent>
+                                    <SelectItem value="_none">— None —</SelectItem>
+                                    {CONSTRUCTION_OPTIONS.filter(Boolean).map((o) => (
+                                      <SelectItem key={o} value={o}>{o}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </div>
                           </div>
                         </div>

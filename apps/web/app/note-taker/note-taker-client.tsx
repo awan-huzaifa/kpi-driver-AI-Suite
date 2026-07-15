@@ -292,7 +292,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           Call Logs
         </h1>
         <p style={{ fontSize: 13, color: C.bodyText, marginTop: 6 }}>
-          All call notes — click any row to view the full transcript.
+          All Call Notes — Click Any Row To View The Full Transcript.
         </p>
       </motion.div>
 
@@ -403,11 +403,11 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date & Time", "Agent", "Direction", "From", "To", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Agent", "Direction", "From", "To", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
-                  fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
-                  textTransform: "uppercase", color: "#475569",
+                  fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
+                  textTransform: "uppercase", color: "#e2e8f0",
                 }}>{h}</th>
               ))}
             </tr>
@@ -416,7 +416,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={8} style={{ padding: "56px 16px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
-                  No call logs yet{period !== "all" ? " for this period" : ""}.
+                  No Call Logs Yet{period !== "all" ? " For This Period" : ""}.
                 </td>
               </tr>
             )}
@@ -431,22 +431,22 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(48,125,192,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <td style={{ padding: "12px 16px", fontSize: 12, color: C.mutedText, whiteSpace: "nowrap" }}>
+                <td style={{ padding: "12px 16px", fontSize: 12, color: C.mutedText, whiteSpace: "nowrap", textAlign: "center" }}>
                   {fmt(c.created_at)}
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: c.agent_name ? C.text : C.dimText, whiteSpace: "nowrap" }}>
+                <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: c.agent_name ? C.text : C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
                   {c.agent_name ?? "—"}
                 </td>
-                <td style={{ padding: "12px 16px" }}>
+                <td style={{ padding: "12px 16px", textAlign: "center" }}>
                   <DirectionBadge dir={c.call_direction} />
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace" }}>
+                <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
                   {c.from_number ?? "—"}
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace" }}>
+                <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
                   {c.to_number ?? "—"}
                 </td>
-                <td style={{ padding: "12px 16px", maxWidth: 320 }}>
+                <td style={{ padding: "12px 16px", maxWidth: 320, textAlign: "center" }}>
                   <p style={{
                     fontSize: 12, color: C.bodyText, margin: 0,
                     overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -454,11 +454,11 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                     {c.ai_summary ?? c.normal_summary ?? "—"}
                   </p>
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap" }}>
+                <td style={{ padding: "12px 16px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
                   {(c.input_tokens + c.output_tokens).toLocaleString()}
                 </td>
                 {accessRole !== "user" && (
-                  <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: "#FCAF17", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: "#FCAF17", whiteSpace: "nowrap", textAlign: "center" }}>
                     {fmtCost(c.cost_usd)}
                   </td>
                 )}

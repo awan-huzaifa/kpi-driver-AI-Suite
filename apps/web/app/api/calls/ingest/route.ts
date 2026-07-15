@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
       call_stage:    result.call_stage ?? stage ?? null,
       scorable:      result.scorable,
       score:         result.score,
-      call_result:   known_outcome ?? null,
+      call_result:   result.call_result ?? null,
       transcript,
       recording_url: recording_url ?? null,
       crm_link:      crm_link      ?? null,

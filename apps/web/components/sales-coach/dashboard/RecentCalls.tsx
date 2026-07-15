@@ -84,8 +84,8 @@ export default function RecentCalls({ calls }: Props) {
               {["Agent", "Contact", "Stage", "Duration", "Score", "Result"].map((h, i) => (
                 <th key={h} style={{
                   padding: "10px 16px", textAlign: "left",
-                  fontSize: 10, fontWeight: 700, color: "#334155",
-                  letterSpacing: "0.07em", textTransform: "uppercase",
+                  fontSize: 10, fontWeight: 800, color: "#e2e8f0",
+                  letterSpacing: "0.08em", textTransform: "uppercase",
                   borderBottom: "1px solid rgba(255,255,255,0.04)",
                   paddingLeft: i === 0 ? 24 : 16,
                 }}>

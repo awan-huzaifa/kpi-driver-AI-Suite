@@ -108,7 +108,6 @@ function initials(name: string) {
 
 /* ── Filter constants ────────────────────────────────────────────── */
 
-const RESULT_OPTS  = ["all", "Appointment Booked", "Follow-up Required", "Not Interested", "No Answer"] as const;
 const DIRECTIONS   = [{ value: "all", label: "All" }, { value: "inbound", label: "Inbound" }, { value: "outbound", label: "Outbound" }] as const;
 const DURATIONS    = [{ value: "all", label: "Any" }, { value: "1", label: "1+ min" }, { value: "2", label: "2+ min" }, { value: "5", label: "5+ min" }, { value: "10", label: "10+ min" }, { value: "15", label: "15+ min" }] as const;
 const ROLES        = [{ value: "all", label: "All Roles" }, { value: "fus", label: "FUS" }, { value: "acq", label: "ACQ" }, { value: "tc", label: "TC" }, { value: "cc", label: "CC" }, { value: "none", label: "None" }] as const;
@@ -537,7 +536,6 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
   }, []);
   const [companyId,  setCompanyId]  = useState<string>("all");
   const [agentIds,   setAgentIds]   = useState<string[]>([]);
-  const [result,     setResult]     = useState<typeof RESULT_OPTS[number]>("all");
   const [search,     setSearch]     = useState("");
   const [direction,  setDirection]  = useState<string>("all");
   const [duration,   setDuration]   = useState<string>("2");
@@ -563,7 +561,6 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
   const filtered = useMemo(() => calls.filter(c => {
     if (companyId !== "all" && c.company_id !== companyId) return false;
     if (agentIds.length > 0 && !agentIds.includes(c.user_id)) return false;
-    if (result !== "all" && c.call_result !== result) return false;
     if (direction !== "all" && c.direction !== direction) return false;
     if (duration !== "all" && !meetsMinDuration(c.duration_sec, duration)) return false;
     if (role !== "all" && (c.agent?.agent_type ?? "none") !== role) return false;
@@ -579,7 +576,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
           !(c.agent?.full_name ?? "").toLowerCase().includes(q)) return false;
     }
     return true;
-  }), [calls, companyId, agentIds, result, direction, duration, role, scorable, leadSource, period, customFrom, customTo, search]);
+  }), [calls, companyId, agentIds, direction, duration, role, scorable, leadSource, period, customFrom, customTo, search]);
 
   const avgScore = useMemo(() => {
     const scored = filtered.filter(c => c.score !== null);
@@ -721,11 +718,6 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
           <SelectContent>{SCORABLE_OPTS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
         </Select>
 
-        <Select value={result} onValueChange={v => setResult(v as typeof result)}>
-          <SelectTrigger placeholder="Result" className="w-auto min-w-[90px] text-xs py-1.5" />
-          <SelectContent>{RESULT_OPTS.map(r => <SelectItem key={r} value={r}>{r === "all" ? "All Results" : r}</SelectItem>)}</SelectContent>
-        </Select>
-
         {leadSources.length > 0 && (
           <Select value={leadSource} onValueChange={setLeadSource}>
             <SelectTrigger placeholder="Lead Source" className="w-auto min-w-[100px] text-xs py-1.5" />
@@ -750,12 +742,11 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "rgba(255,255,255,0.015)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Contact", "Agent", "Direction", "Duration", "Score", "Result", "Stage", "Date"].map((h, i) => (
+              {["Date", "Contact", "Agent", "Direction", "Duration", "Score", "Result", "Stage", "Lead Source", "CRM Link"].map((h) => (
                 <th key={h} style={{
-                  padding: "11px 14px", textAlign: "left",
-                  fontSize: 10, fontWeight: 700, color: "#334155",
-                  textTransform: "uppercase", letterSpacing: "0.07em",
-                  paddingLeft: i === 0 ? 20 : 14,
+                  padding: "11px 14px", textAlign: "center",
+                  fontSize: 10, fontWeight: 800, color: "#e2e8f0",
+                  textTransform: "uppercase", letterSpacing: "0.08em",
                 }}>{h}</th>
               ))}
               <th style={{ width: 28 }} />
@@ -765,7 +756,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
             <AnimatePresence>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: "60px 16px", textAlign: "center" }}>
+                <td colSpan={12} style={{ padding: "60px 16px", textAlign: "center" }}>
                   <div style={{
                     width: 44, height: 44, borderRadius: 12, margin: "0 auto 10px",
                     background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.15)",
@@ -773,8 +764,8 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   }}>
                     <Phone size={18} style={{ color: "#334155" }} />
                   </div>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: "#334155", margin: "0 0 4px" }}>No calls found</p>
-                  <p style={{ fontSize: 12, color: "#1e293b", margin: 0 }}>Try adjusting your filters.</p>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "#334155", margin: "0 0 4px" }}>No Calls Found</p>
+                  <p style={{ fontSize: 12, color: "#1e293b", margin: 0 }}>Try Adjusting Your Filters.</p>
                 </td>
               </tr>
             )}
@@ -797,8 +788,14 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(48,125,192,0.04)")}
                   onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
                 >
+                  {/* Date */}
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", margin: "0 0 1px" }}>{fmtDate(c.created_at)}</p>
+                    <p style={{ fontSize: 10, fontWeight: 500, color: "#475569", margin: 0 }}>{fmtTime(c.created_at)}</p>
+                  </td>
+
                   {/* Contact */}
-                  <td style={{ padding: "12px 14px 12px 20px" }}>
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
                     <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>
                       {c.contact_name ?? "Unknown"}
                     </p>
@@ -808,7 +805,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   </td>
 
                   {/* Agent */}
-                  <td style={{ padding: "12px 14px" }}>
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
                     <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>{agentName}</p>
                     {c.agent?.agent_type && c.agent.agent_type !== "none" && (
                       <Badge variant={c.agent.agent_type as any} />
@@ -816,7 +813,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   </td>
 
                   {/* Direction */}
-                  <td style={{ padding: "12px 14px" }}>
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
                     <span style={{
                       display: "inline-flex", alignItems: "center", gap: 4,
                       fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
@@ -830,12 +827,12 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   </td>
 
                   {/* Duration */}
-                  <td style={{ padding: "12px 14px" }}>
-                    <span style={{ fontSize: 12, fontFamily: "monospace", color: "#64748b" }}>{fmtDuration(c.duration_sec)}</span>
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace", color: "#94a3b8" }}>{fmtDuration(c.duration_sec)}</span>
                   </td>
 
                   {/* Score */}
-                  <td style={{ padding: "12px 14px" }}>
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
                     {c.score !== null ? (
                       <span style={{
                         display: "inline-block", fontSize: 13, fontWeight: 900,
@@ -851,7 +848,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   </td>
 
                   {/* Result */}
-                  <td style={{ padding: "12px 14px" }}>
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
                     <span style={{
                       fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99,
                       color: rs.color, background: rs.bg, whiteSpace: "nowrap",
@@ -861,37 +858,50 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   </td>
 
                   {/* Stage */}
-                  <td style={{ padding: "12px 14px" }}>
-                    <span style={{ fontSize: 12, color: "#475569" }}>{c.call_stage ?? "—"}</span>
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>{c.call_stage ?? "—"}</span>
                   </td>
 
-                  {/* Date */}
-                  <td style={{ padding: "12px 14px" }}>
-                    <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 1px" }}>{fmtDate(c.created_at)}</p>
-                    <p style={{ fontSize: 10, color: "#334155", margin: 0 }}>{fmtTime(c.created_at)}</p>
+                  {/* Lead Source */}
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                    {c.evaluation?.meta?.lead_source ? (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                        color: "#FCAF17", background: "rgba(252,175,23,0.1)", border: "1px solid rgba(252,175,23,0.2)",
+                        whiteSpace: "nowrap",
+                      }}>
+                        {c.evaluation.meta.lead_source}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                    )}
                   </td>
 
-                  {/* CRM + Arrow */}
-                  <td style={{ padding: "12px 10px", whiteSpace: "nowrap" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      {c.crm_link && (
-                        <a
-                          href={c.crm_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 4,
-                            fontSize: 11, fontWeight: 600, color: "#307DC0",
-                            textDecoration: "none", padding: "4px 8px", borderRadius: 7,
-                            background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
-                          }}
-                        >
-                          <ExternalLink size={11} /> CRM
-                        </a>
-                      )}
-                      <ChevronRight size={13} style={{ color: "#334155" }} />
-                    </div>
+                  {/* CRM Link */}
+                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                    {c.crm_link ? (
+                      <a
+                        href={c.crm_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          fontSize: 11, fontWeight: 600, color: "#307DC0",
+                          textDecoration: "none", padding: "4px 8px", borderRadius: 7,
+                          background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
+                        }}
+                      >
+                        <ExternalLink size={11} /> CRM
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                    )}
+                  </td>
+
+                  {/* Arrow */}
+                  <td style={{ padding: "12px 10px", width: 28 }}>
+                    <ChevronRight size={13} style={{ color: "#334155" }} />
                   </td>
                 </motion.tr>
               );

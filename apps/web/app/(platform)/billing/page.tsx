@@ -22,7 +22,7 @@ export default async function BillingPage() {
   const companyId = profile?.company_id ?? null
   const admin = createAdminClient()
 
-  const [{ data: sub }, { data: companyRow }, { data: transactions }, { data: usageLogs }] = await Promise.all([
+  const [{ data: sub }, { data: companyRow }, { data: appSpend }, { data: usageLogs }] = await Promise.all([
     supabase.from('subscriptions').select('plan_id, status').eq('user_id', user.id).single(),
 
     companyId
@@ -30,12 +30,7 @@ export default async function BillingPage() {
       : Promise.resolve({ data: null, error: null }),
 
     companyId
-      ? admin
-          .from('company_wallet_transactions')
-          .select('id, type, amount_usd, description, created_at, app')
-          .eq('company_id', companyId)
-          .order('created_at', { ascending: false })
-          .limit(500)
+      ? admin.rpc('get_company_app_spend', { p_company_id: companyId })
       : Promise.resolve({ data: [], error: null }),
 
     supabase
@@ -62,7 +57,7 @@ export default async function BillingPage() {
         skipTracing:    isAdmin || (profile?.app_skip_tracing    ?? false),
       }}
       balance={companyRow?.wallet_balance ?? 0}
-      transactions={transactions ?? []}
+      appSpend={appSpend ?? []}
       topUpOptions={TOP_UP_OPTIONS}
       usageLogs={usageLogs ?? []}
       autoTopup={{

@@ -10,13 +10,17 @@ import WalletTab from './wallet-tab'
 import UsageTab, { type UsageLogRow } from './usage-tab'
 import type { TopUpOption } from '@kpidriver/stripe/topup'
 
-export interface Transaction {
-  id:          string
-  type:        'topup' | 'deduction'
-  amount_usd:  number
-  description: string | null
-  created_at:  string
-  app:         string | null
+export interface AppSpendRow {
+  app:                  string
+  total_cost:           number
+  run_count:            number
+  total_input_tokens:   number
+  total_output_tokens:  number
+  ai_cost:              number
+  transcription_cost:   number
+  property_api_1_cost:  number
+  property_api_2_cost:  number
+  voice_agent_cost:     number
 }
 
 interface AutoTopup {
@@ -31,7 +35,7 @@ interface Props {
   access:       Access
   accessRole:   'admin' | 'super_admin' | 'user'
   balance:      number
-  transactions: Transaction[]
+  appSpend:     AppSpendRow[]
   topUpOptions: TopUpOption[]
   usageLogs:    UsageLogRow[]
   autoTopup:    AutoTopup
@@ -42,11 +46,11 @@ const TABS = [
   { id: 'usage'  as const, label: 'Usage',  icon: BarChart3 },
 ]
 
-export default function BillingClient({ user, planId, access, accessRole, balance, transactions, topUpOptions, usageLogs, autoTopup }: Props) {
+export default function BillingClient({ user, planId, access, accessRole, balance, appSpend, topUpOptions, usageLogs, autoTopup }: Props) {
   const [tab, setTab] = useState<'wallet' | 'usage'>('wallet')
 
   return (
-    <PlatformShell user={{ email: user.email, fullName: user.fullName }} planId={planId} access={access} accessRole={accessRole} pageTitle="Billing">
+    <PlatformShell planId={planId} pageTitle="Billing">
 
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
@@ -91,7 +95,7 @@ export default function BillingClient({ user, planId, access, accessRole, balanc
         transition={{ duration: 0.25 }}
       >
         {tab === 'wallet' ? (
-          <WalletTab balance={balance} transactions={transactions} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} />
+          <WalletTab balance={balance} appSpend={appSpend} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} />
         ) : (
           <UsageTab rows={usageLogs} />
         )}

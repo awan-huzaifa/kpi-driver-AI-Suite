@@ -21,6 +21,7 @@ interface UserRow {
   access_role:        AccessRole;
   agent_type:         AgentType;
   company_id:         string | null;
+  avatar_url:         string | null;
   app_underwriting:   boolean;
   app_sales_coach:    boolean;
   app_training_coach: boolean;
@@ -210,7 +211,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
   const inactive  = filtered.filter((u) => !u.is_active);
 
   return (
-    <PlatformShell user={currentUser} planId={planId} access={access} accessRole={accessRole} pageTitle="Users">
+    <PlatformShell planId={planId} pageTitle="Users">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -298,9 +299,11 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                         width: 32, height: 32, borderRadius: 8, flexShrink: 0,
                         background: "rgba(48,125,192,0.15)", border: "1px solid rgba(48,125,192,0.25)",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        color: C.blue, fontSize: 13, fontWeight: 800,
+                        color: C.blue, fontSize: 13, fontWeight: 800, overflow: "hidden",
                       }}>
-                        {initials(u.full_name, u.email)}
+                        {u.avatar_url
+                          ? <img src={u.avatar_url} alt={u.full_name ?? ""} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : initials(u.full_name, u.email)}
                       </div>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>

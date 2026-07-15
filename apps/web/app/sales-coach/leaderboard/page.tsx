@@ -8,7 +8,7 @@ export type LeaderboardCall = {
   company_id: string;
   score:      number;
   created_at: string;
-  agent:      { full_name: string | null; agent_type: string } | null;
+  agent:      { full_name: string | null; agent_type: string; avatar_url: string | null } | null;
 };
 
 export default async function LeaderboardPage() {
@@ -27,7 +27,7 @@ export default async function LeaderboardPage() {
 
   let query = supabase
     .from("live_calls")
-    .select("user_id, company_id, score, created_at, agent:users(full_name, agent_type)")
+    .select("user_id, company_id, score, created_at, agent:users(full_name, agent_type, avatar_url)")
     .eq("scorable", true)
     .not("score", "is", null)
     .order("created_at", { ascending: false })
@@ -50,7 +50,7 @@ export default async function LeaderboardPage() {
 
   return (
     <LeaderboardClient
-      calls={(calls ?? []) as LeaderboardCall[]}
+      calls={(calls ?? []) as unknown as LeaderboardCall[]}
       companies={companies}
       accessRole={role}
       currentUserId={profile?.id}

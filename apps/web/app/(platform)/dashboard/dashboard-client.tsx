@@ -293,7 +293,7 @@ function ToolCard({ app, unlocked, index }: { app: AppEntry; unlocked: boolean; 
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: C.dimText }}>
               <Lock size={13} />
-              Coming soon
+              Coming Soon
             </div>
           )
         )}
@@ -330,7 +330,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
   ]
 
   return (
-    <PlatformShell user={user} planId={planId} access={access} accessRole={accessRole} pageTitle="Home">
+    <PlatformShell planId={planId} pageTitle="Home">
 
       {/* ── Hero ── */}
       <motion.div
@@ -366,7 +366,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
         <p style={{ fontSize: 15, fontWeight: 500, color: C.bodyText, margin: 0, maxWidth: 480 }}>
           {planId
             ? `You're on the ${planId.charAt(0).toUpperCase() + planId.slice(1)} plan — your tools are ready below.`
-            : "Here's your team's activity at a glance."}
+            : "Here's Your Team's Activity At A Glance."}
         </p>
       </motion.div>
 

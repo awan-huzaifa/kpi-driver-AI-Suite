@@ -31,9 +31,15 @@ export async function POST(request: Request) {
   const companyName = companyRow?.name ?? 'Unknown Company'
   const description = `$${option.amount} AI Suite top-up — ${companyName} (KPI DRIVER)`
 
+  console.log('[topup] companyId:', companyId)
+  console.log('[topup] companyName:', companyName)
+  console.log('[topup] description:', description)
+  console.log('[topup] defaultPm:', defaultPm?.id ?? 'none (will use Checkout)')
+
   // ── One-click path: saved default card ──────────────────────────────────────
   if (defaultPm) {
     try {
+      console.log('[topup] charging saved card off-session...')
       const intent = await chargeWithSavedMethod(
         customer.id,
         defaultPm.id,
@@ -41,6 +47,7 @@ export async function POST(request: Request) {
         companyId,
         description,
       )
+      console.log('[topup] one-click charge succeeded — intent.id:', intent.id, 'description on intent:', intent.description)
 
       const { data: newBalance } = await admin.rpc('add_wallet_balance', {
         p_company_id:              companyId,
@@ -56,6 +63,7 @@ export async function POST(request: Request) {
   }
 
   // ── Checkout fallback: no saved card or charge failed ───────────────────────
+  console.log('[topup] falling back to Stripe Checkout...')
   const session = await createTopUpCheckoutSession({
     companyId,
     customerId:  customer.id,
@@ -65,6 +73,7 @@ export async function POST(request: Request) {
     cancelUrl:   `${appUrl}/billing`,
     description,
   })
+  console.log('[topup] checkout session created — id:', session.id, 'payment_intent_data.description set:', !!description)
 
   return NextResponse.json({ url: session.url })
 }

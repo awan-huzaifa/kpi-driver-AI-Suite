@@ -98,13 +98,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
   const isEditing = modal !== null && modal !== 'create'
 
   return (
-    <PlatformShell
-      user={currentUser}
-      planId={planId}
-      access={access}
-      accessRole="super_admin"
-      pageTitle="Companies"
-    >
+    <PlatformShell planId={planId} pageTitle="Companies">
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
         <div>

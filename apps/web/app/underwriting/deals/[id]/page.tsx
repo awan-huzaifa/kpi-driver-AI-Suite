@@ -193,6 +193,9 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 initialKnownRepairCost={initialKnownRepairCost}
                 initialCustomPerSqft={initialCustomPerSqft}
                 initialCustomItems={initialCustomItems}
+                initialBeds={report.beds}
+                initialBaths={report.baths}
+                initialSqft={report.sqft}
               />
             )}
             <DownloadPDFButton dealId={id} />
@@ -247,7 +250,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                 {report.beds === 0 && (
                   <div className="flex items-start gap-1 mt-1">
                     <AlertTriangle size={11} className="text-uw-warn shrink-0 mt-0.5" />
-                    <p className="text-uw-warn text-[10px] leading-relaxed">Verify on site</p>
+                    <p className="text-uw-warn text-[10px] leading-relaxed">Verify On Site</p>
                   </div>
                 )}
               </div>
@@ -316,7 +319,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                   <ConditionBadge grade={repairs.condition} />
                 </div>
                 <div className="flex justify-between text-[13px]">
-                  <span className="text-muted">Market multiplier</span>
+                  <span className="text-muted">Market Multiplier</span>
                   <span className="text-white font-medium">{repairs.marketMultiplier}×</span>
                 </div>
                 <div className="flex justify-between text-[13px]">
@@ -324,7 +327,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                   <span className="text-white font-medium">${repairs.per_sqft_low} – ${repairs.per_sqft_high}</span>
                 </div>
                 <div className="flex justify-between text-[13px]">
-                  <span className="text-muted">Base cost</span>
+                  <span className="text-muted">Base Cost</span>
                   <span className="text-white font-medium">{fmt(repairs.baseLow)} – {fmt(repairs.baseHigh)}</span>
                 </div>
                 {repairs.checkedExtraItems?.length > 0 && (
@@ -398,7 +401,6 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
                   <tr key={i} className="hover:bg-white/[0.02] transition-colors">
                     <td className="px-5 py-3">
                       <p className="text-white text-[12px] leading-snug">{comp.address}</p>
-                      <p className="text-muted text-[11px] mt-0.5">{comp.saleDate}</p>
                     </td>
                     <td className="px-4 py-3 text-right text-white text-[12px] font-medium">{fmt(comp.salePrice)}</td>
                     <td className="px-4 py-3 text-right text-muted text-[12px]">{fmt(comp.pricePerSqft)}</td>

@@ -89,13 +89,15 @@ Set manager_review_needed = true if:
 - low confidence (below 0.6)
 - transcript ambiguity materially affects score
 
+For call_result, write a concise 2-3 word phrase describing what actually happened on the call. Never use vague terms — be specific to what occurred (e.g. "Appointment Set", "Not Interested", "Callback Scheduled", "Offer Rejected", "No Answer", "Contract Signed"). Always return a value, never null.
+
 You must return valid JSON only — no markdown, no explanation, raw JSON only.`;
 
 const JSON_SCHEMA = `{
   "scorable": true,
   "reason": "string",
   "call_type": "string",
-  "call_result": "No Progress | Follow Up | Appointment Set | Offer Made | Contract Sent | Other",
+  "call_result": "2-3 word summary of what actually happened on the call (e.g. 'Appointment Set', 'Not Interested', 'Callback Scheduled')",
   "opportunity_level": "low | medium | high",
   "overall_score": 0,
   "score_band": "Elite | Strong | Workable | Weak | Needs Coaching",
@@ -294,7 +296,7 @@ ${JSON_SCHEMA}`;
     call_result: parsed.call_result ?? null,
     opportunity_level: parsed.opportunity_level ?? null,
     rubric_version,
-    score: parsed.overall_score ?? null,
+    score: parsed.scorable === false ? null : (parsed.overall_score ?? null),
     score_band: parsed.score_band ?? null,
     category_scores: parsed.category_scores ?? null,
     penalties: parsed.penalties ?? [],

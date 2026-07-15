@@ -16,11 +16,14 @@ type Deal = {
   arv_high: number | null;
   max_offer: number | null;
   created_at: string;
+  user_id?: string | null;
   company_id?: string | null;
   company_name?: string | null;
 };
 
+type CompanyUser = { id: string; full_name: string | null; email: string | null };
 type StatusFilter = "all" | "completed" | "failed" | "pending";
+type ViewMode = "mine" | "all";
 
 function fmt(n: number | null) {
   if (n == null) return "—";
@@ -107,14 +110,12 @@ function DeleteDialog({
             </div>
           </div>
 
-          {/* Single — show address pill */}
           {!isBulk && targets[0] && (
             <div className="bg-surface border border-edge rounded-lg px-4 py-2.5 mb-6 text-center">
               <p className="text-white text-[13px] font-medium truncate">{targets[0].address}</p>
             </div>
           )}
 
-          {/* Bulk — show scrollable address list */}
           {isBulk && (
             <div className="bg-surface border border-edge rounded-lg mb-6 max-h-36 overflow-y-auto divide-y divide-edge">
               {targets.map((d) => (
@@ -155,25 +156,40 @@ export function DealsTable({
   deals,
   companies = [],
   accessRole = "user",
+  currentUserId = "",
+  companyUsers = [],
 }: {
   deals: Deal[];
   companies?: { id: string; name: string }[];
   accessRole?: string;
+  currentUserId?: string;
+  companyUsers?: CompanyUser[];
 }) {
   const router = useRouter();
   const isSuperAdmin = accessRole === "super_admin";
+  const hasCompanyContext = !isSuperAdmin && companyUsers.length > 0;
 
+  const [viewMode,      setViewMode]      = useState<ViewMode>("all");
+  const [userFilter,    setUserFilter]    = useState("all");
   const [filter,        setFilter]        = useState<StatusFilter>("all");
   const [search,        setSearch]        = useState("");
   const [companyId,     setCompanyId]     = useState("all");
   const [selected,      setSelected]      = useState<Set<string>>(new Set());
   const [deleteTargets, setDeleteTargets] = useState<Deal[]>([]);
 
+  // Users who actually have deals (for the dropdown)
+  const usersWithDeals = useMemo(() => {
+    const dealUserIds = new Set(deals.map((d) => d.user_id).filter(Boolean));
+    return companyUsers.filter((u) => dealUserIds.has(u.id));
+  }, [deals, companyUsers]);
+
   const filtered = useMemo(() => deals
     .filter((d) => companyId === "all" || d.company_id === companyId)
+    .filter((d) => !hasCompanyContext || viewMode === "all" || d.user_id === currentUserId)
+    .filter((d) => userFilter === "all" || d.user_id === userFilter)
     .filter((d) => filter === "all" || d.status === filter)
     .filter((d) => d.address.toLowerCase().includes(search.toLowerCase())),
-  [deals, companyId, filter, search]);
+  [deals, companyId, viewMode, userFilter, filter, search, currentUserId, hasCompanyContext]);
 
   const filteredIds    = filtered.map((d) => d.id);
   const allSelected    = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
@@ -204,6 +220,10 @@ export function DealsTable({
 
   const showCompanyCol = isSuperAdmin && companyId === "all";
 
+  function getUserLabel(u: CompanyUser) {
+    return u.full_name?.trim() || u.email || u.id.slice(0, 8);
+  }
+
   return (
     <>
       <DeleteDialog
@@ -216,6 +236,8 @@ export function DealsTable({
 
         {/* Filter bar */}
         <div className="flex flex-wrap items-center gap-3">
+
+          {/* Search */}
           <div className="relative flex-1 min-w-[180px] max-w-sm">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
@@ -227,6 +249,44 @@ export function DealsTable({
             />
           </div>
 
+          {/* My Deals / All toggle — only for company members */}
+          {hasCompanyContext && (
+            <div className="flex items-center gap-0.5 bg-card border border-edge rounded-lg p-1">
+              <button
+                onClick={() => { setViewMode("mine"); setUserFilter("all"); clearSelection(); }}
+                className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
+                  viewMode === "mine" ? "bg-brand text-white" : "text-muted hover:text-white"
+                }`}
+              >
+                My Deals
+              </button>
+              <button
+                onClick={() => { setViewMode("all"); clearSelection(); }}
+                className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
+                  viewMode === "all" ? "bg-brand text-white" : "text-muted hover:text-white"
+                }`}
+              >
+                All
+              </button>
+            </div>
+          )}
+
+          {/* User filter — only when viewing all company deals */}
+          {hasCompanyContext && viewMode === "all" && usersWithDeals.length > 1 && (
+            <Select value={userFilter} onValueChange={(v) => { setUserFilter(v); clearSelection(); }}>
+              <SelectTrigger placeholder="All Members" className="w-auto min-w-[150px] text-xs py-2" />
+              <SelectContent>
+                <SelectItem value="all">All Members</SelectItem>
+                {usersWithDeals.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {getUserLabel(u)}{u.id === currentUserId ? " (Me)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {/* Company filter — super_admin only */}
           {isSuperAdmin && companies.length > 0 && (
             <Select value={companyId} onValueChange={(v) => { setCompanyId(v); clearSelection(); }}>
               <SelectTrigger placeholder="All Companies" className="w-auto min-w-[160px] text-xs py-2" />
@@ -239,6 +299,7 @@ export function DealsTable({
             </Select>
           )}
 
+          {/* Status filter */}
           <select
             value={filter}
             onChange={(e) => { setFilter(e.target.value as StatusFilter); clearSelection(); }}
@@ -269,7 +330,7 @@ export function DealsTable({
                 className="flex items-center gap-1.5 bg-uw-danger hover:bg-uw-danger/90 text-white text-[13px] font-semibold px-3 py-1.5 rounded-lg transition-colors"
               >
                 <Trash2 size={13} />
-                Delete selected
+                Delete Selected
               </button>
             </div>
           </div>
@@ -295,21 +356,22 @@ export function DealsTable({
                         className="w-4 h-4 accent-brand rounded"
                       />
                     </th>
-                    <th className="text-left px-3 py-3 text-[11px] font-semibold text-muted uppercase tracking-wider">Address</th>
+                    <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Date</th>
+                    <th className="text-left px-3 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Address</th>
                     {showCompanyCol && (
-                      <th className="text-left px-4 py-3 text-[11px] font-semibold text-muted uppercase tracking-wider">Company</th>
+                      <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Company</th>
                     )}
-                    <th className="text-left px-4 py-3 text-[11px] font-semibold text-muted uppercase tracking-wider">Status</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-semibold text-muted uppercase tracking-wider">Recommendation</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-semibold text-muted uppercase tracking-wider">ARV Range</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-semibold text-muted uppercase tracking-wider">Max Offer</th>
-                    <th className="text-right px-4 py-3 text-[11px] font-semibold text-muted uppercase tracking-wider">Date</th>
+                    <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Status</th>
+                    <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Recommendation</th>
+                    <th className="text-right px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">ARV Range</th>
+                    <th className="text-right px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Max Offer</th>
                     <th className="px-5 py-3 w-10" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-edge">
                   {filtered.map((deal) => {
                     const isSelected = selected.has(deal.id);
+                    const isOwn = deal.user_id === currentUserId;
                     return (
                       <tr
                         key={deal.id}
@@ -323,6 +385,9 @@ export function DealsTable({
                             onChange={() => toggleOne(deal.id)}
                             className="w-4 h-4 accent-brand rounded"
                           />
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="text-muted text-[12px]">{fmtDate(deal.created_at)}</span>
                         </td>
                         <td className="px-3 py-4">
                           <p className="text-white text-[13px] font-medium leading-snug">{deal.address}</p>
@@ -347,16 +412,16 @@ export function DealsTable({
                         <td className="px-4 py-4 text-right">
                           <span className="text-brand text-[13px] font-semibold">{fmt(deal.max_offer)}</span>
                         </td>
-                        <td className="px-4 py-4 text-right">
-                          <span className="text-muted text-[12px]">{fmtDate(deal.created_at)}</span>
-                        </td>
                         <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => setDeleteTargets([deal])}
-                            className="p-1.5 rounded-md text-muted hover:text-uw-danger hover:bg-uw-danger/10 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {/* Only allow deleting own deals */}
+                          {isOwn && (
+                            <button
+                              onClick={() => setDeleteTargets([deal])}
+                              className="p-1.5 rounded-md text-muted hover:text-uw-danger hover:bg-uw-danger/10 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );

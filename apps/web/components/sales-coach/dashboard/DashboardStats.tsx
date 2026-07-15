@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Phone, Star, Target, Users } from "lucide-react";
+import { Phone, Star, Target } from "lucide-react";
 import StatCard from "./StatCard";
 import type { Stats } from "./DashboardClient";
 
@@ -21,10 +21,6 @@ export default function DashboardStats({ stats }: Props) {
       label: "Scorable Rate", value: stats.scorableRate, suffix: "%", change: 0,
       icon: Target, iconColor: "#43B749", iconBg: "rgba(67,183,73,0.12)", accentRgb: "67,183,73",
     },
-    {
-      label: "Active Agents", value: stats.activeAgents, change: 0,
-      icon: Users, iconColor: "#43B749", iconBg: "rgba(67,183,73,0.12)", accentRgb: "67,183,73",
-    },
   ];
 
   return (
@@ -32,7 +28,7 @@ export default function DashboardStats({ stats }: Props) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}
+      style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}
     >
       {cards.map((s, i) => (
         <StatCard key={s.label} {...s} index={i} />

@@ -11,7 +11,7 @@ export default async function AccountSettingsPage() {
   const [{ data: profile }, { data: sub }] = await Promise.all([
     supabase
       .from("users")
-      .select("full_name, access_role, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing")
+      .select("full_name, access_role, avatar_url, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing")
       .eq("id", user.id)
       .single(),
     supabase.from("subscriptions").select("plan_id, status").eq("user_id", user.id).single(),
@@ -24,9 +24,10 @@ export default async function AccountSettingsPage() {
   return (
     <AccountSettingsClient
       currentUser={{
-        id:       user.id,
-        email:    user.email!,
-        fullName: profile?.full_name ?? null,
+        id:        user.id,
+        email:     user.email!,
+        fullName:  profile?.full_name  ?? null,
+        avatarUrl: profile?.avatar_url ?? null,
       }}
       planId={isActive ? planId : null}
       accessRole={profile?.access_role ?? "user"}

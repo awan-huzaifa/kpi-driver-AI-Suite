@@ -123,13 +123,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   }
 
   return (
-    <PlatformShell
-      user={currentUser}
-      planId={planId}
-      access={access}
-      accessRole="super_admin"
-      pageTitle="Billing Config"
-    >
+    <PlatformShell planId={planId} pageTitle="Billing Config">
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, color: C.white, letterSpacing: '-0.02em', margin: '0 0 6px' }}>

@@ -8,11 +8,10 @@ export default async function DashboardPage() {
 
   await cleanupStuckDeals();
 
-  const handle = user?.email?.split("@")[0] ?? "there";
-
   const { data: deals } = await supabase
     .from("deals")
     .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at")
+    .eq("user_id", user!.id)
     .order("created_at", { ascending: false });
 
   const rows            = deals ?? [];
@@ -25,7 +24,6 @@ export default async function DashboardPage() {
 
   return (
     <UWDashboardClient
-      handle={handle}
       totalDeals={rows.length}
       completedCount={completedDeals.length}
       portfolioValue={portfolioValue}

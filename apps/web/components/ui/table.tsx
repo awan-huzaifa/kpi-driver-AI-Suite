@@ -32,11 +32,11 @@ export function TableRow({
   );
 }
 
-export function TableHead({ children, className }: { children?: React.ReactNode; className?: string }) {
+export function TableHead({ children, className, style }: { children?: React.ReactNode; className?: string; style?: React.CSSProperties }) {
   return (
     <th
       className={cn("text-left px-4 py-3 text-xs font-semibold whitespace-nowrap", className)}
-      style={{ color: "#7a8ba3", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+      style={{ color: "#7a8ba3", borderBottom: "1px solid rgba(255,255,255,0.06)", ...style }}
     >
       {children}
     </th>

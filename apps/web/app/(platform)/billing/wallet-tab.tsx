@@ -5,7 +5,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { CreditCard, Plus, Trash2, Check, Loader2, ArrowUpRight, CheckCircle2, AlertCircle, RefreshCw, Mic, Building2, GraduationCap, NotebookPen, Database, Search } from 'lucide-react'
 import { C } from '@/components/platform/brand'
-import type { Transaction } from './billing-client'
+import type { AppSpendRow } from './billing-client'
 import type { Access } from '@/components/platform/PlatformShell'
 import type { TopUpOption } from '@kpidriver/stripe/topup'
 
@@ -47,13 +47,13 @@ interface AutoTopup {
 
 interface Props {
   balance:      number
-  transactions: Transaction[]
+  appSpend:     AppSpendRow[]
   topUpOptions: TopUpOption[]
   autoTopup:    AutoTopup
   access:       Access
 }
 
-export default function WalletTab({ balance: initialBalance, transactions, topUpOptions, autoTopup, access }: Props) {
+export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access }: Props) {
   const [balance, setBalance]         = useState(initialBalance)
   const [toppingUp, setToppingUp]     = useState<string | null>(null)
   const [topupMessage, setTopupMessage] = useState<string | null>(null)
@@ -148,7 +148,7 @@ export default function WalletTab({ balance: initialBalance, transactions, topUp
 
       <AutoTopUpCard topUpOptions={topUpOptions} autoTopup={autoTopup} />
       <PaymentMethodsCard />
-      <AppSpendCard transactions={transactions} access={access} />
+      <AppSpendCard appSpend={appSpend} access={access} />
     </div>
   )
 }
@@ -510,17 +510,20 @@ const APP_ENTRIES: { appKey: string; accessKey: keyof Access; label: string; col
   { appKey: 'skip_tracing',    accessKey: 'skipTracing',    label: 'Skip Tracing',     color: '#FCAF17', bg: 'rgba(252,175,23,0.12)',  Icon: Search       },
 ]
 
-function AppSpendCard({ transactions, access }: { transactions: Transaction[]; access: Access }) {
-  const spend = useMemo(() => {
-    const map: Record<string, { total: number; runs: number }> = {}
-    for (const t of transactions) {
-      if (t.type !== 'deduction' || !t.app) continue
-      if (!map[t.app]) map[t.app] = { total: 0, runs: 0 }
-      map[t.app].total += t.amount_usd
-      map[t.app].runs  += 1
-    }
+const BREAKDOWN_ITEMS: { key: keyof Omit<AppSpendRow, 'app' | 'total_cost' | 'run_count'>; label: string }[] = [
+  { key: 'ai_cost',             label: 'AI' },
+  { key: 'transcription_cost',  label: 'Transcription' },
+  { key: 'property_api_1_cost', label: 'Property API 1' },
+  { key: 'property_api_2_cost', label: 'Property API 2' },
+  { key: 'voice_agent_cost',    label: 'AI Voice' },
+]
+
+function AppSpendCard({ appSpend, access }: { appSpend: AppSpendRow[]; access: Access }) {
+  const spendMap = useMemo(() => {
+    const map: Record<string, AppSpendRow> = {}
+    for (const row of appSpend) map[row.app] = row
     return map
-  }, [transactions])
+  }, [appSpend])
 
   const rows = APP_ENTRIES.filter(e => access[e.accessKey])
 
@@ -537,10 +540,15 @@ function AppSpendCard({ transactions, access }: { transactions: Transaction[]; a
       ) : (
         <div>
           {rows.map((e, i) => {
-            const s = spend[e.appKey]
-            const total = s?.total ?? 0
-            const runs  = s?.runs  ?? 0
+            const s     = spendMap[e.appKey]
+            const total = s?.total_cost ?? 0
+            const runs  = s?.run_count  ?? 0
             const Icon  = e.Icon
+
+            const breakdownChips = s
+              ? BREAKDOWN_ITEMS.filter(b => (s[b.key] ?? 0) > 0)
+              : []
+
             return (
               <div key={e.appKey} style={{
                 display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px',
@@ -553,9 +561,27 @@ function AppSpendCard({ transactions, access }: { transactions: Transaction[]; a
                   <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: 0 }}>{e.label}</p>
                   <p style={{ fontSize: 11, color: C.dimText, margin: '2px 0 0' }}>
                     {runs > 0 ? `${runs} run${runs !== 1 ? 's' : ''}` : 'No usage yet'}
+                    {s && (s.total_input_tokens > 0 || s.total_output_tokens > 0) && (
+                      <span style={{ marginLeft: 8, color: C.dimText }}>
+                        · {s.total_input_tokens.toLocaleString()} in / {s.total_output_tokens.toLocaleString()} out tokens
+                      </span>
+                    )}
                   </p>
+                  {breakdownChips.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 10px', marginTop: 6 }}>
+                      {breakdownChips.map(b => (
+                        <span key={b.key} style={{ fontSize: 11, color: C.dimText }}>
+                          <span style={{ fontWeight: 600, color: C.bodyText }}>{b.label}</span>
+                          {' '}
+                          <span style={{ fontWeight: 700, color: C.green, fontVariantNumeric: 'tabular-nums' }}>
+                            ${(s![b.key] ?? 0).toFixed(4)}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span style={{ fontSize: 14, fontWeight: 800, color: total > 0 ? C.text : C.dimText, fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: 14, fontWeight: 800, color: total > 0 ? C.text : C.dimText, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                   ${total.toFixed(2)}
                 </span>
               </div>

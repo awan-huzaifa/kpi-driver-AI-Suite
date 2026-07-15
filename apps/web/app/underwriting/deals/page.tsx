@@ -15,7 +15,7 @@ export default async function DealsPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("access_role")
+    .select("access_role, company_id")
     .eq("id", user.id)
     .single();
 
@@ -36,8 +36,11 @@ export default async function DealsPage() {
     company_name?: string | null;
   };
 
+  type CompanyUser = { id: string; full_name: string | null; email: string | null };
+
   let rows: DealRow[] = [];
   let companies: { id: string; name: string }[] = [];
+  let companyUsers: CompanyUser[] = [];
 
   if (isSuperAdmin) {
     const admin = createAdminClient();
@@ -73,11 +76,23 @@ export default async function DealsPage() {
       });
     }
   } else {
+    // RLS returns all company deals after migration 024
     const { data } = await supabase
       .from("deals")
-      .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at")
+      .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at, user_id")
       .order("created_at", { ascending: false });
-    rows = data ?? [];
+    rows = (data ?? []) as DealRow[];
+
+    // Fetch company members for the user filter dropdown
+    if (profile?.company_id) {
+      const { data: members } = await supabase
+        .from("users")
+        .select("id, full_name, email")
+        .eq("company_id", profile.company_id)
+        .eq("is_active", true)
+        .order("full_name");
+      companyUsers = (members ?? []) as CompanyUser[];
+    }
   }
 
   const completed = rows.filter((d) => d.status === "completed").length;
@@ -144,6 +159,8 @@ export default async function DealsPage() {
           deals={rows}
           companies={isSuperAdmin ? companies : []}
           accessRole={accessRole}
+          currentUserId={user.id}
+          companyUsers={companyUsers}
         />
       )}
     </div>

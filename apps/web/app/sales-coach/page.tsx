@@ -30,7 +30,7 @@ function computeDashboard(calls: CallRow[]): DashboardData {
     ? Math.round(scorable.reduce((s, c) => s + c.score!, 0) / scorable.length)
     : null;
   const scorableRate = totalCalls > 0 ? Math.round((scorable.length / totalCalls) * 100) : 0;
-  const activeAgents = new Set(calls.map(c => c.user_id)).size;
+
 
   const twScoreable  = thisWeek.filter(c => c.scorable && c.score !== null);
   const lwScoreable  = lastWeek.filter(c => c.scorable && c.score !== null);
@@ -78,7 +78,7 @@ function computeDashboard(calls: CallRow[]): DashboardData {
   }));
 
   return {
-    stats: { totalCalls, avgScore, scorableRate, activeAgents, totalCallsChange, avgScoreChange },
+    stats: { totalCalls, avgScore, scorableRate, totalCallsChange, avgScoreChange },
     callVolume,
     scoreDistribution,
     recentCalls,

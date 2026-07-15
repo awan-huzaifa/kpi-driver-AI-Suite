@@ -57,13 +57,7 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
     : "—";
 
   return (
-    <PlatformShell
-      user={currentUser}
-      planId={planId}
-      access={access}
-      accessRole={accessRole}
-      pageTitle="Company Settings"
-    >
+    <PlatformShell planId={planId} pageTitle="Company Settings">
       {/* Header */}
       <div style={{ marginBottom: 36 }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, color: C.white, letterSpacing: "-0.02em", margin: "0 0 8px" }}>

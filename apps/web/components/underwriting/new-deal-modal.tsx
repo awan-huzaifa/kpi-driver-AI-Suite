@@ -431,9 +431,9 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">Investor Profit</label>
                       <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
-                        <input type="number" min={1} max={99} value={investorProfitPct === 0 ? "" : investorProfitPct}
-                          onChange={(e) => { if (e.target.value === "") { setInvestorProfitPct(0); return; } const n = parseInt(e.target.value, 10); if (!isNaN(n)) setInvestorProfitPct(n); }}
-                          onBlur={() => setInvestorProfitPct((prev) => Math.max(1, Math.min(99, prev || 20)))}
+                        <input type="number" min={0} max={99} value={investorProfitPct}
+                          onChange={(e) => { const n = parseInt(e.target.value, 10); setInvestorProfitPct(isNaN(n) ? 0 : n); }}
+                          onBlur={() => setInvestorProfitPct((prev) => Math.max(0, Math.min(99, prev)))}
                           disabled={disabled}
                           className="flex-1 bg-transparent px-3.5 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         />

@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
   Building2, DollarSign, TrendingUp, Clock,
-  CheckCircle2, AlertCircle, XCircle, ArrowRight, Plus, Zap,
+  CheckCircle2, AlertCircle, XCircle, ArrowRight, Plus,
 } from 'lucide-react'
 import { NewDealModal } from '@/components/underwriting/new-deal-modal'
 
@@ -21,7 +21,7 @@ type DealRow = {
 }
 
 interface Props {
-  handle: string
+
   totalDeals: number
   completedCount: number
   portfolioValue: number
@@ -205,7 +205,7 @@ function DealRow({ deal, delay }: { deal: DealRow; delay: number }) {
 /* ── Main component ─────────────────────────────────────────────── */
 
 export default function UWDashboardClient({
-  handle, totalDeals, completedCount, portfolioValue,
+  totalDeals, completedCount, portfolioValue,
   pursueRate, pursueCount, pendingCount, recent, hasMore,
 }: Props) {
   return (
@@ -219,21 +219,18 @@ export default function UWDashboardClient({
         style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
-            <Zap size={13} style={{ color: '#43B749' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#43B749', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Welcome back
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}>
+            <Building2 size={14} style={{ color: '#43B749' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#43B749', letterSpacing: '0.09em', textTransform: 'uppercase' }}>
+              AI Deal Underwriter
             </span>
           </div>
-          <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: '-0.025em', lineHeight: 1, margin: 0, marginBottom: 8 }}>
-            <span style={{ color: '#fff' }}>Hey, </span>
-            <span style={{ background: 'linear-gradient(135deg, #307DC0 0%, #43B749 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              {handle}
-            </span>
+          <h1 style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.02em', lineHeight: 1, margin: '0 0 6px', color: '#fff' }}>
+            Dashboard
           </h1>
-          <p style={{ fontSize: 14, color: '#a8bfd4', fontWeight: 500, margin: 0 }}>
+          <p style={{ fontSize: 13, color: '#a8bfd4', fontWeight: 500, margin: 0 }}>
             {totalDeals === 0
-              ? 'No deals yet — run your first underwriting analysis below.'
+              ? 'No Deals Yet — Run Your First Underwriting Analysis Below.'
               : `${completedCount} completed deal${completedCount !== 1 ? 's' : ''} · pipeline ready`}
           </p>
         </div>
@@ -251,9 +248,9 @@ export default function UWDashboardClient({
       {/* Stat cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
         <StatCard label="Total Deals"    value={String(totalDeals)}   sub={completedCount > 0 ? `${completedCount} completed` : undefined} icon={Building2}  delay={0.08} accent="blue"   />
-        <StatCard label="Pipeline Value" value={portfolioValue > 0 ? fmt(portfolioValue) : '—'} sub={portfolioValue > 0 ? 'Sum of max offers' : 'No completed deals'} icon={DollarSign} delay={0.14} accent="green"  />
-        <StatCard label="Pursue Rate"    value={pursueRate != null ? `${pursueRate}%` : '—'}  sub={pursueRate != null ? `${pursueCount} of ${completedCount} deals` : 'No data yet'} icon={TrendingUp} delay={0.20} accent="yellow" />
-        <StatCard label="Pending"        value={String(pendingCount)} sub="In progress"        icon={Clock}      delay={0.26} accent="blue"   />
+        <StatCard label="Pipeline Value" value={portfolioValue > 0 ? fmt(portfolioValue) : '—'} sub={portfolioValue > 0 ? 'Sum Of Max Offers' : 'No Completed Deals'} icon={DollarSign} delay={0.14} accent="green"  />
+        <StatCard label="Pursue Rate"    value={pursueRate != null ? `${pursueRate}%` : '—'}  sub={pursueRate != null ? `${pursueCount} of ${completedCount} deals` : 'No Data Yet'} icon={TrendingUp} delay={0.20} accent="yellow" />
+        <StatCard label="Pending"        value={String(pendingCount)} sub="In Progress"        icon={Clock}      delay={0.26} accent="blue"   />
       </div>
 
       {/* Recent Deals */}
@@ -312,9 +309,9 @@ export default function UWDashboardClient({
             }}>
               <Building2 size={24} style={{ color: '#307DC0' }} strokeWidth={1.5} />
             </div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 8 }}>No deals yet</p>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 8 }}>No Deals Yet</p>
             <p style={{ fontSize: 13, color: '#7a94b0', margin: 0, marginBottom: 24, maxWidth: 300, lineHeight: 1.6 }}>
-              Add a property address and let AI generate a full underwriting analysis in seconds.
+              Add A Property Address And Let AI Generate A Full Underwriting Analysis In Seconds.
             </p>
             <NewDealModal
               trigger={

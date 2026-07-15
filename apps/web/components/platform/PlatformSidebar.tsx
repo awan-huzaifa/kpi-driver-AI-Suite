@@ -202,6 +202,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
   const router       = useRouter()
   const [settingsOpen,    setSettingsOpen]    = useState(false)
   const [companyLogoUrl,  setCompanyLogoUrl]  = useState<string | null>(null)
+  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null)
 
   useEffect(() => {
     const supabase = createClient()
@@ -209,10 +210,11 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
       if (!u) return
       supabase
         .from('users')
-        .select('company_id')
+        .select('company_id, avatar_url')
         .eq('id', u.id)
         .single()
         .then(({ data: profile }) => {
+          if ((profile as any)?.avatar_url) setAvatarUrl((profile as any).avatar_url)
           if (!profile?.company_id) return
           supabase
             .from('companies')
@@ -224,6 +226,13 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
             })
         })
     })
+
+    function onAvatarUpdated(e: Event) {
+      const url = (e as CustomEvent<{ url: string }>).detail?.url
+      if (url) setAvatarUrl(url)
+    }
+    window.addEventListener('avatar-updated', onAvatarUpdated)
+    return () => window.removeEventListener('avatar-updated', onAvatarUpdated)
   }, [])
 
   const display  = user.fullName ?? user.email.split('@')[0]
@@ -398,8 +407,11 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
           background: 'rgba(48,125,192,0.15)', border: '1px solid rgba(48,125,192,0.3)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: C.blue, fontSize: 13, fontWeight: 800,
+          overflow: 'hidden',
         }}>
-          {initials}
+          {avatarUrl
+            ? <img src={avatarUrl} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : initials}
         </div>
         <div style={{ overflow: 'hidden', flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>

@@ -230,8 +230,12 @@ function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => voi
 
           {/* Not scorable */}
           {!call.scorable && (
-            <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-              <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{ev?.reason ?? "This call was not scored."}</p>
+            <div style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(237,31,36,0.06)", border: "1px solid rgba(237,31,36,0.2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ED1F24", flexShrink: 0 }} />
+                <p style={{ fontSize: 10, fontWeight: 700, color: "#ED1F24", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Non-Scorable</p>
+              </div>
+              <p style={{ fontSize: 12, color: "#94a3b8", margin: 0, lineHeight: 1.6 }}>{ev?.reason ?? "This call was not scored."}</p>
             </div>
           )}
 
@@ -525,11 +529,11 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Rep</TableHead>
-              <TableHead>AI Agent</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Score</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Date</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Rep</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AI Agent</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Duration</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Score</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -537,30 +541,30 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
               <TableRow>
                 <TableCell className="text-center py-16" style={{ color: "#334155" }} colSpan={5}>
                   <GraduationCap size={32} className="mx-auto mb-2 opacity-20" />
-                  <p className="text-sm">No training calls found</p>
+                  <p className="text-sm">No Training Calls Found</p>
                 </TableCell>
               </TableRow>
             )}
             {filtered.map((c) => (
               <TableRow key={c.id} className="cursor-pointer" onClick={() => setSelected(c)}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
+                <TableCell className="text-center">
+                  <span className="text-xs" style={{ color: "#334155" }}>{fmt(c.created_at)}</span>
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-2">
                     <span className="text-sm font-medium text-white">{c.agent?.full_name ?? "Unknown"}</span>
                     {c.agent?.agent_type && c.agent.agent_type !== "none" && (
                       <Badge variant={c.agent.agent_type as any} />
                     )}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <span className="text-xs" style={{ color: "#94a3b8" }}>{c.ai_agent?.agent_name ?? "Unknown"}</span>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <span className="text-xs font-mono" style={{ color: "#64748b" }}>{fmtDuration(c.duration_sec)}</span>
                 </TableCell>
-                <TableCell><ScorePill score={c.score} /></TableCell>
-                <TableCell>
-                  <span className="text-xs" style={{ color: "#334155" }}>{fmt(c.created_at)}</span>
-                </TableCell>
+                <TableCell className="text-center"><ScorePill score={c.score} /></TableCell>
               </TableRow>
             ))}
           </TableBody>

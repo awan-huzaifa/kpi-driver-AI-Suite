@@ -33,11 +33,11 @@ export default async function AdminUsersPage() {
     isSuperAdmin
       ? admin
           .from("users")
-          .select("id, full_name, email, access_role, agent_type, company_id, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, is_active, created_at")
+          .select("id, full_name, email, access_role, agent_type, company_id, avatar_url, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, is_active, created_at")
           .order("created_at", { ascending: true })
       : supabase
           .from("users")
-          .select("id, full_name, email, access_role, agent_type, company_id, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, is_active, created_at")
+          .select("id, full_name, email, access_role, agent_type, company_id, avatar_url, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, is_active, created_at")
           .eq("company_id", profile.company_id!)
           .order("created_at", { ascending: true }),
     isSuperAdmin

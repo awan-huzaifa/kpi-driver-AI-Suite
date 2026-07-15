@@ -103,7 +103,7 @@ function StatChip({ label, value, color }: { label: string; value: string | numb
 
 /* ── Modal ──────────────────────────────────────────────────────── */
 
-function DetailModal({ log, onClose }: { log: SkipLog; onClose: () => void }) {
+function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () => void; accessRole: string }) {
   const persons = (log.payload.persons as Person[] | undefined) ?? [];
   const color   = FLOW_COLORS[log.flow_type];
 
@@ -157,7 +157,7 @@ function DetailModal({ log, onClose }: { log: SkipLog; onClose: () => void }) {
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <span style={{ fontSize: 12, color: C.dimText }}>{log.credits_deducted} credit{log.credits_deducted !== 1 ? "s" : ""} · ${log.cost_usd.toFixed(4)}</span>
+            <span style={{ fontSize: 12, color: C.dimText }}>{log.credits_deducted} credit{log.credits_deducted !== 1 ? "s" : ""}{accessRole !== "user" ? ` · $${log.cost_usd.toFixed(4)}` : ""}</span>
             <button
               onClick={onClose}
               style={{ background: "none", border: "none", cursor: "pointer", color: C.dimText, padding: 4 }}
@@ -424,7 +424,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
           Skip Tracing
         </h1>
         <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>
-          APN lookups, skip traces & DNC checks — all activity logged here.
+          APN Lookups, Skip Traces & DNC Checks — All Activity Logged Here.
         </p>
       </motion.div>
 
@@ -438,7 +438,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         <StatChip label="TOTAL LOOKUPS"    value={filtered.length} />
         <StatChip label="HITS"             value={totalHits}       color={C.green} />
         <StatChip label="CREDITS USED"     value={totalCredits}    color={C.yellow} />
-        <StatChip label="COST (BILLED)"    value={`$${totalCost.toFixed(2)}`} color={C.blue} />
+        {accessRole !== "user" && <StatChip label="COST (BILLED)" value={`$${totalCost.toFixed(2)}`} color={C.blue} />}
       </motion.div>
 
       {/* Filter bar */}
@@ -529,8 +529,8 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
-              {["Date", "Contact", "Type", "Result", "Context", "Credits", "Cost"].map((h) => (
-                <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.dimText, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {["Date", "Contact", "Type", "Result", "Context", "Credits", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+                <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 800, color: "#e2e8f0", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {h}
                 </th>
               ))}
@@ -542,7 +542,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
-                    No lookups found for the current filters.
+                    No Lookups Found For The Current Filters.
                   </td>
                 </tr>
               ) : (
@@ -565,13 +565,13 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
                         {fmt(log.created_at)}
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                         {log.contact_id ?? "—"}
                       </td>
-                      <td style={{ padding: "11px 14px" }}>
+                      <td style={{ padding: "11px 14px", textAlign: "center" }}>
                         <span style={{
                           fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
                           color: FLOW_COLORS[log.flow_type], background: FLOW_BG[log.flow_type],
@@ -580,19 +580,21 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                           {FLOW_LABELS[log.flow_type]}
                         </span>
                       </td>
-                      <td style={{ padding: "11px 14px" }}>
+                      <td style={{ padding: "11px 14px", textAlign: "center" }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: resultClr }}>{resultLbl}</span>
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                         {contextLabel(log)}
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText }}>
+                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, textAlign: "center" }}>
                         {log.credits_deducted}
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.dimText }}>
-                        ${log.cost_usd.toFixed(4)}
-                      </td>
-                      <td style={{ padding: "11px 14px" }}>
+                      {accessRole !== "user" && (
+                        <td style={{ padding: "11px 14px", fontSize: 12, color: C.dimText, textAlign: "center" }}>
+                          ${log.cost_usd.toFixed(4)}
+                        </td>
+                      )}
+                      <td style={{ padding: "11px 14px", textAlign: "center" }}>
                         <span style={{ fontSize: 11, color: C.blue, fontWeight: 600 }}>View →</span>
                       </td>
                     </motion.tr>
@@ -606,7 +608,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
 
       {/* Detail modal */}
       <AnimatePresence>
-        {selected && <DetailModal log={selected} onClose={() => setSelected(null)} />}
+        {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
       </AnimatePresence>
     </div>
   );

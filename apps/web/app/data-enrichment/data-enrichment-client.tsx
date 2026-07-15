@@ -371,7 +371,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
               Enrichment Logs
             </h1>
             <p style={{ fontSize: 13, color: C.bodyText, marginTop: 4 }}>
-              All enrichment records — click any row to view the full details.
+              All Enrichment Records — Click Any Row To View The Full Details.
             </p>
           </div>
           {/* Stats */}
@@ -468,11 +468,11 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
-              {["Date & Time", "Contact / Record", "Field Preview", "Fields", ...(accessRole !== "user" ? ["Cost"] : [])].map((h, i) => (
+              {["Date", "Contact / Record", "Field Preview", "Fields", ...(accessRole !== "user" ? ["Cost"] : [])].map((h, i) => (
                 <th key={h} style={{
                   padding: "11px 16px", textAlign: i >= 3 ? "center" : "left",
-                  fontSize: 10, fontWeight: 700, letterSpacing: "0.07em",
-                  textTransform: "uppercase", color: "#475569",
+                  fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
+                  textTransform: "uppercase", color: "#e2e8f0",
                 }}>{h}</th>
               ))}
               <th style={{ width: 32 }} />
@@ -491,10 +491,10 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                       <Database size={20} style={{ color: C.dimText }} />
                     </div>
                     <p style={{ fontSize: 14, fontWeight: 600, color: C.dimText, margin: 0 }}>
-                      No enrichment logs{period !== "all" ? " for this period" : ""}.
+                      No Enrichment Logs{period !== "all" ? " For This Period" : ""}.
                     </p>
                     <p style={{ fontSize: 12, color: "#374151", margin: 0 }}>
-                      Records will appear here once data is enriched.
+                      Records Will Appear Here Once Data Is Enriched.
                     </p>
                   </div>
                 </td>
@@ -514,7 +514,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >
                   {/* Date */}
-                  <td style={{ padding: "13px 16px", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "13px 16px", whiteSpace: "nowrap", textAlign: "center" }}>
                     <p style={{ fontSize: 12, fontWeight: 600, color: C.bodyText, margin: 0 }}>
                       {fmtDate(l.created_at)}
                     </p>
@@ -524,12 +524,12 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                   </td>
 
                   {/* Contact */}
-                  <td style={{ padding: "13px 16px", maxWidth: 220 }}>
+                  <td style={{ padding: "13px 16px", maxWidth: 220, textAlign: "center" }}>
                     <p style={{ fontSize: 13, fontWeight: 700, color: C.white, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {l.contact_name ?? previewLabel(l.fields)}
                     </p>
                     {l.external_id && (
-                      <p style={{ fontSize: 11, color: C.dimText, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 3 }}>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", justifyContent: "center", gap: 3 }}>
                         <Hash size={9} />
                         {l.external_id}
                       </p>
@@ -537,8 +537,8 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                   </td>
 
                   {/* Field preview tags */}
-                  <td style={{ padding: "13px 16px" }}>
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  <td style={{ padding: "13px 16px", textAlign: "center" }}>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "center" }}>
                       {keys.map((k) => (
                         <span key={k} style={{
                           fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5,

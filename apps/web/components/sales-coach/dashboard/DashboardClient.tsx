@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mic, Zap } from "lucide-react";
+import { Mic } from "lucide-react";
 import DashboardStats from "./DashboardStats";
 import CallsChart from "./CallsChart";
 import ScoreDistribution from "./ScoreDistribution";
@@ -13,7 +13,7 @@ export interface Stats {
   totalCalls:        number;
   avgScore:          number | null;
   scorableRate:      number;
-  activeAgents:      number;
+
   totalCallsChange:  number;
   avgScoreChange:    number;
 }
@@ -45,11 +45,8 @@ interface Props {
 
 export default function DashboardClient({ data, companyData, accessRole, userName }: Props) {
   const [view, setView] = useState<"my" | "company">("my");
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const showToggle = accessRole === "user" && companyData !== undefined;
   const active     = showToggle && view === "company" ? companyData! : data;
-  const display    = userName.split(" ")[0] || userName;
 
   return (
     <div style={{ padding: "32px 36px", maxWidth: 1200, position: "relative" }}>
@@ -66,28 +63,20 @@ export default function DashboardClient({ data, companyData, accessRole, userNam
         style={{ marginBottom: 32, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}
       >
         <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: 7,
-              background: "rgba(48,125,192,0.15)", border: "1px solid rgba(48,125,192,0.3)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Mic size={12} style={{ color: "#307DC0" }} />
-            </div>
-            <p style={{ fontSize: 11, fontWeight: 700, color: "#307DC0", margin: 0, letterSpacing: "0.1em", textTransform: "uppercase" }}>
-              Sales Coach
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+            <Mic size={14} style={{ color: "#307DC0" }} />
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#307DC0", margin: 0, letterSpacing: "0.09em", textTransform: "uppercase" }}>
+              AI Sales Coach
             </p>
           </div>
-          <h1 style={{
-            fontSize: 36, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1, margin: "0 0 8px",
-            background: "linear-gradient(135deg, #ffffff 40%, rgba(67,183,73,0.75) 100%)",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-          }}>
-            {greeting}, {display}
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "#fff", letterSpacing: "-0.02em", margin: "0 0 6px" }}>
+            Dashboard
           </h1>
-          <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-            Here&apos;s how your team is performing.
-          </p>
+          {(!showToggle || view === "company") && (
+            <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+              Here&apos;s Your Team&apos;s Performance At A Glance.
+            </p>
+          )}
         </div>
 
         {showToggle && (

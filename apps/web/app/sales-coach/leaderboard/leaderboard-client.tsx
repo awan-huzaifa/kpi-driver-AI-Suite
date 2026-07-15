@@ -16,6 +16,7 @@ interface AgentStats {
   name:       string;
   agentType:  string;
   companyId:  string;
+  avatarUrl:  string | null;
   avgScore:   number;
   totalCalls: number;
   bands:      { elite: number; strong: number; workable: number; weak: number; coaching: number };
@@ -33,7 +34,6 @@ interface Props {
 /* ── Constants ──────────────────────────────────────────── */
 
 const TYPES = [
-  { value: "all", label: "All" },
   { value: "fus", label: "FUS" },
   { value: "acq", label: "ACQ" },
 ] as const;
@@ -98,7 +98,10 @@ function buildStats(calls: LeaderboardCall[], period: DatePeriod, customFrom: st
     if (!c.agent) continue;
     const bk = getBandKey(c.score);
     const ex = map.get(c.user_id);
-    if (ex) { ex.totalScore += c.score; ex.count++; ex.bands[bk]++; }
+    if (ex) {
+      ex.totalScore += c.score; ex.count++; ex.bands[bk]++;
+      if (!ex.agent?.avatar_url && c.agent.avatar_url) (ex.agent as any).avatar_url = c.agent.avatar_url;
+    }
     else map.set(c.user_id, { totalScore: c.score, count: 1, agent: c.agent, companyId: c.company_id, bands: { elite: 0, strong: 0, workable: 0, weak: 0, coaching: 0, [bk]: 1 } });
   }
 
@@ -124,6 +127,7 @@ function buildStats(calls: LeaderboardCall[], period: DatePeriod, customFrom: st
     name:       d.agent?.full_name ?? "Unknown",
     agentType:  d.agent?.agent_type ?? "none",
     companyId:  d.companyId,
+    avatarUrl:  (d.agent as any)?.avatar_url ?? null,
     avgScore:   Math.round(d.avg * 10) / 10,
     totalCalls: d.count,
     bands:      d.bands,
@@ -190,7 +194,7 @@ function RankChange({ change }: { change: number | null }) {
 function BandPills({ bands }: { bands: AgentStats["bands"] }) {
   const order: (keyof typeof BAND_META)[] = ["elite", "strong", "workable", "weak", "coaching"];
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-1 justify-center">
       {order.map((k) => bands[k] > 0 ? (
         <span key={k} className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
           style={{ color: BAND_META[k].color, background: BAND_META[k].bg }}>
@@ -204,6 +208,7 @@ function BandPills({ bands }: { bands: AgentStats["bands"] }) {
 function PodiumCard({ s, isMe, delay }: { s: AgentStats; isMe: boolean; delay: number }) {
   const color = scoreColor(s.avgScore);
   const score = useCountUp(s.avgScore, 900, delay + 200);
+  const initials = s.name[0]?.toUpperCase() ?? "?";
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.96 }}
@@ -213,6 +218,17 @@ function PodiumCard({ s, isMe, delay }: { s: AgentStats; isMe: boolean; delay: n
       style={s.rank === 1 ? { boxShadow: "0 0 24px rgba(251,191,36,0.08)", borderColor: "rgba(251,191,36,0.25)" } : {}}
     >
       <RankBadge rank={s.rank} />
+      {/* Avatar */}
+      <div style={{
+        width: 48, height: 48, borderRadius: 14, overflow: "hidden", flexShrink: 0,
+        background: "rgba(48,125,192,0.12)", border: "1px solid rgba(48,125,192,0.25)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 18, fontWeight: 800, color: "#78ABD6",
+      }}>
+        {s.avatarUrl
+          ? <img src={s.avatarUrl} alt={s.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          : initials}
+      </div>
       <div>
         <p className="text-sm font-bold text-white">{s.name}{isMe ? " (you)" : ""}</p>
         <div className="flex justify-center mt-1"><Badge variant={s.agentType as any} /></div>
@@ -231,12 +247,12 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
   const [period,     setPeriod]    = useState<DatePeriod>("today");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
-  const [agentType,  setAgentType] = useState<"all" | "fus" | "acq">("all");
+  const [agentType,  setAgentType] = useState<"fus" | "acq">("fus");
   const [companyId,  setCompanyId] = useState<string>("all");
 
   const leaderboard = useMemo(() => {
     let filtered = calls;
-    if (agentType !== "all") filtered = filtered.filter(c => c.agent?.agent_type === agentType);
+    filtered = filtered.filter(c => c.agent?.agent_type === agentType);
     if (companyId !== "all") filtered = filtered.filter(c => c.company_id === companyId);
     return buildStats(filtered, period, customFrom, customTo);
   }, [calls, period, customFrom, customTo, agentType, companyId]);
@@ -253,7 +269,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
         <div>
           <h1 className="text-xl font-bold gradient-text">Leaderboard</h1>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-            {leaderboard.length} agent{leaderboard.length !== 1 ? "s" : ""} ranked
+            {agentType.toUpperCase()} · {leaderboard.length} agent{leaderboard.length !== 1 ? "s" : ""} ranked
           </p>
         </div>
 
@@ -297,17 +313,22 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
           style={{ color: "#334155" }}
         >
           <Trophy size={36} className="mb-3 opacity-20" />
-          <p className="text-sm">No scored calls found for this period.</p>
+          <p className="text-sm">No Scored Calls Found For This Period.</p>
         </motion.div>
       )}
 
       {/* Podium — top 3 in [2nd, 1st, 3rd] visual order */}
       {leaderboard.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-3 gap-4" style={{ alignItems: 'flex-end', marginBottom: 96 }}>
           {[1, 0, 2].map((podiumIdx, vi) => {
             const s = leaderboard[podiumIdx];
             if (!s) return <div key={podiumIdx} />;
-            return <PodiumCard key={s.userId} s={s} isMe={s.userId === currentUserId} delay={vi * 0.08} />;
+            const lift = s.rank === 1 ? 0 : 28;
+            return (
+              <div key={s.userId} style={{ transform: `translateY(${lift}px)` }}>
+                <PodiumCard s={s} isMe={s.userId === currentUserId} delay={vi * 0.08} />
+              </div>
+            );
           })}
         </div>
       )}
@@ -324,7 +345,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
                 {["Rank", "Agent", "Avg Score", "Calls", "Score Bands", "Change"].map((h) => (
-                  <th key={h} className="text-left px-5 py-3 text-xs font-medium" style={{ color: "#334155" }}>{h}</th>
+                  <th key={h} className="text-center px-5 py-3 text-xs font-extrabold uppercase tracking-wide" style={{ color: "#e2e8f0" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -345,13 +366,15 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
                         background: isMe ? "rgba(48,125,192,0.05)" : "transparent",
                       }}
                     >
-                      <td className="px-5 py-3.5"><RankBadge rank={s.rank} /></td>
+                      <td className="px-5 py-3.5"><div className="flex justify-center"><RankBadge rank={s.rank} /></div></td>
 
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2.5">
+                      <td className="px-5 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-2.5">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
-                            style={{ background: "rgba(48,125,192,0.12)", color: "#78ABD6" }}>
-                            {s.name[0]?.toUpperCase() ?? "?"}
+                            style={{ background: "rgba(48,125,192,0.12)", color: "#78ABD6", overflow: "hidden" }}>
+                            {s.avatarUrl
+                              ? <img src={s.avatarUrl} alt={s.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                              : s.name[0]?.toUpperCase() ?? "?"}
                           </div>
                           <div>
                             <p className="text-sm font-medium text-white">
@@ -362,8 +385,8 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
                         </div>
                       </td>
 
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
+                      <td className="px-5 py-3.5 text-center">
+                        <div className="flex items-center justify-center gap-3">
                           <div className="w-20 h-1.5 rounded-full overflow-hidden flex-shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
                             <motion.div
                               className="h-full rounded-full"
@@ -378,12 +401,14 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
                       </td>
 
                       <td className="px-5 py-3.5">
-                        <span className="text-sm font-semibold text-white">{s.totalCalls}</span>
-                        <span className="text-xs ml-1" style={{ color: "#334155" }}>scored</span>
+                        <div className="flex items-center justify-center gap-1">
+                          <span className="text-sm font-semibold text-white">{s.totalCalls}</span>
+                          <span className="text-xs" style={{ color: "#334155" }}>scored</span>
+                        </div>
                       </td>
 
                       <td className="px-5 py-3.5"><BandPills bands={s.bands} /></td>
-                      <td className="px-5 py-3.5"><RankChange change={s.rankChange} /></td>
+                      <td className="px-5 py-3.5"><div className="flex justify-center"><RankChange change={s.rankChange} /></div></td>
                     </motion.tr>
                   );
                 })}
