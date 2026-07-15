@@ -19,6 +19,7 @@ interface NoteCall {
   to_number:       string | null;
   from_number:     string | null;
   agent_name:      string | null;
+  lead_source:     string | null;
   ai_summary:      string | null;
   normal_summary:  string | null;
   input_tokens:    number;
@@ -232,13 +233,19 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
   const [customTo,   setCustomTo]   = useState("");
   const [companyId,   setCompanyId]   = useState<string>("all");
   const [direction,   setDirection]   = useState<Direction>("all");
-  const [agentFilter, setAgentFilter] = useState<string>("all");
-  const [search,      setSearch]      = useState("");
-  const [selected,    setSelected]    = useState<NoteCall | null>(null);
+  const [agentFilter,      setAgentFilter]      = useState<string>("all");
+  const [leadSourceFilter, setLeadSourceFilter] = useState<string>("all");
+  const [search,           setSearch]           = useState("");
+  const [selected,         setSelected]         = useState<NoteCall | null>(null);
 
   const agentNames = useMemo(() => {
     const names = calls.map(c => c.agent_name).filter((n): n is string => !!n);
     return [...new Set(names)].sort();
+  }, [calls]);
+
+  const leadSources = useMemo(() => {
+    const sources = calls.map(c => c.lead_source).filter((s): s is string => !!s);
+    return [...new Set(sources)].sort();
   }, [calls]);
 
   useEffect(() => {
@@ -257,6 +264,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
       if (end   && new Date(c.created_at) > end)   return false;
       if (direction !== "all" && c.call_direction !== direction) return false;
       if (agentFilter !== "all" && c.agent_name !== agentFilter) return false;
+      if (leadSourceFilter !== "all" && c.lead_source !== leadSourceFilter) return false;
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -269,7 +277,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
       }
       return true;
     });
-  }, [calls, companyId, period, customFrom, customTo, direction, agentFilter, search]);
+  }, [calls, companyId, period, customFrom, customTo, direction, agentFilter, leadSourceFilter, search]);
 
   const totalCost = filtered.reduce((s, c) => s + (c.cost_usd ?? 0), 0);
 
@@ -358,6 +366,17 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
               {agentNames.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
             </SelectContent>
           </Select>
+
+          {/* Lead Source filter */}
+          {leadSources.length > 0 && (
+            <Select value={leadSourceFilter} onValueChange={setLeadSourceFilter}>
+              <SelectTrigger placeholder="All Sources" className="w-auto min-w-[120px] text-xs py-1.5" />
+              <SelectContent>
+                <SelectItem value="all">All Sources</SelectItem>
+                {leadSources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Row 2 — search + cost */}
@@ -403,7 +422,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date", "Agent", "Direction", "From", "To", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Agent", "Direction", "Lead Source", "From", "To", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
@@ -415,7 +434,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: "56px 16px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
+                <td colSpan={9} style={{ padding: "56px 16px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
                   No Call Logs Yet{period !== "all" ? " For This Period" : ""}.
                 </td>
               </tr>
@@ -439,6 +458,19 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 </td>
                 <td style={{ padding: "12px 16px", textAlign: "center" }}>
                   <DirectionBadge dir={c.call_direction} />
+                </td>
+                <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                  {c.lead_source ? (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                      color: "#FCAF17", background: "rgba(252,175,23,0.1)",
+                      border: "1px solid rgba(252,175,23,0.2)", whiteSpace: "nowrap",
+                    }}>
+                      {c.lead_source}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                  )}
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
                   {c.from_number ?? "—"}
