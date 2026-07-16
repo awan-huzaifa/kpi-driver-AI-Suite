@@ -51,9 +51,7 @@ export const APP_REGISTRY: AppEntry[] = [
       { href: '/sales-coach/live-calls',                label: 'Live Calls',  icon: Phone                               },
       { href: '/sales-coach/leaderboard',               label: 'Leaderboard', icon: Trophy                              },
       { href: '/sales-coach/analytics',                 label: 'Analytics',   icon: BarChart3                           },
-      { href: '/sales-coach/admin/users',               label: 'Team',        icon: Users,       minRole: 'admin', maxRole: 'admin' },
       { href: '/sales-coach/super-admin/companies',     label: 'Companies',   icon: ShieldCheck, minRole: 'super_admin' },
-      { href: '/sales-coach/super-admin/users',         label: 'All Users',   icon: ShieldCheck, minRole: 'super_admin' },
     ],
   },
   {

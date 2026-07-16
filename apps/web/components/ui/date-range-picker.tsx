@@ -363,7 +363,7 @@ export default function DateRangePicker({
               transition: "background 0.15s, color 0.15s",
               whiteSpace: "nowrap",
               background: period === p.value ? `${activeColor}22` : "transparent",
-              color:      period === p.value ? activeColor : "#475569",
+              color:      period === p.value ? activeColor : "#94a3b8",
             }}
           >
             {p.label}

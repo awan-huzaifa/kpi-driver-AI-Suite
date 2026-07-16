@@ -27,6 +27,16 @@ export default async function DashboardPage() {
   const admin = createAdminClient()
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
 
+  // For deals (no company_id column) — fetch company user IDs first
+  let companyUserIds: string[] = []
+  if (!isSuperAdmin && companyId) {
+    const { data: companyUsers } = await admin
+      .from('users')
+      .select('id')
+      .eq('company_id', companyId)
+    companyUserIds = (companyUsers ?? []).map((u: { id: string }) => u.id)
+  }
+
   // Fetch stats + wallet + recent activity in parallel
   const [
     liveCallsResult,
@@ -46,8 +56,8 @@ export default async function DashboardPage() {
 
     isSuperAdmin
       ? admin.from('deals').select('id', { count: 'exact', head: true }).gte('created_at', monthStart)
-      : companyId
-        ? admin.from('deals').select('id', { count: 'exact', head: true }).eq('company_id', companyId).gte('created_at', monthStart)
+      : companyUserIds.length > 0
+        ? admin.from('deals').select('id', { count: 'exact', head: true }).in('user_id', companyUserIds).gte('created_at', monthStart)
         : Promise.resolve({ count: 0, error: null }),
 
     isSuperAdmin

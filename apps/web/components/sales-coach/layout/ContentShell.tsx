@@ -12,9 +12,7 @@ const PATH_TITLES: Record<string, string> = {
   "/sales-coach/leaderboard":          "Leaderboard",
   "/sales-coach/analytics":            "Analytics",
   "/sales-coach/settings":             "Settings",
-  "/sales-coach/admin/users":          "Users",
   "/sales-coach/super-admin/companies":"Companies",
-  "/sales-coach/super-admin/users":    "All Users",
 };
 
 function getTitle(pathname: string): string {

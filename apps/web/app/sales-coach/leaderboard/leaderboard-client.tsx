@@ -284,11 +284,11 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
               </SelectContent>
             </Select>
           )}
-          <div className="flex rounded-xl overflow-hidden mt-0.5" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+          <div className="flex rounded-xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
             {TYPES.map((t) => (
               <button key={t.value} onClick={() => setAgentType(t.value)}
                 className="px-3 py-2 text-xs font-medium transition-colors"
-                style={{ background: agentType === t.value ? "rgba(48,125,192,0.15)" : "transparent", color: agentType === t.value ? "#78ABD6" : "#475569" }}>
+                style={{ background: agentType === t.value ? "rgba(48,125,192,0.15)" : "transparent", color: agentType === t.value ? "#78ABD6" : "#94a3b8" }}>
                 {t.label}
               </button>
             ))}
