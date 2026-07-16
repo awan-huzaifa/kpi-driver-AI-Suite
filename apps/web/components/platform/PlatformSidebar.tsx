@@ -201,8 +201,12 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
   const pathname     = usePathname()
   const router       = useRouter()
   const [settingsOpen,    setSettingsOpen]    = useState(false)
-  const [companyLogoUrl,  setCompanyLogoUrl]  = useState<string | null>(null)
-  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null)
+  const [companyLogoUrl,  setCompanyLogoUrl]  = useState<string | null>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('kpi-company-logo') : null
+  )
+  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('kpi-avatar-url') : null
+  )
 
   useEffect(() => {
     const supabase = createClient()
@@ -214,7 +218,10 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
         .eq('id', u.id)
         .single()
         .then(({ data: profile }) => {
-          if ((profile as any)?.avatar_url) setAvatarUrl((profile as any).avatar_url)
+          if ((profile as any)?.avatar_url) {
+            setAvatarUrl((profile as any).avatar_url)
+            localStorage.setItem('kpi-avatar-url', (profile as any).avatar_url)
+          }
           if (!profile?.company_id) return
           supabase
             .from('companies')
@@ -222,14 +229,17 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
             .eq('id', profile.company_id)
             .single()
             .then(({ data: co }) => {
-              if ((co as any)?.logo_url) setCompanyLogoUrl((co as any).logo_url)
+              const url = (co as any)?.logo_url ?? null
+              setCompanyLogoUrl(url)
+              if (url) localStorage.setItem('kpi-company-logo', url)
+              else localStorage.removeItem('kpi-company-logo')
             })
         })
     })
 
     function onAvatarUpdated(e: Event) {
       const url = (e as CustomEvent<{ url: string }>).detail?.url
-      if (url) setAvatarUrl(url)
+      if (url) { setAvatarUrl(url); localStorage.setItem('kpi-avatar-url', url) }
     }
     window.addEventListener('avatar-updated', onAvatarUpdated)
     return () => window.removeEventListener('avatar-updated', onAvatarUpdated)
