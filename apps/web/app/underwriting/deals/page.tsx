@@ -32,6 +32,7 @@ export default async function DealsPage() {
     max_offer: number | null;
     created_at: string;
     user_id?: string;
+    agent_name?: string | null;
     company_id?: string | null;
     company_name?: string | null;
   };
@@ -53,10 +54,11 @@ export default async function DealsPage() {
       const uniqueUserIds = [...new Set(allDeals.map((d) => d.user_id as string))];
       const { data: userRows } = await admin
         .from("users")
-        .select("id, company_id")
+        .select("id, company_id, full_name, email")
         .in("id", uniqueUserIds);
 
       const userCompanyMap = new Map((userRows ?? []).map((u) => [u.id, u.company_id as string | null]));
+      const userNameMap    = new Map((userRows ?? []).map((u) => [u.id, (u.full_name || u.email || null) as string | null]));
 
       const { data: companyRows } = await admin
         .from("companies")
@@ -70,6 +72,7 @@ export default async function DealsPage() {
         const cid = userCompanyMap.get(d.user_id as string) ?? null;
         return {
           ...d,
+          agent_name:   userNameMap.get(d.user_id as string) ?? null,
           company_id:   cid,
           company_name: cid ? (companyNameMap.get(cid) ?? null) : null,
         };
@@ -81,9 +84,8 @@ export default async function DealsPage() {
       .from("deals")
       .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at, user_id")
       .order("created_at", { ascending: false });
-    rows = (data ?? []) as DealRow[];
 
-    // Fetch company members for the user filter dropdown
+    // Fetch company members for the user filter dropdown + agent name enrichment
     if (profile?.company_id) {
       const { data: members } = await supabase
         .from("users")
@@ -93,6 +95,9 @@ export default async function DealsPage() {
         .order("full_name");
       companyUsers = (members ?? []) as CompanyUser[];
     }
+
+    const nameMap = new Map(companyUsers.map((u) => [u.id, u.full_name || u.email || null]));
+    rows = (data ?? []).map((d) => ({ ...d, agent_name: nameMap.get(d.user_id as string) ?? null })) as DealRow[];
   }
 
   const completed = rows.filter((d) => d.status === "completed").length;

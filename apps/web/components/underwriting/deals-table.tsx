@@ -1,11 +1,123 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, Search, AlertTriangle, Loader2 } from "lucide-react";
+import { Trash2, Search, AlertTriangle, Loader2, ChevronDown, Check } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { deleteDeal, deleteDeals } from "@/app/actions/underwriting/deals";
+
+// ── Custom inline dropdown (no portal — avoids Radix conflict) ────────────────
+
+interface DropdownOption { value: string; label: string }
+
+function InlineDropdown({
+  value,
+  options,
+  onChange,
+  placeholder = "Select…",
+  minWidth = 140,
+}: {
+  value:       string;
+  options:     DropdownOption[];
+  onChange:    (v: string) => void;
+  placeholder?: string;
+  minWidth?:   number;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const selected = options.find((o) => o.value === value);
+
+  return (
+    <div ref={ref} style={{ position: "relative", minWidth }}>
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: 8, width: "100%",
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(255,255,255,0.08)",
+          color: "#f1f5f9", fontSize: 13, borderRadius: 12,
+          padding: "7px 10px 7px 12px",
+          cursor: "pointer", outline: "none",
+          transition: "border-color 0.15s, background 0.15s",
+          whiteSpace: "nowrap",
+        }}
+        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "rgba(48,125,192,0.4)"; }}
+        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = open ? "rgba(48,125,192,0.4)" : "rgba(255,255,255,0.08)"; }}
+      >
+        <span>{selected?.label ?? placeholder}</span>
+        <ChevronDown
+          size={13}
+          style={{ color: "#475569", transition: "transform 0.15s", transform: open ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}
+        />
+      </button>
+
+      {/* Dropdown list */}
+      {open && (
+        <div
+          style={{
+            position: "absolute", top: "calc(100% + 4px)", left: 0,
+            minWidth: "100%", zIndex: 9999,
+            background: "#0F2032",
+            border: "1px solid rgba(48,125,192,0.18)",
+            borderRadius: 12,
+            boxShadow: "0 12px 40px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35)",
+            overflow: "hidden",
+            padding: "4px",
+          }}
+        >
+          {options.map((opt) => {
+            const isActive = opt.value === value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  width: "100%", textAlign: "left",
+                  padding: "7px 10px", borderRadius: 8, border: "none",
+                  background: isActive ? "rgba(48,125,192,0.12)" : "transparent",
+                  color: isActive ? "#f1f5f9" : "#94a3b8",
+                  fontSize: 13, cursor: "pointer",
+                  transition: "background 0.1s, color 0.1s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.05)";
+                    (e.currentTarget as HTMLElement).style.color = "#f1f5f9";
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLElement).style.background = "transparent";
+                    (e.currentTarget as HTMLElement).style.color = "#94a3b8";
+                  }
+                }}
+              >
+                <span>{opt.label}</span>
+                {isActive && <Check size={12} style={{ color: "#307DC0", flexShrink: 0 }} />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 type Deal = {
   id: string;
@@ -17,12 +129,12 @@ type Deal = {
   max_offer: number | null;
   created_at: string;
   user_id?: string | null;
+  agent_name?: string | null;
   company_id?: string | null;
   company_name?: string | null;
 };
 
 type CompanyUser = { id: string; full_name: string | null; email: string | null };
-type StatusFilter = "all" | "completed" | "failed" | "pending";
 type ViewMode = "mine" | "all";
 
 function fmt(n: number | null) {
@@ -169,9 +281,8 @@ export function DealsTable({
   const isSuperAdmin = accessRole === "super_admin";
   const hasCompanyContext = !isSuperAdmin && companyUsers.length > 0;
 
-  const [viewMode,      setViewMode]      = useState<ViewMode>("all");
+  const [viewMode,      setViewMode]      = useState<ViewMode>("mine");
   const [userFilter,    setUserFilter]    = useState("all");
-  const [filter,        setFilter]        = useState<StatusFilter>("all");
   const [search,        setSearch]        = useState("");
   const [companyId,     setCompanyId]     = useState("all");
   const [selected,      setSelected]      = useState<Set<string>>(new Set());
@@ -185,11 +296,14 @@ export function DealsTable({
 
   const filtered = useMemo(() => deals
     .filter((d) => companyId === "all" || d.company_id === companyId)
-    .filter((d) => !hasCompanyContext || viewMode === "all" || d.user_id === currentUserId)
-    .filter((d) => userFilter === "all" || d.user_id === userFilter)
-    .filter((d) => filter === "all" || d.status === filter)
+    .filter((d) => {
+      if (!hasCompanyContext) return true;
+      if (viewMode === "mine") return d.user_id === currentUserId;
+      if (userFilter !== "all") return d.user_id === userFilter;
+      return true;
+    })
     .filter((d) => d.address.toLowerCase().includes(search.toLowerCase())),
-  [deals, companyId, viewMode, userFilter, filter, search, currentUserId, hasCompanyContext]);
+  [deals, companyId, viewMode, userFilter, search, currentUserId, hasCompanyContext]);
 
   const filteredIds    = filtered.map((d) => d.id);
   const allSelected    = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
@@ -249,67 +363,39 @@ export function DealsTable({
             />
           </div>
 
-          {/* My Deals / All toggle — only for company members */}
+          {/* View selector — my deals / company member */}
           {hasCompanyContext && (
-            <div className="flex items-center gap-0.5 bg-card border border-edge rounded-lg p-1">
-              <button
-                onClick={() => { setViewMode("mine"); setUserFilter("all"); clearSelection(); }}
-                className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
-                  viewMode === "mine" ? "bg-brand text-white" : "text-muted hover:text-white"
-                }`}
-              >
-                My Deals
-              </button>
-              <button
-                onClick={() => { setViewMode("all"); clearSelection(); }}
-                className={`px-3 py-1 rounded text-[12px] font-semibold transition-colors ${
-                  viewMode === "all" ? "bg-brand text-white" : "text-muted hover:text-white"
-                }`}
-              >
-                All
-              </button>
-            </div>
-          )}
-
-          {/* User filter — only when viewing all company deals */}
-          {hasCompanyContext && viewMode === "all" && usersWithDeals.length > 1 && (
-            <Select value={userFilter} onValueChange={(v) => { setUserFilter(v); clearSelection(); }}>
-              <SelectTrigger placeholder="All Members" className="w-auto min-w-[150px] text-xs py-2" />
-              <SelectContent>
-                <SelectItem value="all">All Members</SelectItem>
-                {usersWithDeals.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>
-                    {getUserLabel(u)}{u.id === currentUserId ? " (Me)" : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <InlineDropdown
+              value={viewMode === "mine" ? "mine" : userFilter}
+              options={[
+                { value: "mine", label: "My Deals" },
+                { value: "all",  label: "All Members" },
+                ...usersWithDeals
+                  .filter((u) => u.id !== currentUserId)
+                  .map((u) => ({ value: u.id, label: getUserLabel(u) })),
+              ]}
+              onChange={(v) => {
+                if (v === "mine") { setViewMode("mine"); setUserFilter("all"); }
+                else              { setViewMode("all");  setUserFilter(v);     }
+                clearSelection();
+              }}
+              minWidth={150}
+            />
           )}
 
           {/* Company filter — super_admin only */}
           {isSuperAdmin && companies.length > 0 && (
-            <Select value={companyId} onValueChange={(v) => { setCompanyId(v); clearSelection(); }}>
-              <SelectTrigger placeholder="All Companies" className="w-auto min-w-[160px] text-xs py-2" />
-              <SelectContent>
-                <SelectItem value="all">All Companies</SelectItem>
-                {companies.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <InlineDropdown
+              value={companyId}
+              options={[
+                { value: "all", label: "All Companies" },
+                ...companies.map((c) => ({ value: c.id, label: c.name })),
+              ]}
+              onChange={(v) => { setCompanyId(v); clearSelection(); }}
+              minWidth={170}
+            />
           )}
 
-          {/* Status filter */}
-          <select
-            value={filter}
-            onChange={(e) => { setFilter(e.target.value as StatusFilter); clearSelection(); }}
-            className="bg-card border border-edge text-white text-[13px] rounded-lg px-3 py-2 outline-none focus:border-brand transition-colors ml-auto"
-          >
-            <option value="all">All</option>
-            <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-          </select>
         </div>
 
         {/* Bulk action bar */}
@@ -340,7 +426,7 @@ export function DealsTable({
         <div className="bg-card border border-edge rounded-xl overflow-hidden">
           {filtered.length === 0 ? (
             <div className="py-12 text-center text-muted text-[13px]">
-              No {filter !== "all" ? filter : ""} deals found.
+              No deals found.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -356,13 +442,14 @@ export function DealsTable({
                         className="w-4 h-4 accent-brand rounded"
                       />
                     </th>
-                    <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Date</th>
-                    <th className="text-left px-3 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Address</th>
+                    <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Date</th>
+                    <th className="text-center px-3 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Address</th>
                     {showCompanyCol && (
-                      <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Company</th>
+                      <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Company</th>
                     )}
-                    <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Status</th>
-                    <th className="text-left px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Recommendation</th>
+                    <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Agent</th>
+                    <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Status</th>
+                    <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Recommendation</th>
                     <th className="text-right px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">ARV Range</th>
                     <th className="text-right px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Max Offer</th>
                     <th className="px-5 py-3 w-10" />
@@ -386,21 +473,24 @@ export function DealsTable({
                             className="w-4 h-4 accent-brand rounded"
                           />
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-4 text-center">
                           <span className="text-muted text-[12px]">{fmtDate(deal.created_at)}</span>
                         </td>
-                        <td className="px-3 py-4">
+                        <td className="px-3 py-4 text-center">
                           <p className="text-white text-[13px] font-medium leading-snug">{deal.address}</p>
                           <p className="text-muted text-[11px] mt-0.5 font-mono">{deal.id.slice(0, 8)}…</p>
                         </td>
                         {showCompanyCol && (
-                          <td className="px-4 py-4">
+                          <td className="px-4 py-4 text-center">
                             <span className="text-muted text-[12px]">{deal.company_name ?? "—"}</span>
                           </td>
                         )}
-                        <td className="px-4 py-4"><StatusBadge status={deal.status} /></td>
-                        <td className="px-4 py-4"><RecommendationBadge value={deal.recommendation} /></td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-4 py-4 text-center">
+                          <span className="text-white text-[12px] font-medium">{deal.agent_name ?? "—"}</span>
+                        </td>
+                        <td className="px-4 py-4 text-center"><StatusBadge status={deal.status} /></td>
+                        <td className="px-4 py-4 text-center"><RecommendationBadge value={deal.recommendation} /></td>
+                        <td className="px-4 py-4 text-center">
                           {deal.arv_low && deal.arv_high ? (
                             <span className="text-white text-[13px] font-medium">
                               {fmt(deal.arv_low)} — {fmt(deal.arv_high)}
@@ -409,10 +499,10 @@ export function DealsTable({
                             <span className="text-muted text-[12px]">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-4 text-right">
+                        <td className="px-4 py-4 text-center">
                           <span className="text-brand text-[13px] font-semibold">{fmt(deal.max_offer)}</span>
                         </td>
-                        <td className="px-5 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                        <td className="px-5 py-4 text-center" onClick={(e) => e.stopPropagation()}>
                           {/* Only allow deleting own deals */}
                           {isOwn && (
                             <button
