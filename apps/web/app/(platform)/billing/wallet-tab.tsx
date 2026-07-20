@@ -202,7 +202,7 @@ function AutoTopUpCard({ topUpOptions, autoTopup }: { topUpOptions: TopUpOption[
           <div>
             <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>Auto Top-Up</p>
             <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, margin: '2px 0 0' }}>
-              Automatically recharge when your wallet balance gets low
+              Automatically Recharge When Your Wallet Balance Gets Low
             </p>
           </div>
         </div>
@@ -270,7 +270,7 @@ function AutoTopUpCard({ topUpOptions, autoTopup }: { topUpOptions: TopUpOption[
               />
             </div>
             <p style={{ fontSize: 11, color: C.dimText, margin: '6px 0 0' }}>
-              When your balance falls below this amount, we'll automatically charge your default card.
+              When Your Balance Falls Below This Amount, We'll Automatically Charge Your Default Card.
             </p>
           </div>
 
@@ -372,12 +372,12 @@ function PaymentMethodsCard() {
         <div>
           <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>Payment Methods</p>
           <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, margin: '2px 0 0' }}>
-            Default card is charged instantly on top-up — no redirect needed
+            Default Card Is Charged Instantly On Top-Up — No Redirect Needed
           </p>
         </div>
         {!adding && (
           <button onClick={startAddCard} className="btn-primary" style={{ padding: '8px 14px', fontSize: 11 }}>
-            <Plus size={13} /> Add card
+            <Plus size={13} /> Add Card
           </button>
         )}
       </div>
@@ -404,7 +404,7 @@ function PaymentMethodsCard() {
         ) : methods.length === 0 ? (
           <div style={{ padding: '32px 22px', textAlign: 'center' }}>
             <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>
-              No saved cards yet. Add one above for instant one-click top-ups.
+              No Saved Cards Yet. Add One Above For Instant One-Click Top-Ups.
             </p>
           </div>
         ) : (
@@ -432,7 +432,7 @@ function PaymentMethodsCard() {
                     onClick={() => setDefault(m.id)} disabled={busyId === m.id}
                     style={{ fontSize: 11, fontWeight: 600, color: C.blue, background: 'transparent', border: 'none', cursor: 'pointer' }}
                   >
-                    Set default
+                    Set Default
                   </button>
                 )}
                 <button
@@ -486,7 +486,7 @@ function AddCardForm({ clientSecret, onSuccess, onCancel }: { clientSecret: stri
       <div style={{ display: 'flex', gap: 8 }}>
         <button type="submit" disabled={!stripe || submitting} className="btn-primary" style={{ flex: 1 }}>
           {submitting && <Loader2 size={14} className="animate-spin" />}
-          Save card
+          Save Card
         </button>
         <button
           type="button" onClick={onCancel} disabled={submitting}
@@ -531,11 +531,11 @@ function AppSpendCard({ appSpend, access }: { appSpend: AppSpendRow[]; access: A
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}` }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>App Usage</p>
-        <p style={{ fontSize: 12, color: C.dimText, margin: '3px 0 0' }}>Total wallet spend per app, all time</p>
+        <p style={{ fontSize: 12, color: C.dimText, margin: '3px 0 0' }}>Total Wallet Spend Per App, All Time</p>
       </div>
       {rows.length === 0 ? (
         <div style={{ padding: '32px 22px', textAlign: 'center' }}>
-          <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>No apps unlocked yet.</p>
+          <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>No Apps Unlocked Yet.</p>
         </div>
       ) : (
         <div>
@@ -560,7 +560,7 @@ function AppSpendCard({ appSpend, access }: { appSpend: AppSpendRow[]; access: A
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: 0 }}>{e.label}</p>
                   <p style={{ fontSize: 11, color: C.dimText, margin: '2px 0 0' }}>
-                    {runs > 0 ? `${runs} run${runs !== 1 ? 's' : ''}` : 'No usage yet'}
+                    {runs > 0 ? `${runs} run${runs !== 1 ? 's' : ''}` : 'No Usage Yet'}
                     {s && (s.total_input_tokens > 0 || s.total_output_tokens > 0) && (
                       <span style={{ marginLeft: 8, color: C.dimText }}>
                         · {s.total_input_tokens.toLocaleString()} in / {s.total_output_tokens.toLocaleString()} out tokens

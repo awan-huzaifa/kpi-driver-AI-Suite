@@ -15,10 +15,12 @@ function verifySecret(header: string | null): boolean {
 
 type FlowType = "apn" | "dnc" | "skiptrace";
 
-function detectFlowType(body: Record<string, unknown>): FlowType | null {
-  if ("parcel_id" in body)    return "apn";
-  if ("national_dnc" in body) return "dnc";
-  if ("address" in body)      return "skiptrace";
+function detectFlowType(body: Record<string, unknown>): { flowType: FlowType; findOwner: boolean } | null {
+  const raw = body.type as string | undefined;
+  if (raw === "apn")               return { flowType: "apn",       findOwner: false };
+  if (raw === "dnc")               return { flowType: "dnc",       findOwner: false };
+  if (raw === "skiptrace")         return { flowType: "skiptrace", findOwner: false };
+  if (raw === "address_skiptrace") return { flowType: "skiptrace", findOwner: true  };
   return null;
 }
 
@@ -39,15 +41,17 @@ export async function POST(req: NextRequest) {
 
   const location_id = body.location_id as string | null | undefined;
   const contact_id  = body.contact_id  as string | null | undefined;
+  const lead_source = (body.lead_source as string | null | undefined) ?? null;
 
   if (!location_id) {
     return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
   }
 
-  const flowType = detectFlowType(body);
-  if (!flowType) {
-    return NextResponse.json({ error: "Unrecognized payload shape — expected parcel_id, national_dnc, or address" }, { status: 400 });
+  const detected = detectFlowType(body);
+  if (!detected) {
+    return NextResponse.json({ error: "Missing or unrecognized 'type' field — expected apn, dnc, skiptrace, or address_skiptrace" }, { status: 400 });
   }
+  const { flowType, findOwner } = detected;
 
   const admin = createAdminClient();
 
@@ -100,6 +104,7 @@ export async function POST(req: NextRequest) {
     credits_deducted: creditsDeducted,
     cost_usd:         deductionUsd,
     persons_count:    personsCount,
+    lead_source:      lead_source,
     payload:          body,
   };
 
@@ -117,11 +122,11 @@ export async function POST(req: NextRequest) {
     logRow.litigator    = body.litigator    ?? null;
     logRow.phone_type   = body.phone_type   ?? null;
   } else {
-    logRow.address    = body.address    ?? null;
-    logRow.city       = body.city       ?? null;
-    logRow.state      = body.state      ?? null;
-    logRow.zip        = body.zip        ?? null;
-    logRow.find_owner = body.find_owner ?? null;
+    logRow.address    = body.address ?? null;
+    logRow.city       = body.city    ?? null;
+    logRow.state      = body.state   ?? null;
+    logRow.zip        = body.zip     ?? null;
+    logRow.find_owner = findOwner;
   }
 
   const { data: log, error: insertErr } = await admin

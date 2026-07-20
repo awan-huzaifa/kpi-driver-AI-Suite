@@ -18,6 +18,8 @@ interface NoteCall {
   call_direction:  string | null;
   to_number:       string | null;
   from_number:     string | null;
+  contact_phone:   string | null;
+  agent_phone:     string | null;
   agent_name:      string | null;
   lead_source:     string | null;
   ai_summary:      string | null;
@@ -147,10 +149,10 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
             display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24,
           }}>
             {[
-              { label: "Agent",     value: call.agent_name ?? "—"                     },
-              { label: "Direction", value: <DirectionBadge dir={call.call_direction} /> },
-              { label: "From",      value: call.from_number ?? "—"                    },
-              { label: "To",        value: call.to_number   ?? "—"                    },
+              { label: "Agent",         value: call.agent_name    ?? "—"                    },
+              { label: "Agent Phone",   value: call.agent_phone   ?? "—"                    },
+              { label: "Direction",     value: <DirectionBadge dir={call.call_direction} /> },
+              { label: "Contact Phone", value: call.contact_phone ?? "—"                    },
             ].map(({ label, value }) => (
               <div key={label} style={{
                 background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
@@ -422,7 +424,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date", "Agent", "Direction", "Lead Source", "From", "To", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
@@ -473,10 +475,10 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                   )}
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
-                  {c.from_number ?? "—"}
+                  {c.agent_phone ?? "—"}
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
-                  {c.to_number ?? "—"}
+                  {c.contact_phone ?? "—"}
                 </td>
                 <td style={{ padding: "12px 16px", maxWidth: 320, textAlign: "center" }}>
                   <p style={{

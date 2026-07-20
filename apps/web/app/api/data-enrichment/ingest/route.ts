@@ -20,10 +20,13 @@ interface EnrichmentField {
 }
 
 interface EnrichmentPayload {
-  location_id: string | null;
-  record_id?:  string | null;  // contact ID + idempotency key
-  name?:       string | null;  // contact name
-  fields:      EnrichmentField[];
+  location_id:    string | null;
+  record_id?:     string | null;   // contact ID + idempotency key
+  name?:          string | null;   // contact name
+  fields:         EnrichmentField[];
+  "CRM Link"?:   string | null;   // GHL contact URL
+  contact_Phone?: string | null;  // contact phone from GHL
+  lead_source?:   string | null;  // lead source from GHL
 }
 
 export async function POST(req: NextRequest) {
@@ -42,6 +45,9 @@ export async function POST(req: NextRequest) {
   }
 
   const { location_id, record_id, name, fields } = body;
+  const crm_link      = body["CRM Link"]    ?? null;
+  const contact_phone = body.contact_Phone  ?? null;
+  const lead_source   = body.lead_source    ?? null;
 
   if (!location_id) {
     return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
@@ -88,11 +94,14 @@ export async function POST(req: NextRequest) {
   const { data: log, error: insertErr } = await admin
     .from("data_enrichment_logs")
     .insert({
-      company_id:   company.id,
-      external_id:  record_id ?? null,
-      contact_name: name ?? null,
-      fields:       fields ?? [],
-      cost_usd:     deductionUsd,
+      company_id:    company.id,
+      external_id:   record_id ?? null,
+      contact_name:  name ?? null,
+      contact_phone: contact_phone,
+      crm_link:      crm_link,
+      lead_source:   lead_source,
+      fields:        fields ?? [],
+      cost_usd:      deductionUsd,
     })
     .select("id")
     .single();

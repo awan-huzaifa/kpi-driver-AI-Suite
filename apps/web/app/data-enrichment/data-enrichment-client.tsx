@@ -15,13 +15,16 @@ interface EnrichmentField {
 }
 
 interface EnrichmentLog {
-  id:           string;
-  company_id:   string;
-  external_id:  string | null;
-  contact_name: string | null;
-  fields:       EnrichmentField[];
-  cost_usd:     number;
-  created_at:   string;
+  id:            string;
+  company_id:    string;
+  external_id:   string | null;
+  contact_name:  string | null;
+  contact_phone: string | null;
+  crm_link:      string | null;
+  lead_source:   string | null;
+  fields:        EnrichmentField[];
+  cost_usd:      number;
+  created_at:    string;
 }
 
 interface Props {
@@ -191,7 +194,7 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
             </div>
 
             {/* Stats strip */}
-            <div style={{ display: "flex", gap: 10, marginTop: 18 }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 18, flexWrap: "wrap" }}>
               <div style={{
                 display: "flex", alignItems: "center", gap: 8,
                 background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.15)",
@@ -214,6 +217,52 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
                   <p style={{ fontSize: 16, fontWeight: 800, color: C.green, margin: 0 }}>Enriched</p>
                 </div>
               </div>
+              {log.lead_source && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: "rgba(252,175,23,0.06)", border: "1px solid rgba(252,175,23,0.2)",
+                  borderRadius: 10, padding: "8px 14px",
+                }}>
+                  <div>
+                    <p style={{ fontSize: 10, color: C.dimText, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Lead Source</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "#FCAF17", margin: 0 }}>{log.lead_source}</p>
+                  </div>
+                </div>
+              )}
+              {log.contact_phone && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
+                  borderRadius: 10, padding: "8px 14px",
+                }}>
+                  <div>
+                    <p style={{ fontSize: 10, color: C.dimText, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Phone</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: C.white, margin: 0, fontFamily: "monospace" }}>{log.contact_phone}</p>
+                  </div>
+                </div>
+              )}
+              {log.crm_link && (
+                <a
+                  href={log.crm_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.25)",
+                    borderRadius: 10, padding: "8px 14px",
+                    textDecoration: "none", cursor: "pointer",
+                    transition: "background 0.15s",
+                  }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.18)"; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.08)"; }}
+                >
+                  <ExternalLink size={13} style={{ color: C.blue }} />
+                  <div>
+                    <p style={{ fontSize: 10, color: C.dimText, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>CRM</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: C.blue, margin: 0 }}>Open In GHL</p>
+                  </div>
+                </a>
+              )}
               {accessRole !== "user" && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8,
@@ -468,9 +517,9 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
-              {["Date", "Contact / Record", "Field Preview", "Fields", ...(accessRole !== "user" ? ["Cost"] : [])].map((h, i) => (
+              {["Date", "Contact / Record", "Phone", "Lead Source", "Fields", ...(accessRole !== "user" ? ["Cost"] : []), "CRM"].map((h, i) => (
                 <th key={h} style={{
-                  padding: "11px 16px", textAlign: i >= 3 ? "center" : "left",
+                  padding: "11px 16px", textAlign: "center",
                   fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
                   textTransform: "uppercase", color: "#e2e8f0",
                 }}>{h}</th>
@@ -500,8 +549,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                 </td>
               </tr>
             )}
-            {filtered.map((l, idx) => {
-              const keys = previewKeys(l.fields);
+            {filtered.map((l) => {
               return (
                 <tr
                   key={l.id}
@@ -536,28 +584,28 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                     )}
                   </td>
 
-                  {/* Field preview tags */}
+                  {/* Phone */}
+                  <td style={{ padding: "13px 16px", textAlign: "center", whiteSpace: "nowrap" }}>
+                    {l.contact_phone ? (
+                      <span style={{ fontSize: 12, color: C.bodyText, fontFamily: "monospace" }}>{l.contact_phone}</span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                    )}
+                  </td>
+
+                  {/* Lead Source */}
                   <td style={{ padding: "13px 16px", textAlign: "center" }}>
-                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap", justifyContent: "center" }}>
-                      {keys.map((k) => (
-                        <span key={k} style={{
-                          fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5,
-                          background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
-                          color: C.mutedText, whiteSpace: "nowrap",
-                        }}>
-                          {k}
-                        </span>
-                      ))}
-                      {l.fields.length > 4 && (
-                        <span style={{
-                          fontSize: 10, fontWeight: 600, padding: "2px 7px", borderRadius: 5,
-                          background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.15)",
-                          color: C.blue, whiteSpace: "nowrap",
-                        }}>
-                          +{l.fields.length - 4}
-                        </span>
-                      )}
-                    </div>
+                    {l.lead_source ? (
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                        color: "#FCAF17", background: "rgba(252,175,23,0.1)",
+                        border: "1px solid rgba(252,175,23,0.2)", whiteSpace: "nowrap",
+                      }}>
+                        {l.lead_source}
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                    )}
                   </td>
 
                   {/* Fields count */}
@@ -575,6 +623,31 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                       </span>
                     </td>
                   )}
+
+                  {/* CRM Link */}
+                  <td style={{ padding: "13px 16px", textAlign: "center" }}>
+                    {l.crm_link ? (
+                      <a
+                        href={l.crm_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 4,
+                          fontSize: 11, fontWeight: 700, color: C.blue,
+                          background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.2)",
+                          borderRadius: 6, padding: "3px 9px", textDecoration: "none",
+                          transition: "background 0.15s",
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.18)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.08)"; }}
+                      >
+                        GHL <ExternalLink size={10} />
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                    )}
+                  </td>
 
                   {/* Arrow */}
                   <td style={{ padding: "13px 12px 13px 0", width: 32 }}>

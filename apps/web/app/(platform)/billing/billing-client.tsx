@@ -58,7 +58,7 @@ export default function BillingClient({ user, planId, access, accessRole, balanc
           Billing
         </h1>
         <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: 0 }}>
-          Manage your wallet, payment methods, and usage.
+          Manage Your Wallet, Payment Methods, And Usage.
         </p>
       </div>
 

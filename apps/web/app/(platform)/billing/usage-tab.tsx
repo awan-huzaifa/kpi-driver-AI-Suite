@@ -27,7 +27,7 @@ export interface UsageLogRow {
   cost_breakdown?: CostBreakdown | null
 }
 
-const COLUMNS = ['App', 'Flow', 'Date', 'Input Tokens', 'Output Tokens', 'Cost', '']
+const COLUMNS = ['Date', 'App', 'Flow', 'Input Tokens', 'Output Tokens', 'Cost', '']
 
 const APP_LABELS: Record<UsageLogRow['app'], string> = {
   underwriting:    'AI Deal Underwriter',
@@ -107,7 +107,10 @@ function fmtCost(n: number) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const d = new Date(iso)
+  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  return `${date} · ${time}`
 }
 
 const DATE_INPUT_STYLE: React.CSSProperties = {
@@ -131,12 +134,15 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+const PAGE_SIZE = 25
+
 export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
   const [period, setPeriod]           = useState<Period>('month')
   const [appFilter, setAppFilter]     = useState<AppFilter>('all')
   const [customFrom, setCustomFrom]   = useState<string>(todayStr())
   const [customTo,   setCustomTo]     = useState<string>(todayStr())
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [page, setPage]               = useState(1)
 
   function toggleRow(id: string) {
     setExpandedRows(prev => {
@@ -160,6 +166,11 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
       return true
     })
   }, [rows, period, appFilter, customFrom, customTo])
+
+  // Reset to page 1 whenever filters change
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage    = Math.min(page, totalPages)
+  const pageRows    = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   const totalCost   = filtered.reduce((sum, r) => sum + r.cost_usd, 0)
   const totalInput  = filtered.reduce((sum, r) => sum + r.input_tokens, 0)
@@ -198,7 +209,7 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
         {/* App filter */}
         <div style={{ flex: '1 1 160px', minWidth: 140 }}>
           <FilterLabel>App</FilterLabel>
-          <Select value={appFilter} onValueChange={(v) => setAppFilter(v as AppFilter)}>
+          <Select value={appFilter} onValueChange={(v) => { setAppFilter(v as AppFilter); setPage(1) }}>
             <SelectTrigger className="w-full" />
             <SelectContent>
               {APP_FILTER_OPTIONS.map((o) => (
@@ -214,7 +225,7 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
         {/* Period filter */}
         <div style={{ flex: '1 1 160px', minWidth: 140 }}>
           <FilterLabel>Period</FilterLabel>
-          <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+          <Select value={period} onValueChange={(v) => { setPeriod(v as Period); setPage(1) }}>
             <SelectTrigger className="w-full" />
             <SelectContent>
               {PERIODS.map((p) => (
@@ -234,7 +245,7 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
                 type="date"
                 value={customFrom}
                 max={customTo}
-                onChange={(e) => setCustomFrom(e.target.value)}
+                onChange={(e) => { setCustomFrom(e.target.value); setPage(1) }}
                 style={DATE_INPUT_STYLE}
               />
             </div>
@@ -244,7 +255,7 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
                 type="date"
                 value={customTo}
                 min={customFrom}
-                onChange={(e) => setCustomTo(e.target.value)}
+                onChange={(e) => { setCustomTo(e.target.value); setPage(1) }}
                 style={DATE_INPUT_STYLE}
               />
             </div>
@@ -258,12 +269,12 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
           <div>
             <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>Workflow Usage</p>
             <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, margin: '2px 0 0' }}>
-              Token usage and cost per workflow run, across every app.
+              Token Usage And Cost Per Workflow Run, Across Every App.
             </p>
           </div>
           {filtered.length > 0 && (
             <span style={{ fontSize: 12, fontWeight: 600, color: C.dimText }}>
-              {filtered.length} run{filtered.length !== 1 ? 's' : ''}
+              {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
             </span>
           )}
         </div>
@@ -278,12 +289,12 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
               <BarChart3 size={22} style={{ color: C.green }} strokeWidth={1.5} />
             </div>
             <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 6px' }}>
-              {rows.length === 0 ? 'No usage recorded yet' : 'No usage in this period'}
+              {rows.length === 0 ? 'No Usage Recorded Yet' : 'No Usage In This Period'}
             </p>
             <p style={{ fontSize: 13, fontWeight: 500, color: C.dimText, margin: 0, maxWidth: 320, lineHeight: 1.6 }}>
               {rows.length === 0
-                ? 'Every AI workflow run will appear here with token counts and cost.'
-                : 'Try a wider date range or a different app filter to see more activity.'}
+                ? 'Every AI Workflow Run Will Appear Here With Token Counts And Cost.'
+                : 'Try A Wider Date Range Or A Different App Filter To See More Activity.'}
             </p>
           </div>
         ) : (
@@ -292,9 +303,9 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
               <tr style={{ borderBottom: `1px solid ${C.border}` }}>
                 {COLUMNS.map((h, i) => (
                   <th key={h || `col-${i}`} style={{
-                    textAlign: i >= 3 ? 'right' : 'left',
+                    textAlign: 'center',
                     padding: i === 0 ? '10px 22px' : i === COLUMNS.length - 1 ? '10px 22px' : '10px 12px',
-                    fontSize: 10, fontWeight: 700, color: C.dimText,
+                    fontSize: 10, fontWeight: 800, color: C.text,
                     textTransform: 'uppercase', letterSpacing: '0.06em',
                     width: i === COLUMNS.length - 1 ? 44 : undefined,
                   }}>
@@ -304,7 +315,7 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r) => {
+              {pageRows.map((r) => {
                 const hasBreakdown = !!r.cost_breakdown && Object.keys(r.cost_breakdown).length > 0
                 const isExpanded   = expandedRows.has(r.id)
                 const bdKeys       = hasBreakdown ? (Object.keys(r.cost_breakdown!) as (keyof CostBreakdown)[]) : []
@@ -317,8 +328,9 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
                         cursor: hasBreakdown ? 'pointer' : 'default',
                       }}
                     >
-                      <td style={{ padding: '12px 22px', fontSize: 13, fontWeight: 500, color: C.text }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <td style={{ padding: '12px 22px', fontSize: 13, color: C.bodyText, whiteSpace: 'nowrap', textAlign: 'center' }}>{fmtDate(r.created_at)}</td>
+                      <td style={{ padding: '12px', fontSize: 13, fontWeight: 500, color: C.text, textAlign: 'center' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           {hasBreakdown && (
                             isExpanded
                               ? <ChevronDown size={13} style={{ color: C.dimText, flexShrink: 0 }} />
@@ -327,12 +339,11 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
                           {APP_LABELS[r.app]}
                         </div>
                       </td>
-                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText }}>{ENTITY_LABELS[r.entity_type]}</td>
-                      <td style={{ padding: '12px', fontSize: 12, color: C.dimText, whiteSpace: 'nowrap' }}>{fmtDate(r.created_at)}</td>
-                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.input_tokens.toLocaleString()}</td>
-                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{r.output_tokens.toLocaleString()}</td>
-                      <td style={{ padding: '12px', fontSize: 13, fontWeight: 700, color: C.green, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fmtCost(r.cost_usd)}</td>
-                      <td style={{ padding: '12px 22px', textAlign: 'right' }}>
+                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center' }}>{ENTITY_LABELS[r.entity_type]}</td>
+                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{r.input_tokens.toLocaleString()}</td>
+                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{r.output_tokens.toLocaleString()}</td>
+                      <td style={{ padding: '12px', fontSize: 13, fontWeight: 700, color: C.green, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtCost(r.cost_usd)}</td>
+                      <td style={{ padding: '12px 22px', textAlign: 'center' }}>
                         <Link
                           href={entityLink(r)}
                           onClick={(e) => e.stopPropagation()}
@@ -367,6 +378,75 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
               })}
             </tbody>
           </table>
+        )}
+
+        {/* Pagination footer */}
+        {filtered.length > PAGE_SIZE && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 22px', borderTop: `1px solid ${C.border}`,
+          }}>
+            {/* Page number pills */}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                const isActive = p === safePage
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    style={{
+                      minWidth: 32, height: 32, borderRadius: 8, border: 'none',
+                      fontSize: 12, fontWeight: isActive ? 700 : 500,
+                      cursor: isActive ? 'default' : 'pointer',
+                      background: isActive ? C.blue : 'transparent',
+                      color: isActive ? '#fff' : C.dimText,
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                    onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
+                    onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+                  >
+                    {p}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Prev / Next */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                style={{
+                  padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`,
+                  fontSize: 12, fontWeight: 600,
+                  background: 'transparent', cursor: safePage === 1 ? 'default' : 'pointer',
+                  color: safePage === 1 ? C.dimText : C.text,
+                  opacity: safePage === 1 ? 0.4 : 1,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => { if (safePage !== 1) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                ← Prev
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                style={{
+                  padding: '6px 14px', borderRadius: 8, border: `1px solid ${C.border}`,
+                  fontSize: 12, fontWeight: 600,
+                  background: 'transparent', cursor: safePage === totalPages ? 'default' : 'pointer',
+                  color: safePage === totalPages ? C.dimText : C.text,
+                  opacity: safePage === totalPages ? 0.4 : 1,
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => { if (safePage !== totalPages) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+              >
+                Next →
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>

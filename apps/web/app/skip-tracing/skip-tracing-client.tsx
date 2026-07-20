@@ -32,6 +32,7 @@ interface SkipLog {
   state:            string | null;
   zip:              string | null;
   find_owner:       boolean | null;
+  lead_source:      string | null;
   payload:          Record<string, unknown>;
   created_at:       string;
 }
@@ -60,13 +61,29 @@ interface Props {
 
 /* ── Helpers ────────────────────────────────────────────────────── */
 
-const FLOW_LABELS: Record<string, string> = { apn: "APN", dnc: "DNC", skiptrace: "Skiptrace" };
-const FLOW_COLORS: Record<string, string> = { apn: C.blue, dnc: "#8b5cf6", skiptrace: C.green };
-const FLOW_BG:     Record<string, string> = {
-  apn:       "rgba(48,125,192,0.12)",
-  dnc:       "rgba(139,92,246,0.12)",
-  skiptrace: "rgba(67,183,73,0.12)",
+const FLOW_LABELS: Record<string, string> = {
+  apn:               "APN",
+  dnc:               "DNC",
+  skiptrace:         "Skiptrace",
+  address_skiptrace: "Address Skiptrace",
 };
+const FLOW_COLORS: Record<string, string> = {
+  apn:               C.blue,
+  dnc:               "#8b5cf6",
+  skiptrace:         C.green,
+  address_skiptrace: "#FCAF17",
+};
+const FLOW_BG: Record<string, string> = {
+  apn:               "rgba(48,125,192,0.12)",
+  dnc:               "rgba(139,92,246,0.12)",
+  skiptrace:         "rgba(67,183,73,0.12)",
+  address_skiptrace: "rgba(252,175,23,0.12)",
+};
+
+function getDisplayType(log: SkipLog): string {
+  if (log.flow_type === "skiptrace" && log.find_owner) return "address_skiptrace";
+  return log.flow_type;
+}
 
 function fmt(iso: string) {
   const d = new Date(iso);
@@ -104,8 +121,9 @@ function StatChip({ label, value, color }: { label: string; value: string | numb
 /* ── Modal ──────────────────────────────────────────────────────── */
 
 function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () => void; accessRole: string }) {
-  const persons = (log.payload.persons as Person[] | undefined) ?? [];
-  const color   = FLOW_COLORS[log.flow_type];
+  const persons     = (log.payload.persons as Person[] | undefined) ?? [];
+  const displayType = getDisplayType(log);
+  const color       = FLOW_COLORS[displayType];
 
   return (
     <div
@@ -141,10 +159,10 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             <span style={{
               fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
               padding: "4px 10px", borderRadius: 99,
-              color, background: FLOW_BG[log.flow_type],
+              color, background: FLOW_BG[displayType],
               border: `1px solid ${color}40`,
             }}>
-              {FLOW_LABELS[log.flow_type]}
+              {FLOW_LABELS[displayType]}
             </span>
             {log.flow_type === "dnc" ? (
               log.is_clean
@@ -180,6 +198,9 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
               <MetaItem label="Contact ID" value={log.contact_id} mono />
             )}
             <MetaItem label="Date" value={fmt(log.created_at)} />
+            {log.lead_source && (
+              <MetaItem label="Lead Source" value={log.lead_source} />
+            )}
             {log.flow_type === "apn" && (
               <>
                 {log.parcel_id && <MetaItem label="Parcel ID"  value={log.parcel_id} mono />}
@@ -379,7 +400,7 @@ function PersonCard({ person }: { person: Person }) {
 export default function SkipTracingClient({ logs, companies, accessRole }: Props) {
   const [search,    setSearch]    = useState("");
   const [companyId, setCompanyId] = useState<string>("all");
-  const [flowType,  setFlowType]  = useState<"all" | "apn" | "dnc" | "skiptrace">("all");
+  const [flowType,  setFlowType]  = useState<"all" | "apn" | "dnc" | "skiptrace" | "address_skiptrace">("all");
   const [result,    setResult]    = useState<"all" | "hit" | "miss">("all");
   const [period,     setPeriod]     = useState<DatePeriod>("all");
   const [customFrom, setCustomFrom] = useState("");
@@ -391,7 +412,15 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
 
     return logs.filter((l) => {
       if (companyId !== "all" && l.company_id !== companyId) return false;
-      if (flowType !== "all" && l.flow_type !== flowType) return false;
+      if (flowType !== "all") {
+        if (flowType === "address_skiptrace") {
+          if (l.flow_type !== "skiptrace" || !l.find_owner) return false;
+        } else if (flowType === "skiptrace") {
+          if (l.flow_type !== "skiptrace" || l.find_owner) return false;
+        } else {
+          if (l.flow_type !== flowType) return false;
+        }
+      }
       if (result === "hit"  && !l.hit)  return false;
       if (result === "miss" &&  l.hit)  return false;
       if (pFrom && new Date(l.created_at) < pFrom) return false;
@@ -408,7 +437,6 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
 
   const totalCredits  = filtered.reduce((s, l) => s + l.credits_deducted, 0);
   const totalCost     = filtered.reduce((s, l) => s + l.cost_usd, 0);
-  const totalHits     = filtered.filter((l) => l.hit).length;
 
   return (
     <div style={{ padding: "32px 36px" }}>
@@ -433,11 +461,10 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 }}
-        style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}
+        style={{ display: "grid", gridTemplateColumns: accessRole !== "user" ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: 12, marginBottom: 24 }}
       >
-        <StatChip label="TOTAL LOOKUPS"    value={filtered.length} />
-        <StatChip label="HITS"             value={totalHits}       color={C.green} />
-        <StatChip label="CREDITS USED"     value={totalCredits}    color={C.yellow} />
+        <StatChip label="TOTAL LOOKUPS" value={filtered.length} />
+        <StatChip label="CREDITS USED"  value={totalCredits}    color={C.yellow} />
         {accessRole !== "user" && <StatChip label="COST (BILLED)" value={`$${totalCost.toFixed(2)}`} color={C.blue} />}
       </motion.div>
 
@@ -483,10 +510,11 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         {/* Flow type */}
         <FilterPills
           options={[
-            { value: "all",       label: "All Types" },
-            { value: "apn",       label: "APN" },
-            { value: "dnc",       label: "DNC" },
-            { value: "skiptrace", label: "Skiptrace" },
+            { value: "all",               label: "All Types" },
+            { value: "apn",               label: "APN" },
+            { value: "dnc",               label: "DNC" },
+            { value: "skiptrace",         label: "Skiptrace" },
+            { value: "address_skiptrace", label: "Address Skiptrace" },
           ]}
           value={flowType}
           onChange={(v) => setFlowType(v as typeof flowType)}
@@ -529,8 +557,8 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
-              {["Date", "Contact", "Type", "Result", "Context", "Credits", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
-                <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10, fontWeight: 800, color: "#e2e8f0", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {["Date", "Contact", "Type", "Result", "Context", "Lead Source", "Credits", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+                <th key={h} style={{ padding: "10px 14px", textAlign: "center", fontSize: 10, fontWeight: 800, color: "#e2e8f0", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {h}
                 </th>
               ))}
@@ -572,19 +600,34 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                         {log.contact_id ?? "—"}
                       </td>
                       <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                        <span style={{
-                          fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
-                          color: FLOW_COLORS[log.flow_type], background: FLOW_BG[log.flow_type],
-                          border: `1px solid ${FLOW_COLORS[log.flow_type]}40`,
-                        }}>
-                          {FLOW_LABELS[log.flow_type]}
-                        </span>
+                        {(() => { const dt = getDisplayType(log); return (
+                          <span style={{
+                            fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
+                            color: FLOW_COLORS[dt], background: FLOW_BG[dt],
+                            border: `1px solid ${FLOW_COLORS[dt]}40`,
+                          }}>
+                            {FLOW_LABELS[dt]}
+                          </span>
+                        ); })()}
                       </td>
                       <td style={{ padding: "11px 14px", textAlign: "center" }}>
                         <span style={{ fontSize: 12, fontWeight: 600, color: resultClr }}>{resultLbl}</span>
                       </td>
                       <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                         {contextLabel(log)}
+                      </td>
+                      <td style={{ padding: "11px 14px", textAlign: "center" }}>
+                        {log.lead_source ? (
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                            color: "#FCAF17", background: "rgba(252,175,23,0.1)",
+                            border: "1px solid rgba(252,175,23,0.2)", whiteSpace: "nowrap",
+                          }}>
+                            {log.lead_source}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, textAlign: "center" }}>
                         {log.credits_deducted}
