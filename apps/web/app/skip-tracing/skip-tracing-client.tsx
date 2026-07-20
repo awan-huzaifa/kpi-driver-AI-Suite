@@ -176,7 +176,9 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <span style={{ fontSize: 12, color: C.dimText }}>{log.credits_deducted} credit{log.credits_deducted !== 1 ? "s" : ""}{accessRole !== "user" ? ` · $${log.cost_usd.toFixed(4)}` : ""}</span>
+            {accessRole !== "user" && (
+              <span style={{ fontSize: 12, color: C.dimText }}>${log.cost_usd.toFixed(4)}</span>
+            )}
             <button
               onClick={onClose}
               style={{ background: "none", border: "none", cursor: "pointer", color: C.dimText, padding: 4 }}
@@ -439,8 +441,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
     });
   }, [logs, companyId, flowType, result, period, customFrom, customTo, search]);
 
-  const totalCredits  = filtered.reduce((s, l) => s + l.credits_deducted, 0);
-  const totalCost     = filtered.reduce((s, l) => s + l.cost_usd, 0);
+  const totalCost = filtered.reduce((s, l) => s + l.cost_usd, 0);
 
   return (
     <div style={{ padding: "32px 36px" }}>
@@ -465,10 +466,9 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 }}
-        style={{ display: "grid", gridTemplateColumns: accessRole !== "user" ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: 12, marginBottom: 24 }}
+        style={{ display: "grid", gridTemplateColumns: accessRole !== "user" ? "repeat(2, 1fr)" : "repeat(1, 1fr)", gap: 12, marginBottom: 24 }}
       >
         <StatChip label="TOTAL LOOKUPS" value={filtered.length} />
-        <StatChip label="CREDITS USED"  value={totalCredits}    color={C.yellow} />
         {accessRole !== "user" && <StatChip label="COST (BILLED)" value={`$${totalCost.toFixed(2)}`} color={C.blue} />}
       </motion.div>
 
@@ -561,7 +561,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
-              {["Date", "Contact", "Type", "Result", "Context", "Lead Source", "Credits", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Contact", "Type", "Result", "Context", "Lead Source", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", textAlign: "center", fontSize: 10, fontWeight: 800, color: "#e2e8f0", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {h}
                 </th>
@@ -597,7 +597,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
+                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, whiteSpace: "nowrap", textAlign: "center" }}>
                         {fmt(log.created_at)}
                       </td>
                       <td style={{ padding: "11px 14px", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
@@ -639,11 +639,8 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                           <span style={{ fontSize: 12, color: "#334155" }}>—</span>
                         )}
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, textAlign: "center" }}>
-                        {log.credits_deducted}
-                      </td>
                       {accessRole !== "user" && (
-                        <td style={{ padding: "11px 14px", fontSize: 12, color: C.dimText, textAlign: "center" }}>
+                        <td style={{ padding: "11px 14px", fontSize: 12, fontWeight: 700, color: "#FCAF17", textAlign: "center" }}>
                           ${log.cost_usd.toFixed(4)}
                         </td>
                       )}
