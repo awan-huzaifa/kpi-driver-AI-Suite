@@ -260,6 +260,27 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
               </div>
             </section>
           )}
+
+          {/* Response body */}
+          {log.payload.body && (
+            <section>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.dimText, letterSpacing: "0.08em", textTransform: "uppercase", margin: "0 0 10px" }}>
+                Response Body
+              </p>
+              <div style={{
+                background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)",
+                borderRadius: 10, padding: "14px 16px",
+              }}>
+                <pre style={{
+                  fontSize: 12, color: C.bodyText, margin: 0,
+                  whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.6,
+                  fontFamily: "monospace",
+                }}>
+                  {String(log.payload.body)}
+                </pre>
+              </div>
+            </section>
+          )}
         </div>
       </motion.div>
     </div>
