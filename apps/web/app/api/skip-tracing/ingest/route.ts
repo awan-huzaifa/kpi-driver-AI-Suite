@@ -87,8 +87,8 @@ export async function POST(req: NextRequest) {
   const activeCfg     = companyCfg ?? globalCfg;
   const creditCostUsd = Number((activeCfg as Record<string, unknown>)?.credit_cost_usd ?? 0.02);
   const multiplier    = Number(activeCfg?.multiplier ?? 3.0);
-  // DNC: flat $0.10 base cost. All other types: credits × credit_cost_usd
-  const baseCostUsd   = flowType === "dnc" ? 0.10 : creditsDeducted * creditCostUsd;
+  // DNC + skiptrace: flat $0.10 base cost. APN: credits × credit_cost_usd
+  const baseCostUsd   = (flowType === "dnc" || flowType === "skiptrace") ? 0.10 : creditsDeducted * creditCostUsd;
   const deductionUsd  = baseCostUsd * multiplier;
 
   // Wallet pre-check only when credits will be deducted

@@ -65,7 +65,7 @@ interface Props {
 const FLOW_LABELS: Record<string, string> = {
   apn:               "APN",
   dnc:               "DNC",
-  skiptrace:         "Skiptrace",
+  skiptrace:         "Normal Skiptrace",
   address_skiptrace: "Address Skiptrace",
 };
 const FLOW_COLORS: Record<string, string> = {
@@ -538,7 +538,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
             { value: "all",               label: "All Types" },
             { value: "apn",               label: "APN" },
             { value: "dnc",               label: "DNC" },
-            { value: "skiptrace",         label: "Skiptrace" },
+            { value: "skiptrace",         label: "Normal Skiptrace" },
             { value: "address_skiptrace", label: "Address Skiptrace" },
           ]}
           value={flowType}
