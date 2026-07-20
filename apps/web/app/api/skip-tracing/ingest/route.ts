@@ -39,9 +39,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const location_id = body.location_id as string | null | undefined;
-  const contact_id  = body.contact_id  as string | null | undefined;
-  const lead_source = (body.lead_source as string | null | undefined) ?? null;
+  const location_id  = body.location_id  as string | null | undefined;
+  const contact_id   = body.contact_id   as string | null | undefined;
+  const contact_name = (body.contact_name as string | null | undefined) ?? null;
+  const lead_source  = (body.lead_source  as string | null | undefined) ?? null;
 
   if (!location_id) {
     return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
@@ -70,9 +71,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `No company found for location_id ${location_id}` }, { status: 404 });
   }
 
-  const hit             = (body.hit              as boolean)  ?? false;
-  const creditsDeducted = (body.credits_deducted as number)   ?? 0;
-  const personsCount    = (body.persons_count    as number)   ?? 0;
+  const hit             = (body.hit              as boolean) ?? false;
+  const creditsDeducted = (body.credits_deducted as number)  ?? 0;
+  const personsCount    = (body.persons_count    as number)  ?? 0;
 
   // Fetch billing config — prefer company-specific override, fall back to global default
   const { data: cfgRows } = await admin
@@ -86,7 +87,8 @@ export async function POST(req: NextRequest) {
   const activeCfg     = companyCfg ?? globalCfg;
   const creditCostUsd = Number((activeCfg as Record<string, unknown>)?.credit_cost_usd ?? 0.02);
   const multiplier    = Number(activeCfg?.multiplier ?? 3.0);
-  const baseCostUsd   = creditsDeducted * creditCostUsd;
+  // DNC: flat $0.10 base cost. All other types: credits × credit_cost_usd
+  const baseCostUsd   = flowType === "dnc" ? 0.10 : creditsDeducted * creditCostUsd;
   const deductionUsd  = baseCostUsd * multiplier;
 
   // Wallet pre-check only when credits will be deducted
@@ -98,7 +100,8 @@ export async function POST(req: NextRequest) {
   // Build log row — common fields
   const logRow: Record<string, unknown> = {
     company_id:       company.id,
-    contact_id:       contact_id ?? null,
+    contact_id:       contact_id   ?? null,
+    contact_name:     contact_name,
     flow_type:        flowType,
     hit,
     credits_deducted: creditsDeducted,

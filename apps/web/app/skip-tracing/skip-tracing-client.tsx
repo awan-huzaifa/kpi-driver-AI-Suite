@@ -13,6 +13,7 @@ interface SkipLog {
   id:               string;
   company_id:       string;
   contact_id:       string | null;
+  contact_name:     string | null;
   flow_type:        "apn" | "dnc" | "skiptrace";
   hit:              boolean;
   credits_deducted: number;
@@ -194,6 +195,9 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             display: "grid", gridTemplateColumns: "1fr 1fr",
             gap: 10,
           }}>
+            {log.contact_name && (
+              <MetaItem label="Contact" value={log.contact_name} />
+            )}
             {log.contact_id && (
               <MetaItem label="Contact ID" value={log.contact_id} mono />
             )}
@@ -596,8 +600,14 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                       <td style={{ padding: "11px 14px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
                         {fmt(log.created_at)}
                       </td>
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
-                        {log.contact_id ?? "—"}
+                      <td style={{ padding: "11px 14px", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
+                        {log.contact_name ? (
+                          <span style={{ fontSize: 13, fontWeight: 600, color: C.white }}>{log.contact_name}</span>
+                        ) : log.contact_id ? (
+                          <span style={{ fontSize: 12, color: C.dimText, fontFamily: "monospace" }}>{log.contact_id}</span>
+                        ) : (
+                          <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: "11px 14px", textAlign: "center" }}>
                         {(() => { const dt = getDisplayType(log); return (
