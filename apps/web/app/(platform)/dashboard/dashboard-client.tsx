@@ -393,7 +393,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
         </p>
         <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(252,175,23,0.3) 0%, rgba(67,183,73,0.15) 50%, transparent 100%)' }} />
         <span style={{ fontSize: 11, color: C.dimText, fontWeight: 500 }}>
-          {APPS.filter(a => a.accessKey && access[a.accessKey]).length} of {APPS.filter(a => a.status === 'live').length} apps active
+          {APPS.filter(a => a.status === 'live' && (a.accessKey ? access[a.accessKey] : true)).length} of {APPS.filter(a => a.status === 'live').length} apps active
         </span>
       </motion.div>
 

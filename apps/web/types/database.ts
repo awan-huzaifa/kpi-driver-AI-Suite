@@ -1,5 +1,5 @@
 export type AccessRole = "super_admin" | "admin" | "user";
-export type AgentType  = "fus" | "acq" | "tc" | "cc" | "none";
+export type AgentType  = "fus" | "acq" | "tc" | "cc" | "dispo" | "dispo_fus" | "tca" | "none";
 
 export interface Company {
   id:                 string;

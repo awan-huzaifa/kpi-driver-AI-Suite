@@ -110,7 +110,7 @@ function initials(name: string) {
 
 const DIRECTIONS   = [{ value: "all", label: "All" }, { value: "inbound", label: "Inbound" }, { value: "outbound", label: "Outbound" }] as const;
 const DURATIONS    = [{ value: "all", label: "Any" }, { value: "1", label: "1+ min" }, { value: "2", label: "2+ min" }, { value: "5", label: "5+ min" }, { value: "10", label: "10+ min" }, { value: "15", label: "15+ min" }] as const;
-const ROLES        = [{ value: "all", label: "All Roles" }, { value: "fus", label: "FUS" }, { value: "acq", label: "ACQ" }, { value: "tc", label: "TC" }, { value: "cc", label: "CC" }, { value: "none", label: "None" }] as const;
+const ROLES        = [{ value: "all", label: "All Roles" }, { value: "fus", label: "FUS" }, { value: "acq", label: "ACQ" }, { value: "tc", label: "TC" }, { value: "cc", label: "CC" }, { value: "dispo", label: "DISPO" }, { value: "dispo_fus", label: "DISPO FUS" }, { value: "tca", label: "TCA" }, { value: "none", label: "None" }] as const;
 const SCORABLE_OPTS = [{ value: "scorable", label: "Scorable Only" }, { value: "all", label: "All Calls" }] as const;
 
 function meetsMinDuration(sec: number, min: string) {

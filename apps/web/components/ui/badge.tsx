@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 type BadgeVariant =
   | "super_admin" | "admin" | "user"
-  | "fus" | "acq" | "tc" | "cc" | "none"
+  | "fus" | "acq" | "tc" | "cc" | "dispo" | "dispo_fus" | "tca" | "none"
   | "active" | "inactive";
 
 const MAP: Record<BadgeVariant, { color: string; bg: string; label: string }> = {
@@ -13,6 +13,9 @@ const MAP: Record<BadgeVariant, { color: string; bg: string; label: string }> = 
   acq:         { color: "#FCAF17", bg: "rgba(252,175,23,0.1)",   label: "ACQ"         },
   tc:          { color: "#ED1F24", bg: "rgba(237,31,36,0.1)",    label: "TC"          },
   cc:          { color: "#307DC0", bg: "rgba(48,125,192,0.1)",   label: "CC"          },
+  dispo:       { color: "#8b5cf6", bg: "rgba(139,92,246,0.1)",   label: "DISPO"       },
+  dispo_fus:   { color: "#ec4899", bg: "rgba(236,72,153,0.1)",   label: "DISPO FUS"   },
+  tca:         { color: "#f97316", bg: "rgba(249,115,22,0.1)",   label: "TCA"         },
   none:        { color: "#475569", bg: "rgba(71,85,105,0.1)",    label: "None"        },
   active:      { color: "#43B749", bg: "rgba(67,183,73,0.1)",    label: "Active"      },
   inactive:    { color: "#ED1F24", bg: "rgba(237,31,36,0.1)",    label: "Inactive"    },

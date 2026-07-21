@@ -36,8 +36,11 @@ const DURATIONS = [
 
 const ROLES = [
   { value: "all",  label: "All Roles" },
-  { value: "fus",  label: "FUS" },
-  { value: "acq",  label: "ACQ" },
+  { value: "fus",       label: "FUS"       },
+  { value: "acq",       label: "ACQ"       },
+  { value: "dispo",     label: "DISPO"     },
+  { value: "dispo_fus", label: "DISPO FUS" },
+  { value: "tca",       label: "TCA"       },
   { value: "tc",   label: "TC"  },
   { value: "cc",   label: "CC"  },
   { value: "none", label: "None" },

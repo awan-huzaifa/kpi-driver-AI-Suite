@@ -49,8 +49,11 @@ interface Props {
 
 const AGENT_OPTS: { value: AgentType; label: string }[] = [
   { value: "none", label: "None" },
-  { value: "fus",  label: "FUS — Setter" },
-  { value: "acq",  label: "ACQ — Closer" },
+  { value: "fus",       label: "FUS — Setter"      },
+  { value: "acq",       label: "ACQ — Closer"      },
+  { value: "dispo",     label: "DISPO"             },
+  { value: "dispo_fus", label: "DISPO FUS"         },
+  { value: "tca",       label: "TCA"               },
   { value: "tc",   label: "TC" },
   { value: "cc",   label: "CC" },
 ];
@@ -328,7 +331,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                   {/* Agent Type */}
                   <td style={{ padding: "12px 16px" }}>
                     <span style={{ fontSize: 12, color: "#8b9cb0", fontWeight: 600 }}>
-                      {u.agent_type === "none" ? "—" : u.agent_type.toUpperCase()}
+                      {u.agent_type === "none" ? "—" : u.agent_type === "dispo_fus" ? "DISPO FUS" : u.agent_type.toUpperCase()}
                     </span>
                   </td>
 
