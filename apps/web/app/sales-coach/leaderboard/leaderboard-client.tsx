@@ -34,8 +34,11 @@ interface Props {
 /* ── Constants ──────────────────────────────────────────── */
 
 const TYPES = [
-  { value: "fus", label: "FUS" },
-  { value: "acq", label: "ACQ" },
+  { value: "fus",       label: "FUS"       },
+  { value: "acq",       label: "ACQ"       },
+  { value: "dispo",     label: "DISPO"     },
+  { value: "dispo_fus", label: "DISPO FUS" },
+  { value: "tca",       label: "TCA"       },
 ] as const;
 
 const BAND_META = {
@@ -247,7 +250,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
   const [period,     setPeriod]    = useState<DatePeriod>("today");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
-  const [agentType,  setAgentType] = useState<"fus" | "acq">("fus");
+  const [agentType,  setAgentType] = useState<string>("fus");
   const [companyId,  setCompanyId] = useState<string>("all");
 
   const leaderboard = useMemo(() => {
@@ -269,7 +272,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
         <div>
           <h1 className="text-xl font-bold gradient-text">Leaderboard</h1>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-            {agentType.toUpperCase()} · {leaderboard.length} agent{leaderboard.length !== 1 ? "s" : ""} ranked
+            {agentType === "dispo_fus" ? "DISPO FUS" : agentType.toUpperCase()} · {leaderboard.length} agent{leaderboard.length !== 1 ? "s" : ""} ranked
           </p>
         </div>
 

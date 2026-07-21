@@ -49,8 +49,8 @@ interface Props {
 
 const AGENT_OPTS: { value: AgentType; label: string }[] = [
   { value: "none", label: "None" },
-  { value: "fus",       label: "FUS — Setter"      },
-  { value: "acq",       label: "ACQ — Closer"      },
+  { value: "fus",       label: "FUS"               },
+  { value: "acq",       label: "ACQ"               },
   { value: "dispo",     label: "DISPO"             },
   { value: "dispo_fus", label: "DISPO FUS"         },
   { value: "tca",       label: "TCA"               },

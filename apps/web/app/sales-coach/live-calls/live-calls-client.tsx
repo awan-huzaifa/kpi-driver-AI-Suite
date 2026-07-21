@@ -285,7 +285,7 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
               {[
                 { label: "Stage",       value: call.call_stage  ?? "—" },
                 { label: "Result",      value: call.call_result ?? "—" },
-                { label: "Agent Type",  value: call.agent?.agent_type ?? "—" },
+                { label: "Agent Type",  value: call.agent?.agent_type ? (call.agent.agent_type === "dispo_fus" ? "DISPO FUS" : call.agent.agent_type.toUpperCase()) : "—" },
                 { label: "Opportunity", value: ev?.opportunity_level  ?? "—" },
                 { label: "Call Type",   value: ev?.call_type          ?? "—" },
                 { label: "Confidence",  value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
