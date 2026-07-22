@@ -109,7 +109,7 @@ function initials(name: string) {
 /* ── Filter constants ────────────────────────────────────────────── */
 
 const DIRECTIONS   = [{ value: "all", label: "All" }, { value: "inbound", label: "Inbound" }, { value: "outbound", label: "Outbound" }] as const;
-const DURATIONS    = [{ value: "all", label: "Any" }, { value: "1", label: "1+ min" }, { value: "2", label: "2+ min" }, { value: "5", label: "5+ min" }, { value: "10", label: "10+ min" }, { value: "15", label: "15+ min" }] as const;
+const DURATIONS    = [{ value: "all", label: "Any" }, { value: "1", label: "1+ Min" }, { value: "2", label: "2+ Min" }, { value: "5", label: "5+ Min" }, { value: "10", label: "10+ Min" }, { value: "15", label: "15+ Min" }] as const;
 const ROLES        = [{ value: "all", label: "All Roles" }, { value: "fus", label: "FUS" }, { value: "acq", label: "ACQ" }, { value: "tc", label: "TC" }, { value: "cc", label: "CC" }, { value: "dispo", label: "DISPO" }, { value: "dispo_fus", label: "DISPO FUS" }, { value: "tca", label: "TCA" }, { value: "none", label: "None" }] as const;
 const SCORABLE_OPTS = [{ value: "scorable", label: "Scorable Only" }, { value: "all", label: "All Calls" }] as const;
 
@@ -315,7 +315,7 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
             {/* Not scorable notice */}
             {!call.scorable && (
               <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{ev?.reason ?? "This call was not scored."}</p>
+                <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{ev?.reason ?? "This Call Was Not Scored."}</p>
               </div>
             )}
 
@@ -617,7 +617,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
               Call Log
             </h1>
             <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-              {calls.length} calls total — click any row to view scoring details.
+              {calls.length} Calls Total — Click Any Row To View Scoring Details.
             </p>
           </div>
 
@@ -918,7 +918,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
             fontSize: 11, color: "#334155", fontWeight: 600,
           }}>
             <Phone size={11} />
-            {filtered.length} call{filtered.length !== 1 ? "s" : ""} shown
+            {filtered.length} Call{filtered.length !== 1 ? "s" : ""} Shown
           </div>
         )}
       </motion.div>

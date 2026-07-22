@@ -36,6 +36,8 @@ interface Props {
 const TYPES = [
   { value: "fus",       label: "FUS"       },
   { value: "acq",       label: "ACQ"       },
+  { value: "tc",        label: "TC"        },
+  { value: "cc",        label: "CC"        },
   { value: "dispo",     label: "DISPO"     },
   { value: "dispo_fus", label: "DISPO FUS" },
   { value: "tca",       label: "TCA"       },
@@ -233,12 +235,12 @@ function PodiumCard({ s, isMe, delay }: { s: AgentStats; isMe: boolean; delay: n
           : initials}
       </div>
       <div>
-        <p className="text-sm font-bold text-white">{s.name}{isMe ? " (you)" : ""}</p>
+        <p className="text-sm font-bold text-white">{s.name}{isMe ? " (You)" : ""}</p>
         <div className="flex justify-center mt-1"><Badge variant={s.agentType as any} /></div>
       </div>
       <div className="text-3xl font-black mt-1" style={{ color }}>{score}</div>
       <p className="text-[10px] uppercase tracking-widest" style={{ color: "#334155" }}>avg score</p>
-      <p className="text-xs" style={{ color: "#475569" }}>{s.totalCalls} call{s.totalCalls !== 1 ? "s" : ""}</p>
+      <p className="text-xs" style={{ color: "#475569" }}>{s.totalCalls} Call{s.totalCalls !== 1 ? "s" : ""}</p>
       <div className="mt-1"><RankChange change={s.rankChange} /></div>
     </motion.div>
   );
@@ -272,7 +274,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
         <div>
           <h1 className="text-xl font-bold gradient-text">Leaderboard</h1>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-            {agentType === "dispo_fus" ? "DISPO FUS" : agentType.toUpperCase()} · {leaderboard.length} agent{leaderboard.length !== 1 ? "s" : ""} ranked
+            {agentType === "dispo_fus" ? "DISPO FUS" : agentType.toUpperCase()} · {leaderboard.length} Agent{leaderboard.length !== 1 ? "s" : ""} Ranked
           </p>
         </div>
 
@@ -381,7 +383,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
                           </div>
                           <div>
                             <p className="text-sm font-medium text-white">
-                              {s.name}{isMe && <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "rgba(48,125,192,0.15)", color: "#78ABD6" }}>you</span>}
+                              {s.name}{isMe && <span className="ml-1.5 text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "rgba(48,125,192,0.15)", color: "#78ABD6" }}>You</span>}
                             </p>
                             <div className="mt-0.5"><Badge variant={s.agentType as any} /></div>
                           </div>
@@ -406,7 +408,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
                       <td className="px-5 py-3.5">
                         <div className="flex items-center justify-center gap-1">
                           <span className="text-sm font-semibold text-white">{s.totalCalls}</span>
-                          <span className="text-xs" style={{ color: "#334155" }}>scored</span>
+                          <span className="text-xs" style={{ color: "#334155" }}>Scored</span>
                         </div>
                       </td>
 

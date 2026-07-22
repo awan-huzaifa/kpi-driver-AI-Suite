@@ -49,11 +49,13 @@ interface Props {
 
 const AGENT_OPTS: { value: AgentType; label: string }[] = [
   { value: "none", label: "None" },
-  { value: "fus",       label: "FUS"               },
-  { value: "acq",       label: "ACQ"               },
-  { value: "dispo",     label: "DISPO"             },
-  { value: "dispo_fus", label: "DISPO FUS"         },
-  { value: "tca",       label: "TCA"               },
+  { value: "fus",       label: "FUS"       },
+  { value: "acq",       label: "ACQ"       },
+  { value: "tc",        label: "TC"        },
+  { value: "cc",        label: "CC"        },
+  { value: "dispo",     label: "DISPO"     },
+  { value: "dispo_fus", label: "DISPO FUS" },
+  { value: "tca",       label: "TCA"       },
   { value: "tc",   label: "TC" },
   { value: "cc",   label: "CC" },
 ];
@@ -165,14 +167,14 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
   }
 
   async function handleInvite() {
-    if (!form.email.trim()) { setInviteErr("Email is required."); return; }
+    if (!form.email.trim()) { setInviteErr("Email Is Required."); return; }
     setInviteLoad(true); setInviteErr(null);
     try {
       await inviteUser({ ...form });
       setInviteOpen(false);
       setForm(BLANK);
     } catch (e) {
-      setInviteErr(e instanceof Error ? e.message : "Failed to send invite.");
+      setInviteErr(e instanceof Error ? e.message : "Failed To Send Invite.");
     } finally {
       setInviteLoad(false);
     }
@@ -194,7 +196,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       });
       setEditTarget(null);
     } catch (e) {
-      setEditErr(e instanceof Error ? e.message : "Failed to update user.");
+      setEditErr(e instanceof Error ? e.message : "Failed To Update User.");
     } finally {
       setEditLoad(false);
     }
@@ -221,7 +223,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           <div>
             <h1 className="text-xl font-bold gradient-text">Team Members</h1>
             <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-              Manage who has access and which apps they can use.
+              Manage Who Has Access And Which Apps They Can Use.
             </p>
           </div>
           <Button size="sm" onClick={() => { setForm(BLANK); setInviteErr(null); setInviteOpen(true); }}>
@@ -233,7 +235,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
         {isSuperAdmin && companies.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>
-              Filter by company:
+              Filter By Company:
             </span>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               <button
@@ -283,7 +285,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
               {active.length === 0 && inactive.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ padding: "40px 16px", textAlign: "center", color: "#475569", fontSize: 13 }}>
-                    No team members yet — invite your first one.
+                    No Team Members Yet — Invite Your First One.
                   </td>
                 </tr>
               )}
@@ -391,7 +393,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
 
       {/* ── Invite Modal ── */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent title="Invite Team Member" description="They'll receive an email with a link to set their password.">
+        <DialogContent title="Invite Team Member" description="They'll Receive An Email With A Link To Set Their Password.">
           <div className="space-y-4">
             {/* Company picker — super_admin only */}
             {isSuperAdmin && companies.length > 0 && (
@@ -566,8 +568,8 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       {/* ── Remove Confirm ── */}
       <AlertDialog open={!!removeTarget} onOpenChange={(o) => !o && setRemoveTarget(null)}>
         <AlertDialogContent
-          title="Deactivate member?"
-          description={`${removeTarget?.full_name ?? removeTarget?.email} will lose access immediately. You can reactivate them later by editing their profile.`}
+          title="Deactivate Member?"
+          description={`${removeTarget?.full_name ?? removeTarget?.email} Will Lose Access Immediately. You Can Reactivate Them Later By Editing Their Profile.`}
           confirmLabel="Deactivate"
           confirmVariant="destructive"
           onConfirm={handleRemove}

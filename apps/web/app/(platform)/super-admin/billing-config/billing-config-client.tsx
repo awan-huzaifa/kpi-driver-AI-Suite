@@ -84,7 +84,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   function handleSave(app: string) {
     const val = parseFloat(values[app] ?? '')
     if (isNaN(val) || val < 1) {
-      setErrors(e => ({ ...e, [app]: 'Must be ≥ 1 (1 = no markup, 1.3 = 30% markup)' }))
+      setErrors(e => ({ ...e, [app]: 'Must Be ≥ 1 (1 = No Markup, 1.3 = 30% Markup)' }))
       return
     }
     setErrors(e => ({ ...e, [app]: '' }))
@@ -95,7 +95,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         setSaved(app)
         setTimeout(() => setSaved(null), 3000)
       } catch (e) {
-        setErrors(prev => ({ ...prev, [app]: e instanceof Error ? e.message : 'Failed to save' }))
+        setErrors(prev => ({ ...prev, [app]: e instanceof Error ? e.message : 'Failed To Save' }))
       } finally {
         setSaving(null)
       }
@@ -110,7 +110,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         await clearCompanyMultiplier(app, companyId)
         setValues(v => ({ ...v, [app]: String(globalMultiplier(app)) }))
       } catch (e) {
-        setErrors(prev => ({ ...prev, [app]: e instanceof Error ? e.message : 'Failed to reset' }))
+        setErrors(prev => ({ ...prev, [app]: e instanceof Error ? e.message : 'Failed To Reset' }))
       } finally {
         setResetting(null)
       }
@@ -130,16 +130,16 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
           Billing Config
         </h1>
         <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: 0 }}>
-          Set AI cost markup multipliers per company. A company without an override uses the global default.
+          Set AI Cost Markup Multipliers Per Company. A Company Without An Override Uses The Global Default.
         </p>
       </div>
 
       {/* Info card */}
       <div style={{ background: 'rgba(48,125,192,0.08)', border: '1px solid rgba(48,125,192,0.2)', borderRadius: 12, padding: '14px 18px', marginBottom: 28 }}>
         <p style={{ fontSize: 13, color: C.bodyText, margin: 0, lineHeight: 1.6 }}>
-          <strong style={{ color: C.white }}>Example:</strong> If an underwriting run costs $0.05 and the multiplier is 1.3,
-          the company wallet is deducted <strong style={{ color: C.green }}>$0.065</strong> (30% markup).
-          Multiplier <strong style={{ color: C.white }}>1.0</strong> = no markup.
+          <strong style={{ color: C.white }}>Example:</strong> If An Underwriting Run Costs $0.05 And The Multiplier Is 1.3,
+          The Company Wallet Is Deducted <strong style={{ color: C.green }}>$0.065</strong> (30% Markup).
+          Multiplier <strong style={{ color: C.white }}>1.0</strong> = No Markup.
         </p>
       </div>
 
@@ -166,7 +166,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
 
         <div style={{ marginLeft: 'auto' }}>
           <Select value={selectedCompany} onValueChange={handleCompanyChange}>
-            <SelectTrigger placeholder="Select company" className="w-auto min-w-[200px] text-sm" />
+            <SelectTrigger placeholder="Select Company" className="w-auto min-w-[200px] text-sm" />
             <SelectContent>
               <SelectItem value="global">🌐 Global Defaults</SelectItem>
               {companies.map(c => (
@@ -213,12 +213,12 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <p style={{ fontSize: 12, color: C.dimText, margin: '0 0 3px' }}>{APP_DESC[app]}</p>
                   {companyId && !isOverride && (
                     <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>
-                      Global default: <strong style={{ color: '#78ABD6' }}>{globalFallback}×</strong>
+                      Global Default: <strong style={{ color: '#78ABD6' }}>{globalFallback}×</strong>
                     </p>
                   )}
                   {lastUpdated && (
                     <p style={{ fontSize: 11, color: C.dimText, margin: '2px 0 0' }}>
-                      Last updated: {new Date(lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      Last Updated: {new Date(lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   )}
                 </div>
@@ -260,7 +260,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         <button
                           onClick={() => handleReset(app)}
                           disabled={resetting === app || saving === app}
-                          title="Remove override — revert to global default"
+                          title="Remove Override — Revert To Global Default"
                           style={{
                             display: 'flex', alignItems: 'center', gap: 5,
                             padding: '9px 13px', borderRadius: 9,

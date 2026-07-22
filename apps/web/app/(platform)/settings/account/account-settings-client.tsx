@@ -44,7 +44,7 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setAvatarErr("Image must be under 5 MB."); return; }
+    if (file.size > 5 * 1024 * 1024) { setAvatarErr("Image Must Be Under 5 MB."); return; }
 
     setAvatarUploading(true); setAvatarErr(null);
     try {
@@ -64,7 +64,7 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
       setAvatarUrl(bustedUrl);
       window.dispatchEvent(new CustomEvent('avatar-updated', { detail: { url: bustedUrl } }));
     } catch (err) {
-      setAvatarErr(err instanceof Error ? err.message : "Upload failed.");
+      setAvatarErr(err instanceof Error ? err.message : "Upload Failed.");
     } finally {
       setAvatarUploading(false);
       // Reset input so the same file can be re-selected if needed
@@ -79,15 +79,15 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
       setProfileSaved(true);
       setTimeout(() => setProfileSaved(false), 3000);
     } catch (e) {
-      setProfileErr(e instanceof Error ? e.message : "Failed to save.");
+      setProfileErr(e instanceof Error ? e.message : "Failed To Save.");
     } finally {
       setProfileSaving(false);
     }
   }
 
   async function handlePasswordSave() {
-    if (newPass.length < 8) { setPassErr("Password must be at least 8 characters."); return; }
-    if (newPass !== confirm) { setPassErr("Passwords do not match."); return; }
+    if (newPass.length < 8) { setPassErr("Password Must Be At Least 8 Characters."); return; }
+    if (newPass !== confirm) { setPassErr("Passwords Do Not Match."); return; }
     setPassSaving(true); setPassSaved(false); setPassErr(null);
     const { error } = await createClient().auth.updateUser({ password: newPass });
     if (error) {
@@ -101,21 +101,21 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
   }
 
   return (
-    <PlatformShell planId={planId} pageTitle="Account Settings">
+    <PlatformShell planId={planId} pageTitle="Settings / Account Settings">
       {/* Header */}
       <div style={{ marginBottom: 36 }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, color: C.white, letterSpacing: "-0.02em", margin: "0 0 8px" }}>
           Account Settings
         </h1>
         <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: 0 }}>
-          Manage your personal profile and password.
+          Manage Your Personal Profile And Password.
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 600 }}>
 
         {/* ── Profile card ── */}
-        <Card icon={User} title="Profile" subtitle="Your personal information">
+        <Card icon={User} title="Profile" subtitle="Your Personal Information">
           {/* Avatar row */}
           <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
             {/* Avatar circle */}
@@ -214,7 +214,7 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
                 />
               </div>
               <p style={{ fontSize: 11, fontWeight: 500, color: C.dimText, marginTop: 5 }}>
-                Email cannot be changed. Contact your admin if needed.
+                Email Cannot Be Changed. Contact Your Admin If Needed.
               </p>
             </div>
           </div>
@@ -224,7 +224,7 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
         </Card>
 
         {/* ── Password card ── */}
-        <Card icon={Lock} title="Password" subtitle="Change your login password">
+        <Card icon={Lock} title="Password" subtitle="Change Your Login Password">
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
               <Label htmlFor="new-pass">New Password</Label>
@@ -233,7 +233,7 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
                 type="password"
                 value={newPass}
                 onChange={(e) => setNewPass(e.target.value)}
-                placeholder="Min. 8 characters"
+                placeholder="Min. 8 Characters"
               />
             </div>
             <div>
@@ -243,7 +243,7 @@ export default function AccountSettingsClient({ currentUser, planId, access, acc
                 type="password"
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
-                placeholder="Repeat password"
+                placeholder="Repeat Password"
               />
             </div>
           </div>

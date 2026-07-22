@@ -59,8 +59,8 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
   }
 
   async function handleAdd() {
-    if (!form.agent_name.trim())   { setErr("Agent name is required."); return; }
-    if (!form.phone_number.trim()) { setErr("Phone number is required."); return; }
+    if (!form.agent_name.trim())   { setErr("Agent Name Is Required."); return; }
+    if (!form.phone_number.trim()) { setErr("Phone Number Is Required."); return; }
 
     setLoad(true); setErr(null);
     try {
@@ -74,7 +74,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
       setAddOpen(false);
       setForm({ agent_name: "", phone_number: "", description: "", external_agent_id: "", company_id: "global" });
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to add AI agent.");
+      setErr(e instanceof Error ? e.message : "Failed To Add AI Agent.");
     } finally {
       setLoad(false);
     }
@@ -94,7 +94,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
         <div>
           <h1 className="text-xl font-bold gradient-text">AI Agents</h1>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-            Pick an AI agent and tap the card to reveal the number to dial for that practice scenario.
+            Pick An AI Agent And Tap The Card To Reveal The Number To Dial For That Practice Scenario.
           </p>
         </div>
         {canManage(accessRole) && (
@@ -107,7 +107,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
       {agents.length === 0 ? (
         <div className="glass rounded-2xl flex flex-col items-center justify-center py-24" style={{ color: "#475569" }}>
           <Bot size={32} className="mb-3 opacity-30" />
-          <p className="text-sm">No AI agents registered yet</p>
+          <p className="text-sm">No AI Agents Registered Yet</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -133,13 +133,13 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-white truncate">{a.agent_name}</p>
                     <p className="text-xs truncate" style={{ color: "#8b9cb0" }}>
-                      {a.companies?.name ?? "Global · all companies"}
+                      {a.companies?.name ?? "Global · All Companies"}
                     </p>
                   </div>
                 </div>
 
                 <p className="text-sm leading-relaxed flex-1" style={{ color: "#94a3b8" }}>
-                  {a.description ?? "No description provided."}
+                  {a.description ?? "No Description Provided."}
                 </p>
 
                 {isRevealed ? (
@@ -181,7 +181,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
                       border: "1px solid rgba(48,125,192,0.2)",
                     }}
                   >
-                    <Eye size={13} /> Tap to reveal number
+                    <Eye size={13} /> Tap To Reveal Number
                   </button>
                 )}
               </div>
@@ -192,7 +192,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
 
       {/* Add Modal */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent title="Add AI Agent" description="The phone number Assistable assigned to this bot — stays fixed per agent.">
+        <DialogContent title="Add AI Agent" description="The Phone Number Assistable Assigned To This Bot — Stays Fixed Per Agent.">
           <div className="space-y-4">
             <div>
               <Label>Agent Name *</Label>
@@ -200,7 +200,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
             </div>
             <div>
               <Label>Description</Label>
-              <Input placeholder="Practices handling price objections on a cold lead" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+              <Input placeholder="Practices Handling Price Objections On A Cold Lead" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -216,9 +216,9 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
               <div>
                 <Label>Company</Label>
                 <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v })}>
-                  <SelectTrigger placeholder="Select company" />
+                  <SelectTrigger placeholder="Select Company" />
                   <SelectContent>
-                    <SelectItem value="global">Global · all companies</SelectItem>
+                    <SelectItem value="global">Global · All Companies</SelectItem>
                     {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -236,8 +236,8 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
       {/* Delete Confirm */}
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent
-          title="Remove AI agent?"
-          description={`${deleteTarget?.agent_name} will no longer be recognized on incoming training calls.`}
+          title="Remove AI Agent?"
+          description={`${deleteTarget?.agent_name} Will No Longer Be Recognized On Incoming Training Calls.`}
           confirmLabel="Remove"
           confirmVariant="destructive"
           onConfirm={handleDelete}

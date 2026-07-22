@@ -234,10 +234,10 @@ export default function AnalyticsClient({
           </h1>
           <p className="text-muted text-sm font-medium">
             {hasData
-              ? `Aggregated across ${reports.length} deal${reports.length !== 1 ? "s" : ""}${hasActiveFilter ? " · filtered" : ""}`
+              ? `Aggregated Across ${reports.length} Deal${reports.length !== 1 ? "s" : ""}${hasActiveFilter ? " · Filtered" : ""}`
               : hasActiveFilter
-              ? "No deals match current filters"
-              : "Complete your first deal to unlock analytics"}
+              ? "No Deals Match Current Filters"
+              : "Complete Your First Deal To Unlock Analytics"}
           </p>
         </div>
 
@@ -331,24 +331,24 @@ export default function AnalyticsClient({
 
       {/* Financial Overview */}
       <section>
-        <SectionHeader title="Financial Overview" sub="Averages across filtered deals" color="#43B749" />
+        <SectionHeader title="Financial Overview" sub="Averages Across Filtered Deals" color="#43B749" />
         {!hasData ? (
-          <EmptySection message={hasActiveFilter ? "No deals match current filters" : "No completed deals yet"} />
+          <EmptySection message={hasActiveFilter ? "No Deals Match Current Filters" : "No Completed Deals Yet"} />
         ) : (
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <AnalyticsMetricCard label="Avg ARV"             value={fmt(avgARV)}            sub="After-repair value"  icon="trending-up"  color="#43B749" rgb="67,183,73"  />
-            <AnalyticsMetricCard label="Avg Max Offer"       value={fmt(avgMaxOffer)}       sub="Low–high midpoint"   icon="dollar-sign"  color="#307DC0" rgb="48,125,192" />
-            <AnalyticsMetricCard label="Avg Repair Cost"     value={fmt(avgRepairCost)}     sub="Low–high midpoint"   icon="wrench"       color="#FCAF17" rgb="252,175,23" />
-            <AnalyticsMetricCard label="Avg Investor Profit" value={fmt(avgInvestorProfit)} sub="Target minimum"      icon="bar-chart-2"  color="#43B749" rgb="67,183,73"  />
+            <AnalyticsMetricCard label="Avg ARV"             value={fmt(avgARV)}            sub="After-Repair Value"  icon="trending-up"  color="#43B749" rgb="67,183,73"  />
+            <AnalyticsMetricCard label="Avg Max Offer"       value={fmt(avgMaxOffer)}       sub="Low–High Midpoint"   icon="dollar-sign"  color="#307DC0" rgb="48,125,192" />
+            <AnalyticsMetricCard label="Avg Repair Cost"     value={fmt(avgRepairCost)}     sub="Low–High Midpoint"   icon="wrench"       color="#FCAF17" rgb="252,175,23" />
+            <AnalyticsMetricCard label="Avg Investor Profit" value={fmt(avgInvestorProfit)} sub="Target Minimum"      icon="bar-chart-2"  color="#43B749" rgb="67,183,73"  />
           </div>
         )}
       </section>
 
       {/* Market Insights */}
       <section>
-        <SectionHeader title="Market Insights" sub="Deal volume and ARV by city, repair cost by condition" color="#307DC0" />
+        <SectionHeader title="Market Insights" sub="Deal Volume And ARV By City, Repair Cost By Condition" color="#307DC0" />
         {!hasData ? (
-          <EmptySection message={hasActiveFilter ? "No deals match current filters" : "No market data yet"} />
+          <EmptySection message={hasActiveFilter ? "No Deals Match Current Filters" : "No Market Data Yet"} />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
@@ -356,7 +356,7 @@ export default function AnalyticsClient({
             <div className="rounded-xl border border-edge overflow-hidden transition-all duration-200 hover:border-brand/25" style={{ background: "#0F2032" }}>
               <CardHeader icon={MapPin} title="Most Analyzed Cities" />
               {cityStats.length === 0 ? (
-                <p className="text-muted text-[13px] text-center py-10">No city data available</p>
+                <p className="text-muted text-[13px] text-center py-10">No City Data Available</p>
               ) : (
                 <div>
                   {cityStats.map(({ city: c, count, avgARV: cityAvgARV }, i) => (
@@ -369,7 +369,7 @@ export default function AnalyticsClient({
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-white text-[13px] font-semibold truncate">{c}</span>
                           <span className="text-muted text-[11px] ml-2 shrink-0 font-medium">
-                            {count} deal{count !== 1 ? "s" : ""}
+                            {count} Deal{count !== 1 ? "s" : ""}
                           </span>
                         </div>
                         <div className="h-2 rounded-full overflow-hidden" style={{ background: "rgba(48,125,192,0.10)" }}>
@@ -381,7 +381,7 @@ export default function AnalyticsClient({
                       </div>
                       <div className="text-right shrink-0 w-24">
                         <p className="text-white text-[13px] font-bold">{fmt(cityAvgARV)}</p>
-                        <p className="text-muted text-[10px] font-medium">avg ARV</p>
+                        <p className="text-muted text-[10px] font-medium">Avg ARV</p>
                       </div>
                     </div>
                   ))}
@@ -393,7 +393,7 @@ export default function AnalyticsClient({
             <div className="rounded-xl border border-edge overflow-hidden transition-all duration-200 hover:border-brand/25" style={{ background: "#0F2032" }}>
               <CardHeader icon={Wrench} title="Avg Repair Cost by Condition" />
               {repairByCondition.length === 0 ? (
-                <p className="text-muted text-[13px] text-center py-10">No data yet</p>
+                <p className="text-muted text-[13px] text-center py-10">No Data Yet</p>
               ) : (
                 <div>
                   {repairByCondition.map(({ grade, count, avgRepair }, i) => {
@@ -408,7 +408,7 @@ export default function AnalyticsClient({
                         <div className="flex items-center justify-between mb-2.5">
                           <div className="flex items-center gap-2">
                             <ConditionBadge grade={grade} />
-                            <span className="text-muted text-[12px] font-medium">{count} deal{count !== 1 ? "s" : ""}</span>
+                            <span className="text-muted text-[12px] font-medium">{count} Deal{count !== 1 ? "s" : ""}</span>
                           </div>
                           <span className="text-white text-[13px] font-bold">{fmt(avgRepair)}</span>
                         </div>
@@ -430,9 +430,9 @@ export default function AnalyticsClient({
 
       {/* Condition Breakdown */}
       <section>
-        <SectionHeader title="Condition Breakdown" sub="Deal count and average repair cost per condition grade" color="#FCAF17" />
+        <SectionHeader title="Condition Breakdown" sub="Deal Count And Average Repair Cost Per Condition Grade" color="#FCAF17" />
         {!hasData ? (
-          <EmptySection message={hasActiveFilter ? "No deals match current filters" : "No condition data yet"} />
+          <EmptySection message={hasActiveFilter ? "No Deals Match Current Filters" : "No Condition Data Yet"} />
         ) : (
           <div className="rounded-xl border border-edge overflow-hidden transition-all duration-200 hover:border-brand/25" style={{ background: "#0F2032" }}>
             <table className="w-full">

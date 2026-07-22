@@ -18,8 +18,8 @@ export default function LogoUpload({ companyId, currentLogoUrl }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   async function handleFile(file: File) {
-    if (!file.type.startsWith('image/')) { setErr('Please upload an image file.'); return }
-    if (file.size > 2 * 1024 * 1024)    { setErr('Max file size is 2 MB.');       return }
+    if (!file.type.startsWith('image/')) { setErr('Please Upload An Image File.'); return }
+    if (file.size > 2 * 1024 * 1024)    { setErr('Max File Size Is 2 MB.');       return }
 
     setUploading(true)
     setErr(null)
@@ -42,7 +42,7 @@ export default function LogoUpload({ companyId, currentLogoUrl }: Props) {
       await saveCompanyLogo(publicUrl)
       setPreview(publicUrl)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Upload failed.')
+      setErr(e instanceof Error ? e.message : 'Upload Failed.')
     } finally {
       setUploading(false)
     }
@@ -55,7 +55,7 @@ export default function LogoUpload({ companyId, currentLogoUrl }: Props) {
       await saveCompanyLogo(null)
       setPreview(null)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to remove logo.')
+      setErr(e instanceof Error ? e.message : 'Failed To Remove Logo.')
     } finally {
       setUploading(false)
     }
@@ -125,7 +125,7 @@ export default function LogoUpload({ companyId, currentLogoUrl }: Props) {
       </div>
 
       <p style={{ fontSize: 11, fontWeight: 500, color: C.dimText, marginTop: 8 }}>
-        PNG, JPG or WebP, max 2 MB. Replaces the KPI DRIVER logo in the sidebar for all users in your company.
+        PNG, JPG Or WebP, Max 2 MB. Replaces The KPI DRIVER Logo In The Sidebar For All Users In Your Company.
       </p>
 
       {err && (

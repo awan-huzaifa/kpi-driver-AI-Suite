@@ -19,7 +19,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#307DC0", display: "inline-block", boxShadow: "0 0 6px #307DC0" }} />
         <span style={{ fontSize: 13, fontWeight: 800, color: "#fff" }}>{payload[0]?.value ?? 0}</span>
-        <span style={{ fontSize: 11, color: "#475569" }}>calls</span>
+        <span style={{ fontSize: 11, color: "#475569" }}>Calls</span>
       </div>
     </div>
   );
@@ -49,14 +49,14 @@ export default function CallsChart({ data }: Props) {
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: "0 0 3px" }}>Call Volume</h3>
-          <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>Last 7 days</p>
+          <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>Last 7 Days</p>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, justifyContent: "flex-end" }}>
             <TrendingUp size={13} style={{ color: "#43B749" }} />
             <span style={{ fontSize: 22, fontWeight: 900, color: "#fff", letterSpacing: "-0.02em" }}>{total}</span>
           </div>
-          <p style={{ fontSize: 11, color: "#475569", margin: "2px 0 0" }}>total · peak {peak}</p>
+          <p style={{ fontSize: 11, color: "#475569", margin: "2px 0 0" }}>Total · Peak {peak}</p>
         </div>
       </div>
 

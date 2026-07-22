@@ -67,13 +67,13 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
         setDeleteTarget(null)
       } catch (e) {
         setDeleteTarget(null)
-        setError(e instanceof Error ? e.message : 'Delete failed')
+        setError(e instanceof Error ? e.message : 'Delete Failed')
       }
     })
   }
 
   function handleSubmit() {
-    if (!form.name.trim()) { setError('Company name is required'); return }
+    if (!form.name.trim()) { setError('Company Name Is Required'); return }
     setError(null)
     startTransition(async () => {
       try {
@@ -90,7 +90,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
         }
         closeModal()
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Something went wrong')
+        setError(e instanceof Error ? e.message : 'Something Went Wrong')
       }
     })
   }
@@ -106,7 +106,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
             Companies
           </h1>
           <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: 0 }}>
-            Manage all client companies, their GHL accounts, and Stripe customers.
+            Manage All Client Companies, Their GHL Accounts, And Stripe Customers.
           </p>
         </div>
         <button onClick={openCreate} className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -118,7 +118,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
         <div style={{ padding: '16px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>All Companies</p>
-          <span style={{ fontSize: 12, fontWeight: 600, color: C.dimText }}>{companies.length} total</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: C.dimText }}>{companies.length} Total</span>
         </div>
 
         {companies.length === 0 ? (
@@ -126,8 +126,8 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
             <div style={{ width: 52, height: 52, borderRadius: 16, margin: '0 auto 16px', background: 'rgba(48,125,192,0.10)', border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Building2 size={22} style={{ color: C.blue }} strokeWidth={1.5} />
             </div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 6px' }}>No companies yet</p>
-            <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>Click "New Company" to add your first client.</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: '0 0 6px' }}>No Companies Yet</p>
+            <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>Click "New Company" To Add Your First Client.</p>
           </div>
         ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -233,7 +233,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                 onChange={(v) => setForm((f) => ({ ...f, stripe_customer_id: v }))}
                 placeholder="cus_xxxxxxxxxx"
                 mono
-                hint="Paste the existing Stripe customer ID from GHL. One-click top-up will use this customer's saved card."
+                hint="Paste The Existing Stripe Customer ID From GHL. One-Click Top-Up Will Use This Customer's Saved Card."
               />
             </div>
 
@@ -274,12 +274,12 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
               </div>
               <div>
                 <p style={{ fontSize: 16, fontWeight: 800, color: C.white, margin: 0 }}>Delete Company</p>
-                <p style={{ fontSize: 12, color: C.dimText, margin: '2px 0 0' }}>This action cannot be undone</p>
+                <p style={{ fontSize: 12, color: C.dimText, margin: '2px 0 0' }}>This Action Cannot Be Undone</p>
               </div>
             </div>
             <p style={{ fontSize: 13, color: C.bodyText, margin: '0 0 24px', lineHeight: 1.6 }}>
-              Are you sure you want to delete <strong style={{ color: C.white }}>{deleteTarget.name}</strong>?
-              All associated users, calls, and wallet data will be permanently removed.
+              Are You Sure You Want To Delete <strong style={{ color: C.white }}>{deleteTarget.name}</strong>?
+              All Associated Users, Calls, And Wallet Data Will Be Permanently Removed.
             </p>
             <div style={{ display: 'flex', gap: 10 }}>
               <button

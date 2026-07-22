@@ -46,7 +46,7 @@ export default function ContentShell({ children }: { children: React.ReactNode }
         position: "sticky", top: 0, zIndex: 30,
       }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: C.dimText, letterSpacing: "0.06em" }}>
-          KPI DRIVER / {pageTitle.toUpperCase()}
+          KPI DRIVER / TRAINING COACH / {pageTitle.toUpperCase()}
         </span>
       </header>
 

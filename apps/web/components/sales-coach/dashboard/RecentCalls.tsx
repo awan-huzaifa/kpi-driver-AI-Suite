@@ -50,7 +50,7 @@ export default function RecentCalls({ calls }: Props) {
       }}>
         <div>
           <h3 style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: "0 0 2px" }}>Recent Calls</h3>
-          <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>Latest activity across your team</p>
+          <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>Latest Activity Across Your Team</p>
         </div>
         <Link href="/sales-coach/live-calls" style={{
           display: "flex", alignItems: "center", gap: 5,
@@ -61,7 +61,7 @@ export default function RecentCalls({ calls }: Props) {
           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(48,125,192,0.18)")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(48,125,192,0.1)")}
         >
-          View all <ChevronRight size={13} />
+          View All <ChevronRight size={13} />
         </Link>
       </div>
 
@@ -74,8 +74,8 @@ export default function RecentCalls({ calls }: Props) {
           }}>
             <Phone size={18} style={{ color: "#334155" }} />
           </div>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "#334155", margin: "0 0 4px" }}>No calls yet</p>
-          <p style={{ fontSize: 12, color: "#1e293b", margin: 0 }}>Calls will appear here once ingested.</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "#334155", margin: "0 0 4px" }}>No Calls Yet</p>
+          <p style={{ fontSize: 12, color: "#1e293b", margin: 0 }}>Calls Will Appear Here Once Ingested.</p>
         </div>
       ) : (
         <table style={{ width: "100%", borderCollapse: "collapse" }}>

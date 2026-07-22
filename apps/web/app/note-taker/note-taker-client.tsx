@@ -388,7 +388,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search agent, numbers or summaries…"
+              placeholder="Search Agent, Numbers Or Summaries…"
               style={{
                 width: "100%", boxSizing: "border-box",
                 paddingLeft: 30, paddingRight: 12, paddingTop: 7, paddingBottom: 7,
@@ -408,7 +408,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
               fontSize: 12, fontWeight: 700, color: "#FCAF17",
             }}>
               <Coins size={13} />
-              {fmtCost(totalCost)} total
+              {fmtCost(totalCost)} Total
             </div>
           )}
         </div>
@@ -506,7 +506,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
             padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.05)",
             fontSize: 11, color: C.dimText, fontWeight: 600,
           }}>
-            {filtered.length} log{filtered.length !== 1 ? "s" : ""}
+            {filtered.length} Log{filtered.length !== 1 ? "s" : ""}
           </div>
         )}
       </motion.div>

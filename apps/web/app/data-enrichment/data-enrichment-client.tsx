@@ -324,7 +324,7 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
                         onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.16)"; }}
                         onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.08)"; }}
                       >
-                        Open link <ExternalLink size={10} />
+                        Open Link <ExternalLink size={10} />
                       </a>
                     ) : (
                       <span style={{
@@ -482,7 +482,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search contacts, IDs, fields…"
+            placeholder="Search Contacts, IDs, Fields…"
             style={{
               paddingLeft: 32, paddingRight: search ? 32 : 14, paddingTop: 8, paddingBottom: 8,
               borderRadius: 10, fontSize: 12,
@@ -666,7 +666,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
             display: "flex", alignItems: "center", gap: 6,
           }}>
             <Database size={11} />
-            {filtered.length} record{filtered.length !== 1 ? "s" : ""} · {totalFields} fields enriched{accessRole !== "user" ? ` · ${fmtCost(totalCost)} total cost` : ""}
+            {filtered.length} Record{filtered.length !== 1 ? "s" : ""} · {totalFields} Fields Enriched{accessRole !== "user" ? ` · ${fmtCost(totalCost)} Total Cost` : ""}
           </div>
         )}
       </motion.div>

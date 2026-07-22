@@ -320,7 +320,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
     { label: 'Deals Underwritten', sublabel: `This ${monthLabel}`, value: stats.deals,     icon: Building2,     color: C.green, accentRgb: '67,183,73',  href: '/underwriting'          },
     { label: 'Training Sessions',  sublabel: `This ${monthLabel}`, value: stats.training,  icon: GraduationCap, color: C.yellow, accentRgb: '252,175,23', href: '/training-coach'        },
     ...(stats.walletBalance !== null ? [{
-      label: 'Wallet Balance', sublabel: 'Available balance',
+      label: 'Wallet Balance', sublabel: 'Available Balance',
       value: `$${stats.walletBalance.toFixed(2)}`,
       icon: Wallet,
       color:      stats.walletBalance > 5 ? C.green : C.red,
@@ -354,7 +354,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
 
         <h1 style={{
           fontSize: 48, fontWeight: 900,
-          letterSpacing: '-0.03em', lineHeight: 1, marginBottom: 12,
+          letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 12,
           background: `linear-gradient(135deg, ${C.white} 40%, rgba(67,183,73,0.75) 100%)`,
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
@@ -365,7 +365,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
 
         <p style={{ fontSize: 15, fontWeight: 500, color: C.bodyText, margin: 0, maxWidth: 480 }}>
           {planId
-            ? `You're on the ${planId.charAt(0).toUpperCase() + planId.slice(1)} plan — your tools are ready below.`
+            ? `You're On The ${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan — Your Tools Are Ready Below.`
             : "Here's Your Team's Activity At A Glance."}
         </p>
       </motion.div>
@@ -393,7 +393,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
         </p>
         <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(252,175,23,0.3) 0%, rgba(67,183,73,0.15) 50%, transparent 100%)' }} />
         <span style={{ fontSize: 11, color: C.dimText, fontWeight: 500 }}>
-          {APPS.filter(a => a.status === 'live' && (a.accessKey ? access[a.accessKey] : true)).length} of {APPS.filter(a => a.status === 'live').length} apps active
+          {APPS.filter(a => a.status === 'live' && (a.accessKey ? access[a.accessKey] : true)).length} Of {APPS.filter(a => a.status === 'live').length} Apps Active
         </span>
       </motion.div>
 
@@ -423,7 +423,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
           }}
         >
           <span style={{ fontSize: 14, fontWeight: 600, color: C.red }}>
-            Wallet balance is low — top up to keep your tools running.
+            Wallet Balance Is Low — Top Up To Keep Your Tools Running.
           </span>
           <Link href="/billing" style={{
             fontSize: 13, fontWeight: 700, color: C.white, textDecoration: 'none',
@@ -431,7 +431,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
             background: 'rgba(237,31,36,0.15)', border: '1px solid rgba(237,31,36,0.3)',
             padding: '6px 14px', borderRadius: 8,
           }}>
-            Top up <ArrowRight size={13} />
+            Top Up <ArrowRight size={13} />
           </Link>
         </motion.div>
       )}

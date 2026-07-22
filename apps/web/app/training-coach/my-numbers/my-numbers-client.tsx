@@ -82,8 +82,8 @@ export default function MyNumbersClient({ phones: initial, isSuperAdmin, compani
           </h1>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
             {isSuperAdmin
-              ? "Phone numbers registered by reps across all companies."
-              : "Register the numbers you call from so training calls get matched to your account."}
+              ? "Phone Numbers Registered By Reps Across All Companies."
+              : "Register The Numbers You Call From So Training Calls Get Matched To Your Account."}
           </p>
         </div>
 
@@ -113,8 +113,8 @@ export default function MyNumbersClient({ phones: initial, isSuperAdmin, compani
           }}>
             <Info size={14} style={{ color: "#307DC0", flexShrink: 0, marginTop: 2 }} />
             <p style={{ fontSize: 12, fontWeight: 500, color: "#7da8c8", margin: 0, lineHeight: 1.65 }}>
-              When you call an AI training agent, Assistable sends your caller ID to our system.
-              We match it against your registered numbers to score and log the call under your account.
+              When You Call An AI Training Agent, Assistable Sends Your Caller ID To Our System.
+              We Match It Against Your Registered Numbers To Score And Log The Call Under Your Account.
             </p>
           </div>
         )}
@@ -163,11 +163,11 @@ export default function MyNumbersClient({ phones: initial, isSuperAdmin, compani
             }}>
               <Phone size={28} style={{ color: "#1e3a4a", margin: "0 auto 12px" }} />
               <p style={{ fontSize: 13, fontWeight: 500, color: "#475569", margin: 0 }}>
-                {isSuperAdmin ? "No numbers registered for this company" : "No numbers registered yet"}
+                {isSuperAdmin ? "No Numbers Registered For This Company" : "No Numbers Registered Yet"}
               </p>
               {!isSuperAdmin && (
                 <p style={{ fontSize: 12, fontWeight: 400, color: "#334155", margin: "6px 0 0" }}>
-                  Add a number above to get started
+                  Add A Number Above To Get Started
                 </p>
               )}
             </div>

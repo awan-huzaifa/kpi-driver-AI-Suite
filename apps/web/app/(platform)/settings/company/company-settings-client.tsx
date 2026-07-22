@@ -39,14 +39,14 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
   const [err, setErr]       = useState<string | null>(null);
 
   async function handleSave() {
-    if (!name.trim()) { setErr("Company name is required."); return; }
+    if (!name.trim()) { setErr("Company Name Is Required."); return; }
     setSaving(true); setSaved(false); setErr(null);
     try {
       await updateCompany({ name, ghl_sub_account_id: ghlId });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Failed to save.");
+      setErr(e instanceof Error ? e.message : "Failed To Save.");
     } finally {
       setSaving(false);
     }
@@ -57,14 +57,14 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
     : "—";
 
   return (
-    <PlatformShell planId={planId} pageTitle="Company Settings">
+    <PlatformShell planId={planId} pageTitle="Settings / Company Settings">
       {/* Header */}
       <div style={{ marginBottom: 36 }}>
         <h1 style={{ fontSize: 32, fontWeight: 900, color: C.white, letterSpacing: "-0.02em", margin: "0 0 8px" }}>
           Company Settings
         </h1>
         <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: 0 }}>
-          Manage your company profile and integration settings.
+          Manage Your Company Profile And Integration Settings.
         </p>
       </div>
 
@@ -87,7 +87,7 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
             </div>
             <div>
               <p style={{ fontSize: 15, fontWeight: 700, color: C.white, margin: 0 }}>General</p>
-              <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, margin: 0 }}>Basic company information</p>
+              <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, margin: 0 }}>Basic Company Information</p>
             </div>
           </div>
 
@@ -111,7 +111,7 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
                 placeholder="abc123xyz"
               />
               <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, marginTop: 6 }}>
-                Found in your GoHighLevel sub-account URL. Used to route incoming calls to this company.
+                Found In Your GoHighLevel Sub-Account URL. Used To Route Incoming Calls To This Company.
               </p>
             </div>
 

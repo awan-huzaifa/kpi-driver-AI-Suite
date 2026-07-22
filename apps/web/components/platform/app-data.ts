@@ -42,9 +42,9 @@ export type AppEntry = {
 export const APP_REGISTRY: AppEntry[] = [
   {
     id: 'sales-coach', label: 'AI Sales Coach', status: 'live',
-    tagline: 'Every call, scored & coached',
-    desc: 'Score live transcripts against FUS/ACQ rubrics. Surface actionable coaching insights and drive rep performance at scale.',
-    features: ['FUS & ACQ rubric scoring', 'Live & training call analysis', 'Leaderboard & team analytics'],
+    tagline: 'Every Call, Scored & Coached',
+    desc: 'Score Live Transcripts Against FUS/ACQ Rubrics. Surface Actionable Coaching Insights And Drive Rep Performance At Scale.',
+    features: ['FUS & ACQ Rubric Scoring', 'Live & Training Call Analysis', 'Leaderboard & Team Analytics'],
     href: '/sales-coach', icon: Mic, accessKey: 'salesCoach', accentRgb: '48,125,192',
     subNav: [
       { href: '/sales-coach',                           label: 'Dashboard',   icon: LayoutDashboard, exact: true         },
@@ -56,9 +56,9 @@ export const APP_REGISTRY: AppEntry[] = [
   },
   {
     id: 'deal-uw', label: 'AI Deal Underwriter', status: 'live',
-    tagline: 'Underwrite deals in minutes',
-    desc: 'Pull live comps, run ARV calculations, and generate a full investment report automatically — close faster with confidence.',
-    features: ['Live comps & AVM data', 'ARV & max offer calculator', 'Full PDF report export'],
+    tagline: 'Underwrite Deals In Minutes',
+    desc: 'Pull Live Comps, Run ARV Calculations, And Generate A Full Investment Report Automatically — Close Faster With Confidence.',
+    features: ['Live Comps & AVM Data', 'ARV & Max Offer Calculator', 'Full PDF Report Export'],
     href: '/underwriting', icon: Building2, accessKey: 'underwriting', accentRgb: '67,183,73',
     subNav: [
       { href: '/underwriting',          label: 'Dashboard', icon: LayoutDashboard, exact: true },
@@ -68,9 +68,9 @@ export const APP_REGISTRY: AppEntry[] = [
   },
   {
     id: 'training-coach', label: 'AI Training Coach', status: 'live',
-    tagline: 'Onboard reps 3× faster',
-    desc: 'Score AI role-play training calls against the same rubrics as live calls — so reps improve before touching a real lead.',
-    features: ['AI role-play scoring', 'Per-agent practice history', 'Same rubric as live calls'],
+    tagline: 'Onboard Reps 3× Faster',
+    desc: 'Score AI Role-Play Training Calls Against The Same Rubrics As Live Calls — So Reps Improve Before Touching A Real Lead.',
+    features: ['AI Role-Play Scoring', 'Per-Agent Practice History', 'Same Rubric As Live Calls'],
     href: '/training-coach', icon: GraduationCap, accessKey: 'trainingCoach', accentRgb: '252,175,23',
     subNav: [
       { href: '/training-coach',                        label: 'My Calls',    icon: Phone,   exact: true           },
@@ -81,9 +81,9 @@ export const APP_REGISTRY: AppEntry[] = [
   },
   {
     id: 'note-taker', label: 'AI Note Taker', status: 'live',
-    tagline: 'Auto-notes from every call',
-    desc: 'Capture, structure, and summarize key moments from calls automatically — powered by your n8n workflows.',
-    features: ['Inbound & outbound call notes', 'AI + plain summaries', 'Token usage & cost tracking'],
+    tagline: 'Auto-Notes From Every Call',
+    desc: 'Capture, Structure, And Summarize Key Moments From Calls Automatically — Powered By Your n8n Workflows.',
+    features: ['Inbound & Outbound Call Notes', 'AI + Plain Summaries', 'Token Usage & Cost Tracking'],
     href: '/note-taker', icon: NotebookPen, accessKey: 'noteTaker', accentRgb: '48,125,192',
     subNav: [
       { href: '/note-taker', label: 'Call Logs', icon: LayoutDashboard, exact: true },
@@ -91,9 +91,9 @@ export const APP_REGISTRY: AppEntry[] = [
   },
   {
     id: 'data-enrichment', label: 'AI Data Enrichment', status: 'live',
-    tagline: 'Supercharge your lead data',
-    desc: 'Enrich property leads with ownership history, market data, and investment signals — all logged automatically from n8n.',
-    features: ['Dynamic field enrichment', 'Per-record detail view', 'Full enrichment audit trail'],
+    tagline: 'Supercharge Your Lead Data',
+    desc: 'Enrich Property Leads With Ownership History, Market Data, And Investment Signals — All Logged Automatically From n8n.',
+    features: ['Dynamic Field Enrichment', 'Per-Record Detail View', 'Full Enrichment Audit Trail'],
     href: '/data-enrichment', icon: Database, accessKey: 'dataEnrichment', accentRgb: '48,125,192',
     subNav: [
       { href: '/data-enrichment', label: 'Enrichment', icon: Database, exact: true },
@@ -101,9 +101,9 @@ export const APP_REGISTRY: AppEntry[] = [
   },
   {
     id: 'skip-tracing', label: 'AI Skip Tracing', status: 'live',
-    tagline: 'Find anyone, instantly',
-    desc: 'Run APN lookups, skip traces, and DNC checks against Tracerfy — all logs and costs tracked automatically from your n8n workflows.',
-    features: ['APN & address skip trace', 'DNC lookup & clean flag', 'Per-lookup credit tracking'],
+    tagline: 'Find Anyone, Instantly',
+    desc: 'Run APN Lookups, Skip Traces, And DNC Checks Against Tracerfy — All Logs And Costs Tracked Automatically From Your n8n Workflows.',
+    features: ['APN & Address Skip Trace', 'DNC Lookup & Clean Flag', 'Per-Lookup Credit Tracking'],
     href: '/skip-tracing', icon: Search, accessKey: 'skipTracing', accentRgb: '67,183,73',
     subNav: [
       { href: '/skip-tracing', label: 'Lookup Logs', icon: Search, exact: true },
@@ -111,16 +111,16 @@ export const APP_REGISTRY: AppEntry[] = [
   },
   {
     id: 'agent', label: 'AI Agent', status: 'live',
-    tagline: 'Your 24/7 acquisition assistant',
-    desc: 'Automate lead follow-up, handle objections, and schedule appointments — without lifting a finger.',
-    features: ['Automated lead follow-up', 'Objection handling', 'Appointment scheduling'],
+    tagline: 'Your 24/7 Acquisition Assistant',
+    desc: 'Automate Lead Follow-Up, Handle Objections, And Schedule Appointments — Without Lifting A Finger.',
+    features: ['Automated Lead Follow-Up', 'Objection Handling', 'Appointment Scheduling'],
     href: '/ai-agents', icon: Bot, accessKey: null, accentRgb: '67,183,73',
   },
   {
     id: 'knowledge-base', label: 'Knowledge Base', status: 'live',
-    tagline: "Your team's brain, always on",
-    desc: 'Centralize scripts, objection handlers, and playbooks. AI-powered search so reps find the right answer instantly.',
-    features: ['AI-powered search', 'Script & playbook library', 'Team knowledge sharing'],
+    tagline: "Your Team's Brain, Always On",
+    desc: 'Centralize Scripts, Objection Handlers, And Playbooks. AI-Powered Search So Reps Find The Right Answer Instantly.',
+    features: ['AI-Powered Search', 'Script & Playbook Library', 'Team Knowledge Sharing'],
     href: '/knowledge-base', icon: BookOpen, accessKey: null, accentRgb: '48,125,192',
   },
 ]

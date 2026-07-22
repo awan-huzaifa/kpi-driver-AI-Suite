@@ -235,7 +235,7 @@ function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => voi
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ED1F24", flexShrink: 0 }} />
                 <p style={{ fontSize: 10, fontWeight: 700, color: "#ED1F24", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>Non-Scorable</p>
               </div>
-              <p style={{ fontSize: 12, color: "#94a3b8", margin: 0, lineHeight: 1.6 }}>{ev?.reason ?? "This call was not scored."}</p>
+              <p style={{ fontSize: 12, color: "#94a3b8", margin: 0, lineHeight: 1.6 }}>{ev?.reason ?? "This Call Was Not Scored."}</p>
             </div>
           )}
 
@@ -365,11 +365,11 @@ const DIRECTIONS = [
 
 const DURATIONS = [
   { value: "all", label: "Any Duration" },
-  { value: "1",   label: "1+ min"  },
-  { value: "2",   label: "2+ min"  },
-  { value: "5",   label: "5+ min"  },
-  { value: "10",  label: "10+ min" },
-  { value: "15",  label: "15+ min" },
+  { value: "1",   label: "1+ Min"  },
+  { value: "2",   label: "2+ Min"  },
+  { value: "5",   label: "5+ Min"  },
+  { value: "10",  label: "10+ Min" },
+  { value: "15",  label: "15+ Min" },
 ] as const;
 
 const ROLES = [
@@ -449,7 +449,7 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-xl font-bold gradient-text">Training Calls</h1>
-          <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{calls.length} calls total</p>
+          <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{calls.length} Calls Total</p>
         </div>
         <DateRangePicker
           period={period}

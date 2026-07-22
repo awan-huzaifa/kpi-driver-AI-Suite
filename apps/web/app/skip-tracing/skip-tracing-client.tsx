@@ -171,8 +171,8 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
                 : <span style={{ fontSize: 13, fontWeight: 700, color: C.red }}>⚠ Flagged — Do Not Call</span>
             ) : (
               log.hit
-                ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>✓ Hit — {log.persons_count} person{log.persons_count !== 1 ? "s" : ""} found</span>
-                : <span style={{ fontSize: 13, fontWeight: 700, color: C.dimText }}>✗ Miss — no results</span>
+                ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>✓ Hit — {log.persons_count} Person{log.persons_count !== 1 ? "s" : ""} Found</span>
+                : <span style={{ fontSize: 13, fontWeight: 700, color: C.dimText }}>✗ Miss — No Results</span>
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -511,7 +511,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search address, parcel, phone, contact..."
+            placeholder="Search Address, Parcel, Phone, Contact..."
             style={{
               width: "100%", paddingLeft: 30, paddingRight: 10, paddingTop: 7, paddingBottom: 7,
               background: "rgba(255,255,255,0.04)", border: `1px solid rgba(255,255,255,0.08)`,

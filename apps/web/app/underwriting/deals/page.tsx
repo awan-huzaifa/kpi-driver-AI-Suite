@@ -116,8 +116,8 @@ export default async function DealsPage() {
           <h1 className="text-white font-black text-[32px] leading-none tracking-tight mb-2">All Deals</h1>
           <p className="text-muted text-sm font-medium">
             {rows.length === 0
-              ? "No deals yet — run your first analysis"
-              : `${rows.length} total · ${completed} completed · ${pending} pending`}
+              ? "No Deals Yet — Run Your First Analysis"
+              : `${rows.length} Total · ${completed} Completed · ${pending} Pending`}
           </p>
         </div>
 
@@ -143,15 +143,15 @@ export default async function DealsPage() {
           >
             <Building2 size={26} className="text-brand" strokeWidth={1.5} />
           </div>
-          <p className="text-white font-bold text-[15px] mb-2">No deals yet</p>
+          <p className="text-white font-bold text-[15px] mb-2">No Deals Yet</p>
           <p className="text-muted text-[13px] mb-7 max-w-[300px] leading-relaxed">
-            Run your first underwriting analysis to see results here.
+            Run Your First Underwriting Analysis To See Results Here.
           </p>
           <NewDealModal
             trigger={
               <button className="btn-primary">
                 <Plus size={14} />
-                Create your first deal
+                Create Your First Deal
               </button>
             }
           />

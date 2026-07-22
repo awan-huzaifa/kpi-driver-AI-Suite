@@ -84,13 +84,13 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
         // One-click success
         setBalance(data.newBalance)
         const option = topUpOptions.find((o) => o.priceId === priceId)
-        setTopupMessage(`+$${option?.amount ?? data.amount ?? ''} added to your wallet`)
+        setTopupMessage(`+$${option?.amount ?? data.amount ?? ''} Added To Your Wallet`)
         setTimeout(() => setTopupMessage(null), 5000)
       } else if (data.error) {
         setTopupError(data.error)
       }
     } catch {
-      setTopupError('Something went wrong. Please try again.')
+      setTopupError('Something Went Wrong. Please Try Again.')
     } finally {
       setToppingUp(null)
     }
@@ -164,12 +164,12 @@ function AutoTopUpCard({ topUpOptions, autoTopup }: { topUpOptions: TopUpOption[
 
   async function save() {
     if (enabled && !threshold) {
-      setMessage({ type: 'error', text: 'Threshold amount is required.' })
+      setMessage({ type: 'error', text: 'Threshold Amount Is Required.' })
       return
     }
     const parsed = parseFloat(threshold)
     if (enabled && (isNaN(parsed) || parsed <= 0)) {
-      setMessage({ type: 'error', text: 'Enter a valid threshold greater than $0.' })
+      setMessage({ type: 'error', text: 'Enter A Valid Threshold Greater Than $0.' })
       return
     }
     setSaving(true)
@@ -181,10 +181,10 @@ function AutoTopUpCard({ topUpOptions, autoTopup }: { topUpOptions: TopUpOption[
         body: JSON.stringify({ enabled, priceId: enabled ? priceId : null, threshold: enabled ? parsed : null }),
       })
       const data = await res.json()
-      if (!res.ok) setMessage({ type: 'error', text: data.error ?? 'Failed to save.' })
-      else setMessage({ type: 'success', text: 'Auto top-up settings saved.' })
+      if (!res.ok) setMessage({ type: 'error', text: data.error ?? 'Failed To Save.' })
+      else setMessage({ type: 'success', text: 'Auto Top-Up Settings Saved.' })
     } catch {
-      setMessage({ type: 'error', text: 'Something went wrong.' })
+      setMessage({ type: 'error', text: 'Something Went Wrong.' })
     } finally {
       setSaving(false)
       setTimeout(() => setMessage(null), 4000)
@@ -321,7 +321,7 @@ function PaymentMethodsCard() {
       setMethods(data.paymentMethods)
       setDefaultId(data.defaultPaymentMethodId)
     } catch {
-      setError('Failed to load payment methods.')
+      setError('Failed To Load Payment Methods.')
     }
   }, [])
 
@@ -336,7 +336,7 @@ function PaymentMethodsCard() {
       setClientSecret(clientSecret)
       setAdding(true)
     } catch {
-      setError('Could not start card setup.')
+      setError('Could Not Start Card Setup.')
     }
   }
 
@@ -469,7 +469,7 @@ function AddCardForm({ clientSecret, onSuccess, onCancel }: { clientSecret: stri
 
     const { error: confirmError } = await stripe.confirmCardSetup(clientSecret, { payment_method: { card } })
     if (confirmError) {
-      setError(confirmError.message ?? 'Could not save card.')
+      setError(confirmError.message ?? 'Could Not Save Card.')
       setSubmitting(false)
       return
     }
@@ -560,10 +560,10 @@ function AppSpendCard({ appSpend, access }: { appSpend: AppSpendRow[]; access: A
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: 0 }}>{e.label}</p>
                   <p style={{ fontSize: 11, color: C.dimText, margin: '2px 0 0' }}>
-                    {runs > 0 ? `${runs} run${runs !== 1 ? 's' : ''}` : 'No Usage Yet'}
+                    {runs > 0 ? `${runs} Run${runs !== 1 ? 's' : ''}` : 'No Usage Yet'}
                     {s && (s.total_input_tokens > 0 || s.total_output_tokens > 0) && (
                       <span style={{ marginLeft: 8, color: C.dimText }}>
-                        · {s.total_input_tokens.toLocaleString()} in / {s.total_output_tokens.toLocaleString()} out tokens
+                        · {s.total_input_tokens.toLocaleString()} In / {s.total_output_tokens.toLocaleString()} Out Tokens
                       </span>
                     )}
                   </p>

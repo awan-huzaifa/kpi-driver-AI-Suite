@@ -31,7 +31,7 @@ export default function ScoreDistribution({ data }: Props) {
       <div style={{ marginBottom: 20 }}>
         <h3 style={{ fontSize: 14, fontWeight: 700, color: "#fff", margin: "0 0 3px" }}>Score Distribution</h3>
         <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>
-          {total} scorable call{total !== 1 ? "s" : ""}
+          {total} Scorable Call{total !== 1 ? "s" : ""}
         </p>
       </div>
 

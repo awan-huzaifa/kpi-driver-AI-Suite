@@ -27,11 +27,11 @@ const DIRECTIONS = [
 
 const DURATIONS = [
   { value: "all", label: "Any Duration" },
-  { value: "1",   label: "1+ min"  },
-  { value: "2",   label: "2+ min"  },
-  { value: "5",   label: "5+ min"  },
-  { value: "10",  label: "10+ min" },
-  { value: "15",  label: "15+ min" },
+  { value: "1",   label: "1+ Min"  },
+  { value: "2",   label: "2+ Min"  },
+  { value: "5",   label: "5+ Min"  },
+  { value: "10",  label: "10+ Min" },
+  { value: "15",  label: "15+ Min" },
 ] as const;
 
 const ROLES = [
@@ -343,7 +343,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         <div>
           <h1 className="text-xl font-bold gradient-text">Analytics</h1>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>
-            {data.totalCalls} calls in view
+            {data.totalCalls} Calls In View
           </p>
         </div>
 
@@ -446,13 +446,13 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         <StatCard label="Total Calls"     value={data.totalCalls}           color="#307DC0" />
         <StatCard label="Avg Score"       value={data.avgScore ?? "—"} sub="/100" color="#43B749" />
         <StatCard label="Scorable Rate"   value={`${data.scorableRate}%`}   color="#FCAF17" />
-        <StatCard label="Manager Reviews" value={data.managerReviews} sub="flagged" color="#ED1F24" />
+        <StatCard label="Manager Reviews" value={data.managerReviews} sub="Flagged" color="#ED1F24" />
         <StatCard label="Inbound"         value={data.inboundCount}         color="#43B749" />
         <StatCard label="Outbound"        value={data.outboundCount}        color="#307DC0" />
       </div>
 
       {/* Score trend */}
-      <ChartCard title="Score Trend" sub="Average score per day for scored calls" color="#43B749">
+      <ChartCard title="Score Trend" sub="Average Score Per Day For Scored Calls" color="#43B749">
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={data.scoreTrend} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
@@ -474,7 +474,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
       </ChartCard>
 
       {/* Call volume */}
-      <ChartCard title="Call Volume" sub="Inbound vs outbound calls per day" color="#307DC0">
+      <ChartCard title="Call Volume" sub="Inbound Vs Outbound Calls Per Day" color="#307DC0">
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={data.callVolume} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barSize={14}>
             <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
@@ -492,7 +492,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
 
         {/* Score distribution */}
-        <ChartCard title="Score Distribution" sub="Calls by score band" color="#FCAF17">
+        <ChartCard title="Score Distribution" sub="Calls By Score Band" color="#FCAF17">
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={data.scoreDistribution} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barSize={28}>
               <CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.muted} vertical={false} />
@@ -507,9 +507,9 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         </ChartCard>
 
         {/* Score by agent type */}
-        <ChartCard title="Score by Agent Type" sub="Avg score — FUS vs ACQ" color="#307DC0">
+        <ChartCard title="Score by Agent Type" sub="Avg Score — FUS Vs ACQ" color="#307DC0">
           {data.scoreByType.length === 0 ? (
-            <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: "#334155" }}>No data</div>
+            <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: "#334155" }}>No Data</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={data.scoreByType} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barSize={48}>
@@ -528,9 +528,9 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         </ChartCard>
 
         {/* Opportunity level */}
-        <ChartCard title="Opportunity Level" sub="Distribution across scored calls" color="#43B749">
+        <ChartCard title="Opportunity Level" sub="Distribution Across Scored Calls" color="#43B749">
           {data.opportunityLevels.every(o => o.count === 0) ? (
-            <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: "#334155" }}>No data</div>
+            <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: "#334155" }}>No Data</div>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={data.opportunityLevels} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barSize={48}>
@@ -548,9 +548,9 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
       </div>
 
       {/* Lead source */}
-      <ChartCard title="Lead Source Breakdown" sub="Call volume and avg score per lead source" color="#FCAF17">
+      <ChartCard title="Lead Source Breakdown" sub="Call Volume And Avg Score Per Lead Source" color="#FCAF17">
         {data.leadSourceStats.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-sm" style={{ color: "#334155" }}>No lead source data — make sure n8n is sending the lead_source field</div>
+          <div className="flex items-center justify-center py-12 text-sm" style={{ color: "#334155" }}>No Lead Source Data — Make Sure n8n Is Sending The lead_source Field</div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px 40px" }}>
             {/* Volume column */}

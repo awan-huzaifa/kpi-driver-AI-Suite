@@ -356,7 +356,7 @@ export function DealsTable({
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
               type="text"
-              placeholder="Search by address…"
+              placeholder="Search By Address…"
               value={search}
               onChange={(e) => { setSearch(e.target.value); clearSelection(); }}
               className="w-full bg-card border border-edge text-white text-[13px] rounded-lg pl-8 pr-3 py-2 outline-none focus:border-brand transition-colors placeholder:text-muted"
@@ -402,7 +402,7 @@ export function DealsTable({
         {someSelected && (
           <div className="flex items-center justify-between bg-brand/10 border border-brand/20 rounded-xl px-4 py-2.5">
             <span className="text-brand text-[13px] font-medium">
-              {selectedInView.length} deal{selectedInView.length !== 1 ? "s" : ""} selected
+              {selectedInView.length} Deal{selectedInView.length !== 1 ? "s" : ""} Selected
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -426,7 +426,7 @@ export function DealsTable({
         <div className="bg-card border border-edge rounded-xl overflow-hidden">
           {filtered.length === 0 ? (
             <div className="py-12 text-center text-muted text-[13px]">
-              No deals found.
+              No Deals Found.
             </div>
           ) : (
             <div className="overflow-x-auto">

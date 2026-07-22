@@ -175,7 +175,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             {deal.recommendation && <RecommendationBadge value={deal.recommendation} />}
             {report?.confidence && (
               <span className="text-muted text-[12px] font-medium border border-edge px-2.5 py-1 rounded-lg">
-                {report.confidence}/10 confidence
+                {report.confidence}/10 Confidence
               </span>
             )}
             {report && (
@@ -209,7 +209,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           <MetricCard
             label="ARV Range"
             value={`${fmt(report.arv_low)} – ${fmt(report.arv_high)}`}
-            sub={`Avg ${fmt(report.avg_price_per_sqft)}/sqft`}
+            sub={`Avg ${fmt(report.avg_price_per_sqft)}/Sqft`}
           />
           <MetricCard
             label="Max Offer"
@@ -382,7 +382,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
         <div className="bg-card border border-edge rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-edge flex items-center justify-between">
             <SectionLabel>Comparable Properties</SectionLabel>
-            <span className="text-muted text-[11px] -mt-3">{comps.length} comp{comps.length !== 1 ? "s" : ""}</span>
+            <span className="text-muted text-[11px] -mt-3">{comps.length} Comp{comps.length !== 1 ? "s" : ""}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">

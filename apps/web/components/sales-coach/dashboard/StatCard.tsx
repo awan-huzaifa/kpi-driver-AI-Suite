@@ -71,7 +71,7 @@ export default function StatCard({
               {positive ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
               {Math.abs(change)}%
             </div>
-            <span style={{ fontSize: 11, color: "#334155" }}>vs last week</span>
+            <span style={{ fontSize: 11, color: "#334155" }}>Vs Last Week</span>
           </div>
         </div>
 
