@@ -143,9 +143,10 @@ function fmt(n: number | null) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short", day: "numeric", year: "numeric",
-  });
+  const d = new Date(iso)
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+  return `${date} · ${time}`
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -279,6 +280,7 @@ export function DealsTable({
 }) {
   const router = useRouter();
   const isSuperAdmin = accessRole === "super_admin";
+  const isAdmin = accessRole === "admin" || accessRole === "super_admin";
   const hasCompanyContext = !isSuperAdmin && companyUsers.length > 0;
 
   const [viewMode,      setViewMode]      = useState<ViewMode>("mine");
@@ -399,7 +401,7 @@ export function DealsTable({
         </div>
 
         {/* Bulk action bar */}
-        {someSelected && (
+        {isAdmin && someSelected && (
           <div className="flex items-center justify-between bg-brand/10 border border-brand/20 rounded-xl px-4 py-2.5">
             <span className="text-brand text-[13px] font-medium">
               {selectedInView.length} Deal{selectedInView.length !== 1 ? "s" : ""} Selected
@@ -433,15 +435,17 @@ export function DealsTable({
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-edge">
-                    <th className="px-4 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={allSelected}
-                        ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
-                        onChange={toggleAll}
-                        className="w-4 h-4 accent-brand rounded"
-                      />
-                    </th>
+                    {isAdmin && (
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={allSelected}
+                          ref={(el) => { if (el) el.indeterminate = someSelected && !allSelected; }}
+                          onChange={toggleAll}
+                          className="w-4 h-4 accent-brand rounded"
+                        />
+                      </th>
+                    )}
                     <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Date</th>
                     <th className="text-center px-3 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Address</th>
                     {showCompanyCol && (
@@ -465,14 +469,16 @@ export function DealsTable({
                         onClick={() => router.push(`/underwriting/deals/${deal.id}`)}
                         className={`transition-colors cursor-pointer ${isSelected ? "bg-brand/[0.04]" : "hover:bg-white/[0.02]"}`}
                       >
-                        <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleOne(deal.id)}
-                            className="w-4 h-4 accent-brand rounded"
-                          />
-                        </td>
+                        {isAdmin && (
+                          <td className="px-4 py-4 w-10" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleOne(deal.id)}
+                              className="w-4 h-4 accent-brand rounded"
+                            />
+                          </td>
+                        )}
                         <td className="px-4 py-4 text-center">
                           <span className="text-muted text-[12px]">{fmtDate(deal.created_at)}</span>
                         </td>
@@ -503,8 +509,7 @@ export function DealsTable({
                           <span className="text-brand text-[13px] font-semibold">{fmt(deal.max_offer)}</span>
                         </td>
                         <td className="px-5 py-4 text-center" onClick={(e) => e.stopPropagation()}>
-                          {/* Only allow deleting own deals */}
-                          {isOwn && (
+                          {isAdmin && (
                             <button
                               onClick={() => setDeleteTargets([deal])}
                               className="p-1.5 rounded-md text-muted hover:text-uw-danger hover:bg-uw-danger/10 transition-colors"

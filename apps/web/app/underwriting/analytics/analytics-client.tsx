@@ -127,9 +127,11 @@ export default function AnalyticsClient({
   const [companyId,  setCompanyId]  = useState("all");
   const [userId,     setUserId]     = useState("all");
   const [city,       setCity]       = useState("all");
+  const [viewMode,   setViewMode]   = useState<"mine" | "company">("mine");
 
   const isAdmin      = accessRole === "admin" || accessRole === "super_admin";
   const isSuperAdmin = accessRole === "super_admin";
+  const isUser       = accessRole === "user";
 
   /* users visible in the user filter — scoped to selected company when one is chosen */
   const visibleUsers = useMemo(() => {
@@ -160,6 +162,7 @@ export default function AnalyticsClient({
   const reports = useMemo(() => {
     const { from, to } = periodBounds(period, customFrom, customTo);
     return allReports.filter((r) => {
+      if (isUser && viewMode === "mine" && r.user_id !== currentUserId) return false;
       if (companyId !== "all" && r.company_id !== companyId) return false;
       const d = new Date(r.created_at);
       if (from && d < from) return false;
@@ -171,14 +174,14 @@ export default function AnalyticsClient({
       }
       return true;
     });
-  }, [allReports, period, customFrom, customTo, companyId, userId, city]);
+  }, [allReports, period, customFrom, customTo, companyId, userId, city, isUser, viewMode, currentUserId]);
 
-  const hasData        = reports.length > 0;
-  const hasActiveFilter = period !== "all" || companyId !== "all" || userId !== "all" || city !== "all";
+  const hasData         = reports.length > 0;
+  const hasActiveFilter = period !== "all" || companyId !== "all" || userId !== "all" || city !== "all" || (isUser && viewMode === "company");
 
   const showFilters = isSuperAdmin
     ? companies.length > 0 || allUsers.length > 0 || allCities.length > 1
-    : isAdmin || allCities.length > 1;
+    : isAdmin || isUser || allCities.length > 1;
 
   /* financial aggregates */
   const arvMids         = reports.map((r) => ((r.arv_low ?? 0) + (r.arv_high ?? 0)) / 2);
@@ -268,6 +271,28 @@ export default function AnalyticsClient({
             </span>
           </div>
 
+          {/* My Stats / Company Stats toggle — user role only */}
+          {isUser && (
+            <div className="flex rounded-lg overflow-hidden border border-edge">
+              {(["mine", "company"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  style={{
+                    padding: "5px 14px",
+                    fontSize: 12, fontWeight: 600,
+                    background: viewMode === mode ? "#307DC0" : "transparent",
+                    color: viewMode === mode ? "#fff" : "#78ABD6",
+                    border: "none", cursor: "pointer",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                >
+                  {mode === "mine" ? "My Stats" : "Company Stats"}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Company filter — super_admin only */}
           {isSuperAdmin && companies.length > 0 && (
             <Select value={companyId} onValueChange={handleCompanyChange}>
@@ -309,7 +334,7 @@ export default function AnalyticsClient({
 
           {hasActiveFilter && (
             <button
-              onClick={() => { setCompanyId("all"); setUserId("all"); setCity("all"); }}
+              onClick={() => { setCompanyId("all"); setUserId("all"); setCity("all"); setViewMode("mine"); }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg transition-colors"
               style={{
                 background: "rgba(237,31,36,0.08)",

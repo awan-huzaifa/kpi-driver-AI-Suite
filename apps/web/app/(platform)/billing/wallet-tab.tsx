@@ -104,7 +104,7 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
         background: 'linear-gradient(135deg, rgba(48,125,192,0.10), rgba(67,183,73,0.06))',
         border: `1px solid ${C.border}`, borderRadius: 16, padding: 28,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20, marginBottom: topupMessage || topupError ? 16 : 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20, marginBottom: 14 }}>
           <div>
             <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 8px' }}>
               Wallet Balance
@@ -131,15 +131,25 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
           </div>
         </div>
 
+        {/* Top-up hint */}
+        {!topupMessage && !topupError && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderRadius: 10, background: 'rgba(48,125,192,0.08)', border: '1px solid rgba(48,125,192,0.18)', marginBottom: 0 }}>
+            <AlertCircle size={13} style={{ color: '#78ABD6', flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 500, color: '#78ABD6' }}>
+              If A Default Card Is On File, Clicking A Top-Up Button Will Charge It Instantly. Otherwise, A Secure Checkout Page Will Open.
+            </span>
+          </div>
+        )}
+
         {/* Inline feedback */}
         {topupMessage && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(67,183,73,0.12)', border: `1px solid rgba(67,183,73,0.25)` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(67,183,73,0.12)', border: `1px solid rgba(67,183,73,0.25)`, marginTop: 10 }}>
             <CheckCircle2 size={15} style={{ color: C.green, flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 500, color: C.green }}>{topupMessage}</span>
           </div>
         )}
         {topupError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(237,31,36,0.10)', border: `1px solid rgba(237,31,36,0.25)` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(237,31,36,0.10)', border: `1px solid rgba(237,31,36,0.25)`, marginTop: 10 }}>
             <AlertCircle size={15} style={{ color: C.red, flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 500, color: C.red }}>{topupError}</span>
           </div>

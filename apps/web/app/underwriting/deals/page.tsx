@@ -101,7 +101,6 @@ export default async function DealsPage() {
   }
 
   const completed = rows.filter((d) => d.status === "completed").length;
-  const pending   = rows.filter((d) => d.status === "pending").length;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto w-full">
@@ -117,7 +116,7 @@ export default async function DealsPage() {
           <p className="text-muted text-sm font-medium">
             {rows.length === 0
               ? "No Deals Yet — Run Your First Analysis"
-              : `${rows.length} Total · ${completed} Completed · ${pending} Pending`}
+              : `${rows.length} Total · ${completed} Completed`}
           </p>
         </div>
 

@@ -29,7 +29,6 @@ export default async function DashboardPage() {
       portfolioValue={portfolioValue}
       pursueRate={pursueRate}
       pursueCount={pursueCount}
-      pendingCount={rows.filter((d) => d.status === "pending").length}
       recent={rows.slice(0, 5)}
       hasMore={rows.length > 5}
     />

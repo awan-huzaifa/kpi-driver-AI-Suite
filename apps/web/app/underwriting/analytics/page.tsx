@@ -72,19 +72,14 @@ export default async function AnalyticsPage() {
       }));
     }
   } else {
-    let query = supabase
+    const { data } = await supabase
       .from("underwriting_reports")
       .select("user_id, condition, arv_low, arv_high, repair_cost_low, repair_cost_high, max_offer_low, max_offer_high, investor_profit, property_data, created_at")
       .order("created_at", { ascending: false });
 
-    if (accessRole === "user") {
-      query = query.eq("user_id", user.id);
-    }
-
-    const { data } = await query;
     rows = data ?? [];
 
-    if (isAdmin && rows.length) {
+    if (rows.length) {
       const uniqueIds = [...new Set(rows.map((r) => r.user_id))];
       const { data: userRows } = await supabase
         .from("users")

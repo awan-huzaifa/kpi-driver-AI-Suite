@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
-  Building2, DollarSign, TrendingUp, Clock,
+  Building2, DollarSign, TrendingUp,
   CheckCircle2, AlertCircle, XCircle, ArrowRight, Plus,
 } from 'lucide-react'
 import { NewDealModal } from '@/components/underwriting/new-deal-modal'
@@ -27,7 +27,6 @@ interface Props {
   portfolioValue: number
   pursueRate: number | null
   pursueCount: number
-  pendingCount: number
   recent: DealRow[]
   hasMore: boolean
 }
@@ -206,7 +205,7 @@ function DealRow({ deal, delay }: { deal: DealRow; delay: number }) {
 
 export default function UWDashboardClient({
   totalDeals, completedCount, portfolioValue,
-  pursueRate, pursueCount, pendingCount, recent, hasMore,
+  pursueRate, pursueCount, recent, hasMore,
 }: Props) {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%', display: 'flex', flexDirection: 'column', gap: 28 }}>
@@ -246,11 +245,10 @@ export default function UWDashboardClient({
       </motion.div>
 
       {/* Stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
         <StatCard label="Total Deals"    value={String(totalDeals)}   sub={completedCount > 0 ? `${completedCount} Completed` : undefined} icon={Building2}  delay={0.08} accent="blue"   />
         <StatCard label="Pipeline Value" value={portfolioValue > 0 ? fmt(portfolioValue) : '—'} sub={portfolioValue > 0 ? 'Sum Of Max Offers' : 'No Completed Deals'} icon={DollarSign} delay={0.14} accent="green"  />
         <StatCard label="Pursue Rate"    value={pursueRate != null ? `${pursueRate}%` : '—'}  sub={pursueRate != null ? `${pursueCount} Of ${completedCount} Deals` : 'No Data Yet'} icon={TrendingUp} delay={0.20} accent="yellow" />
-        <StatCard label="Pending"        value={String(pendingCount)} sub="In Progress"        icon={Clock}      delay={0.26} accent="blue"   />
       </div>
 
       {/* Recent Deals */}

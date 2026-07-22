@@ -68,6 +68,18 @@ interface Props {
   currentUserId?: string;
 }
 
+function resultStyle(r: string | null) {
+  if (!r) return { color: "#64748b", bg: "rgba(100,116,139,0.08)" };
+  const l = r.toLowerCase();
+  if (l.includes("book") || l.includes("converted") || l.includes("signed"))
+    return { color: "#43B749", bg: "rgba(67,183,73,0.1)" };
+  if (l.includes("not") || l.includes("disqualif"))
+    return { color: "#ED1F24", bg: "rgba(237,31,36,0.1)" };
+  if (l.includes("follow") || l.includes("nurture"))
+    return { color: "#FCAF17", bg: "rgba(252,175,23,0.1)" };
+  return { color: "#64748b", bg: "rgba(100,116,139,0.08)" };
+}
+
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
@@ -403,9 +415,7 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
     }
   }, []);
   const [companyId, setCompanyId] = useState<string>("all");
-  const [agentIds,  setAgentIds]  = useState<string[]>(
-    accessRole === "user" && currentUserId ? [currentUserId] : []
-  );
+  const [agentIds,  setAgentIds]  = useState<string[]>([]);
   const [aiAgent,   setAiAgent]   = useState<string>("all");
   const [direction, setDirection] = useState<typeof DIRECTIONS[number]["value"]>("all");
   const [duration,  setDuration]  = useState<typeof DURATIONS[number]["value"]>("2");
@@ -534,12 +544,15 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AI Agent</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Duration</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Score</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Scorable</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Reason</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Result</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell className="text-center py-16" style={{ color: "#334155" }} colSpan={5}>
+                <TableCell className="text-center py-16" style={{ color: "#334155" }} colSpan={8}>
                   <GraduationCap size={32} className="mx-auto mb-2 opacity-20" />
                   <p className="text-sm">No Training Calls Found</p>
                 </TableCell>
@@ -565,6 +578,34 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
                   <span className="text-xs font-mono" style={{ color: "#64748b" }}>{fmtDuration(c.duration_sec)}</span>
                 </TableCell>
                 <TableCell className="text-center"><ScorePill score={c.score} /></TableCell>
+                <TableCell className="text-center">
+                  <span style={{
+                    fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                    color: c.scorable ? "#43B749" : "#ED1F24",
+                    background: c.scorable ? "rgba(67,183,73,0.1)" : "rgba(237,31,36,0.1)",
+                  }}>
+                    {c.scorable ? "Yes" : "No"}
+                  </span>
+                </TableCell>
+                <TableCell className="text-center" style={{ maxWidth: 200 }}>
+                  {(() => {
+                    const reason = c.evaluation?.reason ?? (c.scorable ? null : "Not Scored")
+                    if (!reason) return <span style={{ color: "#475569", fontSize: 11 }}>—</span>
+                    const truncated = reason.length > 40 ? reason.slice(0, 40) + "…" : reason
+                    return (
+                      <span title={reason} style={{ fontSize: 11, color: "#94a3b8", cursor: reason.length > 40 ? "help" : "default" }}>
+                        {truncated}
+                      </span>
+                    )
+                  })()}
+                </TableCell>
+                <TableCell className="text-center">
+                  {(() => { const rs = resultStyle(c.call_result); return (
+                    <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, color: rs.color, background: rs.bg, whiteSpace: "nowrap" }}>
+                      {c.call_result ?? "—"}
+                    </span>
+                  ); })()}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -45,9 +45,8 @@ export const APP_REGISTRY: AppEntry[] = [
     tagline: 'Every Call, Scored & Coached',
     desc: 'Score Live Transcripts Against FUS/ACQ Rubrics. Surface Actionable Coaching Insights And Drive Rep Performance At Scale.',
     features: ['FUS & ACQ Rubric Scoring', 'Live & Training Call Analysis', 'Leaderboard & Team Analytics'],
-    href: '/sales-coach', icon: Mic, accessKey: 'salesCoach', accentRgb: '48,125,192',
+    href: '/sales-coach/live-calls', icon: Mic, accessKey: 'salesCoach', accentRgb: '48,125,192',
     subNav: [
-      { href: '/sales-coach',                           label: 'Dashboard',   icon: LayoutDashboard, exact: true         },
       { href: '/sales-coach/live-calls',                label: 'Live Calls',  icon: Phone                               },
       { href: '/sales-coach/leaderboard',               label: 'Leaderboard', icon: Trophy                              },
       { href: '/sales-coach/analytics',                 label: 'Analytics',   icon: BarChart3                           },
@@ -73,7 +72,7 @@ export const APP_REGISTRY: AppEntry[] = [
     features: ['AI Role-Play Scoring', 'Per-Agent Practice History', 'Same Rubric As Live Calls'],
     href: '/training-coach', icon: GraduationCap, accessKey: 'trainingCoach', accentRgb: '252,175,23',
     subNav: [
-      { href: '/training-coach',                        label: 'My Calls',    icon: Phone,   exact: true           },
+      { href: '/training-coach',                        label: 'Training Calls', icon: Phone,   exact: true           },
       { href: '/training-coach/my-numbers',             label: 'My Numbers',  icon: Hash,  maxRole: 'admin'      },
       { href: '/training-coach/agents',                 label: 'AI Agents',   icon: Bot                           },
       { href: '/training-coach/admin/user-phones',      label: 'User Phones', icon: Users,   minRole: 'super_admin' },
