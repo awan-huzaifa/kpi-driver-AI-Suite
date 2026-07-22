@@ -136,7 +136,7 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderRadius: 10, background: 'rgba(48,125,192,0.08)', border: '1px solid rgba(48,125,192,0.18)', marginBottom: 0 }}>
             <AlertCircle size={13} style={{ color: '#78ABD6', flexShrink: 0 }} />
             <span style={{ fontSize: 12, fontWeight: 500, color: '#78ABD6' }}>
-              If A Default Card Is On File, Clicking A Top-Up Button Will Charge It Instantly. Otherwise, A Secure Checkout Page Will Open.
+              Clicking A Top-Up Button Will Instantly Charge Your Default Saved Card.
             </span>
           </div>
         )}
