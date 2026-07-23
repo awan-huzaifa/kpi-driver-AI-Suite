@@ -424,7 +424,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "AI Summary", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px", textAlign: "left",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
@@ -479,14 +479,6 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
                   {c.contact_phone ?? "—"}
-                </td>
-                <td style={{ padding: "12px 16px", maxWidth: 320, textAlign: "center" }}>
-                  <p style={{
-                    fontSize: 12, color: C.bodyText, margin: 0,
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>
-                    {c.ai_summary ?? c.normal_summary ?? "—"}
-                  </p>
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
                   {(c.input_tokens + c.output_tokens).toLocaleString()}

@@ -54,10 +54,11 @@ interface Props {
 }
 
 export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access }: Props) {
-  const [balance, setBalance]         = useState(initialBalance)
-  const [toppingUp, setToppingUp]     = useState<string | null>(null)
+  const [balance, setBalance]           = useState(initialBalance)
+  const [toppingUp, setToppingUp]       = useState<string | null>(null)
   const [topupMessage, setTopupMessage] = useState<string | null>(null)
-  const [topupError, setTopupError]   = useState<string | null>(null)
+  const [topupError, setTopupError]     = useState<string | null>(null)
+  const [pendingPriceId, setPendingPriceId] = useState<string | null>(null)
 
   async function handleTopUp(priceId: string) {
     setToppingUp(priceId)
@@ -96,60 +97,97 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
     }
   }
 
+  const pendingOption = topUpOptions.find(o => o.priceId === pendingPriceId)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+      {/* Confirmation modal overlay */}
+      {pendingPriceId && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)',
+        }}>
+          <div style={{
+            background: C.card, border: `1px solid ${C.border}`, borderRadius: 16,
+            padding: '28px 28px 24px', maxWidth: 400, width: '90%',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+          }}>
+            <p style={{ fontSize: 16, fontWeight: 700, color: C.white, margin: '0 0 10px' }}>
+              Confirm Top-Up
+            </p>
+            <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: '0 0 24px', lineHeight: 1.55 }}>
+              {pendingOption?.label} Will Be Instantly Charged From Your Default Saved Card.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={() => { handleTopUp(pendingPriceId); setPendingPriceId(null) }}
+                disabled={toppingUp !== null}
+                className="btn-primary"
+                style={{ flex: 1, padding: '10px 0', justifyContent: 'center' }}
+              >
+                {toppingUp ? <Loader2 size={13} className="animate-spin" /> : 'Confirm'}
+              </button>
+              <button
+                onClick={() => setPendingPriceId(null)}
+                style={{
+                  flex: 1, padding: '10px 0', borderRadius: 10, background: 'transparent',
+                  border: `1px solid ${C.border}`, color: C.mutedText, fontSize: 14,
+                  fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Balance hero */}
       <div style={{
         background: 'linear-gradient(135deg, rgba(48,125,192,0.10), rgba(67,183,73,0.06))',
         border: `1px solid ${C.border}`, borderRadius: 16, padding: 28,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20, marginBottom: 14 }}>
-          <div>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 8px' }}>
-              Wallet Balance
-            </p>
-            <p style={{ fontSize: 40, fontWeight: 900, color: C.white, margin: 0, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
-              ${balance.toFixed(2)}
-            </p>
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {/* Row 1: labels */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: 0 }}>
+            Wallet Balance
+          </p>
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: 0 }}>
+            Top Up Balance
+          </p>
+        </div>
+
+        {/* Row 2: balance + buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+          <p style={{ fontSize: 40, fontWeight: 900, color: C.white, margin: 0, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+            ${balance.toFixed(2)}
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
             {topUpOptions.map((o) => (
               <button
                 key={o.priceId}
-                onClick={() => handleTopUp(o.priceId)}
+                onClick={() => { setTopupError(null); setTopupMessage(null); setPendingPriceId(o.priceId) }}
                 disabled={toppingUp !== null}
                 className="btn-primary"
-                style={{ padding: '9px 15px', display: 'flex', alignItems: 'center', gap: 6 }}
+                style={{ padding: '9px 15px' }}
               >
-                {toppingUp === o.priceId
-                  ? <Loader2 size={13} className="animate-spin" />
-                  : null}
                 + {o.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Top-up hint */}
-        {!topupMessage && !topupError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 14px', borderRadius: 10, background: 'rgba(48,125,192,0.08)', border: '1px solid rgba(48,125,192,0.18)', marginBottom: 0 }}>
-            <AlertCircle size={13} style={{ color: '#78ABD6', flexShrink: 0 }} />
-            <span style={{ fontSize: 12, fontWeight: 500, color: '#78ABD6' }}>
-              Clicking A Top-Up Button Will Instantly Charge Your Default Saved Card.
-            </span>
-          </div>
-        )}
-
         {/* Inline feedback */}
         {topupMessage && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(67,183,73,0.12)', border: `1px solid rgba(67,183,73,0.25)`, marginTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(67,183,73,0.12)', border: `1px solid rgba(67,183,73,0.25)`, marginTop: 16 }}>
             <CheckCircle2 size={15} style={{ color: C.green, flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 500, color: C.green }}>{topupMessage}</span>
           </div>
         )}
         {topupError && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(237,31,36,0.10)', border: `1px solid rgba(237,31,36,0.25)`, marginTop: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: 'rgba(237,31,36,0.10)', border: `1px solid rgba(237,31,36,0.25)`, marginTop: 16 }}>
             <AlertCircle size={15} style={{ color: C.red, flexShrink: 0 }} />
             <span style={{ fontSize: 13, fontWeight: 500, color: C.red }}>{topupError}</span>
           </div>
