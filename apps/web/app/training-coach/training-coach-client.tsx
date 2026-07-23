@@ -83,6 +83,12 @@ function resultStyle(r: string | null) {
 function fmt(iso: string) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
 
 function fmtDuration(sec: number) {
   const m = Math.floor(sec / 60);
@@ -424,6 +430,7 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
   const [period,     setPeriod]     = useState<DatePeriod>("today");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
+  const [page,       setPage]       = useState(1);
 
   const agents = useMemo(() => {
     const map = new Map<string, string>();
@@ -452,6 +459,11 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
     if (pTo   && new Date(c.created_at) > pTo)   return false;
     return true;
   }), [calls, companyId, agentIds, aiAgent, direction, duration, role, scorable, period, customFrom, customTo]);
+
+  const PAGE_SIZE  = 15;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageRows   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div className="px-8 py-8">
@@ -558,10 +570,11 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
                 </TableCell>
               </TableRow>
             )}
-            {filtered.map((c) => (
+            {pageRows.map((c) => (
               <TableRow key={c.id} className="cursor-pointer" onClick={() => setSelected(c)}>
-                <TableCell className="text-center">
-                  <span className="text-xs" style={{ color: "#334155" }}>{fmt(c.created_at)}</span>
+                <TableCell className="text-center" style={{ whiteSpace: "nowrap" }}>
+                  <p className="m-0" style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8" }}>{fmtDate(c.created_at)}</p>
+                  <p className="m-0" style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{fmtTime(c.created_at)}</p>
                 </TableCell>
                 <TableCell className="text-center">
                   <div className="flex items-center justify-center gap-2">
@@ -610,6 +623,41 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
             ))}
           </TableBody>
         </Table>
+        {/* Pagination */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+            {filtered.length === 0 ? "0 calls" : `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+          </span>
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button key={p} onClick={() => setPage(p)} style={{
+                  minWidth: 30, height: 30, borderRadius: 8, border: "none",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: p === safePage ? "#307DC0" : "rgba(255,255,255,0.04)",
+                  color: p === safePage ? "#fff" : "#475569",
+                  transition: "background 0.15s",
+                }}>{p}</button>
+              ))}
+            </div>
+          )}
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === 1 ? "default" : "pointer",
+                color: safePage === 1 ? "#334155" : "#94a3b8", opacity: safePage === 1 ? 0.4 : 1,
+              }}>← Prev</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === totalPages ? "default" : "pointer",
+                color: safePage === totalPages ? "#334155" : "#94a3b8", opacity: safePage === totalPages ? 0.4 : 1,
+              }}>Next →</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {selected && <DetailModal call={selected} onClose={() => setSelected(null)} />}

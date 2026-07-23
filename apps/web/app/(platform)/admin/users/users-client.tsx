@@ -56,8 +56,6 @@ const AGENT_OPTS: { value: AgentType; label: string }[] = [
   { value: "dispo",     label: "DISPO"     },
   { value: "dispo_fus", label: "DISPO FUS" },
   { value: "tca",       label: "TCA"       },
-  { value: "tc",   label: "TC" },
-  { value: "cc",   label: "CC" },
 ];
 
 const BLANK = {

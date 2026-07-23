@@ -86,6 +86,12 @@ function getDisplayType(log: SkipLog): string {
   return log.flow_type;
 }
 
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
 function fmt(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
@@ -433,6 +439,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
   const [selected, setSelected] = useState<SkipLog | null>(null);
+  const [page,     setPage]     = useState(1);
 
   const filtered = useMemo(() => {
     const { from: pFrom, to: pTo } = periodBounds(period, customFrom, customTo);
@@ -461,6 +468,11 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
       return true;
     });
   }, [logs, companyId, flowType, result, period, customFrom, customTo, search]);
+
+  const PAGE_SIZE  = 15;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageRows   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const totalCost = filtered.reduce((s, l) => s + l.cost_usd, 0);
 
@@ -573,15 +585,11 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        style={{
-          background: "rgba(255,255,255,0.02)",
-          border: `1px solid rgba(255,255,255,0.06)`,
-          borderRadius: 16, overflow: "hidden",
-        }}
+        className="glass rounded-2xl overflow-hidden"
       >
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ borderBottom: `1px solid rgba(255,255,255,0.06)` }}>
+            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
               {["Date", "Contact", "Type", "Result", "Context", "Lead Source", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", textAlign: "center", fontSize: 10, fontWeight: 800, color: "#e2e8f0", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {h}
@@ -599,7 +607,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                   </td>
                 </tr>
               ) : (
-                filtered.map((log, i) => {
+                pageRows.map((log, i) => {
                   const isHit     = log.flow_type === "dnc" ? log.is_clean !== false : log.hit;
                   const resultClr = isHit ? C.green : (log.hit === false ? C.dimText : C.red);
                   const resultLbl = log.flow_type === "dnc"
@@ -618,8 +626,9 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                       onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.025)")}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                     >
-                      <td style={{ padding: "11px 14px", fontSize: 12, color: C.bodyText, whiteSpace: "nowrap", textAlign: "center" }}>
-                        {fmt(log.created_at)}
+                      <td style={{ padding: "11px 14px", whiteSpace: "nowrap", textAlign: "center" }}>
+                        <p style={{ fontSize: 12, fontWeight: 600, color: C.bodyText, margin: 0 }}>{fmtDate(log.created_at)}</p>
+                        <p style={{ fontSize: 11, color: C.dimText, margin: "2px 0 0" }}>{fmtTime(log.created_at)}</p>
                       </td>
                       <td style={{ padding: "11px 14px", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center" }}>
                         {log.contact_name ? (
@@ -675,6 +684,41 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
             </AnimatePresence>
           </tbody>
         </table>
+        {/* Pagination */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+            {filtered.length === 0 ? "0 results" : `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+          </span>
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button key={p} onClick={() => setPage(p)} style={{
+                  minWidth: 30, height: 30, borderRadius: 8, border: "none",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: p === safePage ? "#307DC0" : "rgba(255,255,255,0.04)",
+                  color: p === safePage ? "#fff" : "#475569",
+                  transition: "background 0.15s",
+                }}>{p}</button>
+              ))}
+            </div>
+          )}
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === 1 ? "default" : "pointer",
+                color: safePage === 1 ? "#334155" : "#94a3b8", opacity: safePage === 1 ? 0.4 : 1,
+              }}>← Prev</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === totalPages ? "default" : "pointer",
+                color: safePage === totalPages ? "#334155" : "#94a3b8", opacity: safePage === totalPages ? 0.4 : 1,
+              }}>Next →</button>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {/* Detail modal */}

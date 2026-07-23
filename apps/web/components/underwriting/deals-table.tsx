@@ -143,10 +143,10 @@ function fmt(n: number | null) {
 }
 
 function fmtDate(iso: string) {
-  const d = new Date(iso)
-  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-  return `${date} · ${time}`
+  return new Date(iso).toLocaleDateString("default", { month: "short", day: "numeric", year: "numeric" })
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("default", { hour: "2-digit", minute: "2-digit" })
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -289,6 +289,7 @@ export function DealsTable({
   const [companyId,     setCompanyId]     = useState("all");
   const [selected,      setSelected]      = useState<Set<string>>(new Set());
   const [deleteTargets, setDeleteTargets] = useState<Deal[]>([]);
+  const [page,          setPage]          = useState(1);
 
   // Users who actually have deals (for the dropdown)
   const usersWithDeals = useMemo(() => {
@@ -306,6 +307,11 @@ export function DealsTable({
     })
     .filter((d) => d.address.toLowerCase().includes(search.toLowerCase())),
   [deals, companyId, viewMode, userFilter, search, currentUserId, hasCompanyContext]);
+
+  const PAGE_SIZE  = 15;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageRows   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const filteredIds    = filtered.map((d) => d.id);
   const allSelected    = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
@@ -460,7 +466,7 @@ export function DealsTable({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-edge">
-                  {filtered.map((deal) => {
+                  {pageRows.map((deal) => {
                     const isSelected = selected.has(deal.id);
                     const isOwn = deal.user_id === currentUserId;
                     return (
@@ -479,12 +485,12 @@ export function DealsTable({
                             />
                           </td>
                         )}
-                        <td className="px-4 py-4 text-center">
-                          <span className="text-muted text-[12px]">{fmtDate(deal.created_at)}</span>
+                        <td className="px-4 py-4 text-center" style={{ whiteSpace: "nowrap" }}>
+                          <p className="text-[12px] font-semibold m-0" style={{ color: "#94a3b8" }}>{fmtDate(deal.created_at)}</p>
+                          <p className="text-[11px] m-0" style={{ color: "#475569", marginTop: 2 }}>{fmtTime(deal.created_at)}</p>
                         </td>
                         <td className="px-3 py-4 text-center">
                           <p className="text-white text-[13px] font-medium leading-snug">{deal.address}</p>
-                          <p className="text-muted text-[11px] mt-0.5 font-mono">{deal.id.slice(0, 8)}…</p>
                         </td>
                         {showCompanyCol && (
                           <td className="px-4 py-4 text-center">
@@ -523,6 +529,25 @@ export function DealsTable({
                   })}
                 </tbody>
               </table>
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-5 py-3 border-t border-edge">
+                <span className="text-[11px] font-semibold text-muted">
+                  {filtered.length === 0 ? "0 deals" : `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+                </span>
+                {filtered.length > PAGE_SIZE && (
+                  <div className="flex gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <button key={p} onClick={() => setPage(p)} className={`min-w-[30px] h-[30px] rounded-lg text-xs font-semibold border-none cursor-pointer transition-colors ${p === safePage ? "bg-brand text-white" : "bg-white/[0.04] text-muted hover:bg-white/[0.07]"}`}>{p}</button>
+                    ))}
+                  </div>
+                )}
+                {filtered.length > PAGE_SIZE && (
+                  <div className="flex gap-1.5">
+                    <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} className={`px-3 py-1.5 rounded-lg border border-edge text-xs font-semibold bg-transparent transition-colors ${safePage === 1 ? "text-muted opacity-40 cursor-default" : "text-dimText hover:bg-white/[0.04] cursor-pointer"}`}>← Prev</button>
+                    <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} className={`px-3 py-1.5 rounded-lg border border-edge text-xs font-semibold bg-transparent transition-colors ${safePage === totalPages ? "text-muted opacity-40 cursor-default" : "text-dimText hover:bg-white/[0.04] cursor-pointer"}`}>Next →</button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

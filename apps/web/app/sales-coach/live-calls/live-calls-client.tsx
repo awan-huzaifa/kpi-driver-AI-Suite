@@ -550,6 +550,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
   const [period,      setPeriod]      = useState<DatePeriod>("today");
   const [customFrom,  setCustomFrom]  = useState("");
   const [customTo,    setCustomTo]    = useState("");
+  const [page,        setPage]        = useState(1);
 
   const agents = useMemo(() => {
     const map = new Map<string, string>();
@@ -582,6 +583,11 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
     }
     return true;
   }), [calls, companyId, agentIds, direction, duration, role, scorable, leadSource, period, customFrom, customTo, search]);
+
+  const PAGE_SIZE  = 15;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageRows   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const avgScore = useMemo(() => {
     const scored = filtered.filter(c => c.score !== null);
@@ -739,10 +745,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.12 }}
-        style={{
-          background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
-          borderRadius: 18, overflow: "hidden",
-        }}
+        className="glass rounded-2xl overflow-hidden"
       >
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
@@ -774,7 +777,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                 </td>
               </tr>
             )}
-            {filtered.map((c, i) => {
+            {pageRows.map((c, i) => {
               const sc = scoreColor(c.score);
               const rs = resultStyle(c.call_result);
               const agentName = c.agent?.full_name ?? c.agent_phone;
@@ -919,16 +922,41 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
           </tbody>
         </table>
 
-        {filtered.length > 0 && (
-          <div style={{
-            padding: "10px 20px", borderTop: "1px solid rgba(255,255,255,0.04)",
-            display: "flex", alignItems: "center", gap: 6,
-            fontSize: 11, color: "#334155", fontWeight: 600,
-          }}>
-            <Phone size={11} />
-            {filtered.length} Call{filtered.length !== 1 ? "s" : ""} Shown
-          </div>
-        )}
+        {/* Pagination */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+            {filtered.length === 0 ? "0 calls" : `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+          </span>
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button key={p} onClick={() => setPage(p)} style={{
+                  minWidth: 30, height: 30, borderRadius: 8, border: "none",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: p === safePage ? "#307DC0" : "rgba(255,255,255,0.04)",
+                  color: p === safePage ? "#fff" : "#475569",
+                  transition: "background 0.15s",
+                }}>{p}</button>
+              ))}
+            </div>
+          )}
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === 1 ? "default" : "pointer",
+                color: safePage === 1 ? "#334155" : "#94a3b8", opacity: safePage === 1 ? 0.4 : 1,
+              }}>← Prev</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === totalPages ? "default" : "pointer",
+                color: safePage === totalPages ? "#334155" : "#94a3b8", opacity: safePage === totalPages ? 0.4 : 1,
+              }}>Next →</button>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {selected && <DetailModal call={selected} onClose={() => setSelected(null)} />}

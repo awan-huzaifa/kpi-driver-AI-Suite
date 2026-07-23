@@ -107,10 +107,10 @@ function fmtCost(n: number) {
 }
 
 function fmtDate(iso: string) {
-  const d = new Date(iso)
-  const date = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-  return `${date} · ${time}`
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
 const DATE_INPUT_STYLE: React.CSSProperties = {
@@ -134,7 +134,7 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-const PAGE_SIZE = 25
+const PAGE_SIZE = 15
 
 export default function UsageTab({ rows = [], dealAddresses = {} }: { rows?: UsageLogRow[]; dealAddresses?: Record<string, string> }) {
   const [period, setPeriod]           = useState<Period>('month')
@@ -303,7 +303,10 @@ export default function UsageTab({ rows = [], dealAddresses = {} }: { rows?: Usa
                         cursor: hasBreakdown ? 'pointer' : 'default',
                       }}
                     >
-                      <td style={{ padding: '12px 22px', fontSize: 13, color: C.bodyText, whiteSpace: 'nowrap', textAlign: 'center' }}>{fmtDate(r.created_at)}</td>
+                      <td style={{ padding: '12px 22px', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', margin: 0 }}>{fmtDate(r.created_at)}</p>
+                      <p style={{ fontSize: 11, color: '#475569', margin: '2px 0 0' }}>{fmtTime(r.created_at)}</p>
+                    </td>
                       <td style={{ padding: '12px', fontSize: 13, fontWeight: 500, color: C.text, textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                           {hasBreakdown && (

@@ -360,6 +360,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
   const [companyId, setCompanyId] = useState<string>("all");
   const [search,   setSearch]   = useState("");
   const [selected, setSelected] = useState<EnrichmentLog | null>(null);
+  const [page,     setPage]     = useState(1);
 
   useEffect(() => {
     const logId = searchParams.get("logId");
@@ -387,6 +388,11 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
       return true;
     });
   }, [logs, companyId, period, customFrom, customTo, search]);
+
+  const PAGE_SIZE  = 15;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage   = Math.min(page, totalPages);
+  const pageRows   = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const totalFields = useMemo(() => filtered.reduce((s, l) => s + l.fields.length, 0), [filtered]);
   const totalCost   = useMemo(() => filtered.reduce((s, l) => s + (l.cost_usd ?? 0), 0), [filtered]);
@@ -549,7 +555,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                 </td>
               </tr>
             )}
-            {filtered.map((l) => {
+            {pageRows.map((l) => {
               return (
                 <tr
                   key={l.id}
@@ -659,16 +665,41 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
           </tbody>
         </table>
 
-        {filtered.length > 0 && (
-          <div style={{
-            padding: "10px 16px", borderTop: "1px solid rgba(255,255,255,0.04)",
-            fontSize: 11, color: C.dimText, fontWeight: 600,
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            <Database size={11} />
-            {filtered.length} Record{filtered.length !== 1 ? "s" : ""} · {totalFields} Fields Enriched{accessRole !== "user" ? ` · ${fmtCost(totalCost)} Total Cost` : ""}
-          </div>
-        )}
+        {/* Pagination */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+            {filtered.length === 0 ? "0 records" : `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+          </span>
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 4 }}>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button key={p} onClick={() => setPage(p)} style={{
+                  minWidth: 30, height: 30, borderRadius: 8, border: "none",
+                  fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  background: p === safePage ? "#307DC0" : "rgba(255,255,255,0.04)",
+                  color: p === safePage ? "#fff" : "#475569",
+                  transition: "background 0.15s",
+                }}>{p}</button>
+              ))}
+            </div>
+          )}
+          {filtered.length > PAGE_SIZE && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === 1 ? "default" : "pointer",
+                color: safePage === 1 ? "#334155" : "#94a3b8", opacity: safePage === 1 ? 0.4 : 1,
+              }}>← Prev</button>
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={{
+                padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
+                fontSize: 12, fontWeight: 600, background: "transparent",
+                cursor: safePage === totalPages ? "default" : "pointer",
+                color: safePage === totalPages ? "#334155" : "#94a3b8", opacity: safePage === totalPages ? 0.4 : 1,
+              }}>Next →</button>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
