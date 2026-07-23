@@ -7,7 +7,7 @@ export async function requestPasswordReset(email: string): Promise<{ error?: str
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'https://kpidriver.ai'
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${base}/auth/confirm`,
+    redirectTo: base,
   })
 
   if (error) return { error: error.message }
