@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import { Mail, ArrowRight, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
+import { requestPasswordReset } from '@/app/actions/auth/reset-password'
 import ParticlesBg from '@/components/ui/particles-bg'
 
 export default function ForgotPasswordPage() {
@@ -19,14 +19,10 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     setError(null)
 
-    const supabase = createClient()
-    const base = process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${base}/auth/confirm`,
-    })
+    const { error } = await requestPasswordReset(email)
 
     if (error) {
-      setError(error.message)
+      setError(error)
       setLoading(false)
       return
     }
