@@ -301,17 +301,9 @@ export default function LoginForm() {
 
             {/* Password */}
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <label style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8' }}>
-                  Password
-                </label>
-                <Link
-                  href="/auth/forgot-password"
-                  style={{ fontSize: 11, fontWeight: 600, color: '#307DC0', textDecoration: 'none' }}
-                >
-                  Forgot Password?
-                </Link>
-              </div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#94a3b8', marginBottom: 6 }}>
+                Password
+              </label>
               <div style={{ position: 'relative' }}>
                 <Lock size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#334155', pointerEvents: 'none' }} />
                 <input
@@ -335,6 +327,14 @@ export default function LoginForm() {
                 >
                   {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+                <Link
+                  href="/auth/forgot-password"
+                  style={{ fontSize: 11, fontWeight: 600, color: '#307DC0', textDecoration: 'none' }}
+                >
+                  Forgot Password?
+                </Link>
               </div>
             </div>
 
