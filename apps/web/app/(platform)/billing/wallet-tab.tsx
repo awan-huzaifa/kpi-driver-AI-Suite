@@ -6,6 +6,7 @@ import { Elements, CardElement, useStripe, useElements } from '@stripe/react-str
 import { CreditCard, Plus, Trash2, Check, Loader2, ArrowUpRight, CheckCircle2, AlertCircle, RefreshCw, Mic, Building2, GraduationCap, NotebookPen, Database, Search } from 'lucide-react'
 import { C } from '@/components/platform/brand'
 import type { AppSpendRow } from './billing-client'
+import type { UsageLogRow } from './usage-tab'
 import type { Access } from '@/components/platform/PlatformShell'
 import type { TopUpOption } from '@kpidriver/stripe/topup'
 
@@ -51,9 +52,10 @@ interface Props {
   topUpOptions: TopUpOption[]
   autoTopup:    AutoTopup
   access:       Access
+  usageLogs:    UsageLogRow[]
 }
 
-export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access }: Props) {
+export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access, usageLogs }: Props) {
   const [balance, setBalance]           = useState(initialBalance)
   const [toppingUp, setToppingUp]       = useState<string | null>(null)
   const [topupMessage, setTopupMessage] = useState<string | null>(null)
@@ -149,33 +151,35 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
         background: 'linear-gradient(135deg, rgba(48,125,192,0.10), rgba(67,183,73,0.06))',
         border: `1px solid ${C.border}`, borderRadius: 16, padding: 28,
       }}>
-        {/* Row 1: labels */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: 0 }}>
-            Wallet Balance
-          </p>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: 0 }}>
-            Top Up Balance
-          </p>
-        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
+          {/* Left: label + balance */}
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 6px' }}>
+              Wallet Balance
+            </p>
+            <p style={{ fontSize: 40, fontWeight: 900, color: C.white, margin: 0, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+              ${balance.toFixed(2)}
+            </p>
+          </div>
 
-        {/* Row 2: balance + buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
-          <p style={{ fontSize: 40, fontWeight: 900, color: C.white, margin: 0, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
-            ${balance.toFixed(2)}
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
-            {topUpOptions.map((o) => (
-              <button
-                key={o.priceId}
-                onClick={() => { setTopupError(null); setTopupMessage(null); setPendingPriceId(o.priceId) }}
-                disabled={toppingUp !== null}
-                className="btn-primary"
-                style={{ padding: '9px 15px' }}
-              >
-                + {o.label}
-              </button>
-            ))}
+          {/* Right: label + buttons, both centered */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.dimText, margin: 0 }}>
+              Top Up Balance
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+              {topUpOptions.map((o) => (
+                <button
+                  key={o.priceId}
+                  onClick={() => { setTopupError(null); setTopupMessage(null); setPendingPriceId(o.priceId) }}
+                  disabled={toppingUp !== null}
+                  className="btn-primary"
+                  style={{ padding: '9px 15px' }}
+                >
+                  + {o.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -196,6 +200,32 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
 
       <AutoTopUpCard topUpOptions={topUpOptions} autoTopup={autoTopup} />
       <PaymentMethodsCard />
+
+      {/* Usage summary stats */}
+      {(() => {
+        const totalCost   = usageLogs.reduce((s, r) => s + r.cost_usd, 0)
+        const totalInput  = usageLogs.reduce((s, r) => s + r.input_tokens, 0)
+        const totalOutput = usageLogs.reduce((s, r) => s + r.output_tokens, 0)
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            {[
+              { label: 'Total Cost', value: '$' + totalCost.toFixed(4), color: C.green },
+              { label: 'Workflow Runs', value: usageLogs.length.toLocaleString(), color: C.white },
+              { label: 'Tokens (In / Out)', value: `${totalInput.toLocaleString()} / ${totalOutput.toLocaleString()}`, color: C.white },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 20px' }}>
+                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 8px' }}>
+                  {label}
+                </p>
+                <p style={{ fontSize: 22, fontWeight: 900, color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
       <AppSpendCard appSpend={appSpend} access={access} />
     </div>
   )

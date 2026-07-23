@@ -106,7 +106,7 @@ export default function AdminUsersClient({ users }: { users: UserRow[] }) {
                   </div>
                 </TableCell>
                 <TableCell><span className="text-xs" style={{ color: "#9bacc0" }}>{u.email}</span></TableCell>
-                <TableCell><Badge variant={u.agent_type} /></TableCell>
+                <TableCell><Badge variant={u.agent_type === "none" ? u.access_role : u.agent_type} /></TableCell>
                 <TableCell><span className="text-xs font-mono" style={{ color: "#8b9cb0" }}>{u.phone ?? "—"}</span></TableCell>
                 <TableCell><Badge variant={u.is_active ? "active" : "inactive"} /></TableCell>
                 <TableCell><span className="text-xs" style={{ color: "#8b9cb0" }}>{fmt(u.created_at)}</span></TableCell>

@@ -164,7 +164,7 @@ export default function SuperAdminUsersClient({ users, companies }: Props) {
                 </TableCell>
                 <TableCell><span className="text-xs" style={{ color: "#64748b" }}>{u.email}</span></TableCell>
                 <TableCell><Badge variant={u.access_role} /></TableCell>
-                <TableCell><Badge variant={u.agent_type} /></TableCell>
+                <TableCell><Badge variant={u.agent_type === "none" ? u.access_role : u.agent_type} /></TableCell>
                 <TableCell>
                   <span className="text-xs" style={{ color: "#475569" }}>
                     {(u.companies as any)?.name ?? "—"}

@@ -136,7 +136,7 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
 
 const PAGE_SIZE = 25
 
-export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
+export default function UsageTab({ rows = [], dealAddresses = {} }: { rows?: UsageLogRow[]; dealAddresses?: Record<string, string> }) {
   const [period, setPeriod]           = useState<Period>('month')
   const [appFilter, setAppFilter]     = useState<AppFilter>('all')
   const [customFrom, setCustomFrom]   = useState<string>(todayStr())
@@ -172,33 +172,8 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
   const safePage    = Math.min(page, totalPages)
   const pageRows    = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
-  const totalCost   = filtered.reduce((sum, r) => sum + r.cost_usd, 0)
-  const totalInput  = filtered.reduce((sum, r) => sum + r.input_tokens, 0)
-  const totalOutput = filtered.reduce((sum, r) => sum + r.output_tokens, 0)
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-      {/* Stats row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-        {[
-          { label: 'Total Cost', value: fmtCost(totalCost), color: C.green },
-          { label: 'Workflow Runs', value: filtered.length.toLocaleString(), color: C.white },
-          { label: 'Tokens (In / Out)', value: `${totalInput.toLocaleString()} / ${totalOutput.toLocaleString()}`, color: C.white },
-        ].map(({ label, value, color }) => (
-          <div key={label} style={{
-            background: C.card, border: `1px solid ${C.border}`, borderRadius: 12,
-            padding: '16px 20px',
-          }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 8px' }}>
-              {label}
-            </p>
-            <p style={{ fontSize: 22, fontWeight: 900, color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
-              {value}
-            </p>
-          </div>
-        ))}
-      </div>
 
       {/* Filter bar */}
       <div style={{
@@ -358,7 +333,17 @@ export default function UsageTab({ rows = [] }: { rows?: UsageLogRow[] }) {
                     {hasBreakdown && isExpanded && (
                       <tr style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.015)' }}>
                         <td colSpan={7} style={{ padding: '10px 22px 16px 46px' }}>
-                          <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'center' }}>
+                            {r.entity_type === 'deal' && dealAddresses[r.entity_id] && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.dimText }}>
+                                  Property
+                                </span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>
+                                  {dealAddresses[r.entity_id]}
+                                </span>
+                              </div>
+                            )}
                             {bdKeys.map((key) => (
                               <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.dimText }}>

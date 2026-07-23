@@ -16,7 +16,7 @@ export default async function LiveCallsPage() {
 
   let query = supabase
     .from("live_calls")
-    .select(`*, agent:users(full_name, agent_type)`)
+    .select(`*, agent:users(full_name, agent_type, access_role)`)
     .order("created_at", { ascending: false })
     .limit(200);
 

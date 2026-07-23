@@ -10,6 +10,7 @@ import {
   Eye, EyeOff,
 } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import ParticlesBg from '@/components/ui/particles-bg'
 
 const PRODUCTS = [
@@ -300,9 +301,17 @@ export default function LoginForm() {
 
             {/* Password */}
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#94a3b8', marginBottom: 6 }}>
-                Password
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <label style={{ fontSize: 11, fontWeight: 500, color: '#94a3b8' }}>
+                  Password
+                </label>
+                <Link
+                  href="/auth/forgot-password"
+                  style={{ fontSize: 11, fontWeight: 600, color: '#307DC0', textDecoration: 'none' }}
+                >
+                  Forgot Password?
+                </Link>
+              </div>
               <div style={{ position: 'relative' }}>
                 <Lock size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#334155', pointerEvents: 'none' }} />
                 <input

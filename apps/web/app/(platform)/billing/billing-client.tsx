@@ -30,15 +30,16 @@ interface AutoTopup {
 }
 
 interface Props {
-  user:         { id: string; email: string; fullName: string | null }
-  planId:       PlanId | null
-  access:       Access
-  accessRole:   'admin' | 'super_admin' | 'user'
-  balance:      number
-  appSpend:     AppSpendRow[]
-  topUpOptions: TopUpOption[]
-  usageLogs:    UsageLogRow[]
-  autoTopup:    AutoTopup
+  user:           { id: string; email: string; fullName: string | null }
+  planId:         PlanId | null
+  access:         Access
+  accessRole:     'admin' | 'super_admin' | 'user'
+  balance:        number
+  appSpend:       AppSpendRow[]
+  topUpOptions:   TopUpOption[]
+  usageLogs:      UsageLogRow[]
+  autoTopup:      AutoTopup
+  dealAddresses:  Record<string, string>
 }
 
 const TABS = [
@@ -46,7 +47,7 @@ const TABS = [
   { id: 'usage'  as const, label: 'Usage',  icon: BarChart3 },
 ]
 
-export default function BillingClient({ user, planId, access, accessRole, balance, appSpend, topUpOptions, usageLogs, autoTopup }: Props) {
+export default function BillingClient({ user, planId, access, accessRole, balance, appSpend, topUpOptions, usageLogs, autoTopup, dealAddresses }: Props) {
   const [tab, setTab] = useState<'wallet' | 'usage'>('wallet')
 
   return (
@@ -95,9 +96,9 @@ export default function BillingClient({ user, planId, access, accessRole, balanc
         transition={{ duration: 0.25 }}
       >
         {tab === 'wallet' ? (
-          <WalletTab balance={balance} appSpend={appSpend} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} />
+          <WalletTab balance={balance} appSpend={appSpend} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} usageLogs={usageLogs} />
         ) : (
-          <UsageTab rows={usageLogs} />
+          <UsageTab rows={usageLogs} dealAddresses={dealAddresses} />
         )}
       </motion.div>
     </PlatformShell>

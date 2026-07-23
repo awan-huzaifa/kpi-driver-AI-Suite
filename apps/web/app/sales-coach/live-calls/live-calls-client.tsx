@@ -59,7 +59,7 @@ interface LiveCall {
   crm_link:      string | null;
   evaluation:    Evaluation | null;
   created_at:    string;
-  agent:         { full_name: string | null; agent_type: string } | null;
+  agent:         { full_name: string | null; agent_type: string; access_role: string } | null;
 }
 
 interface Props {
@@ -285,7 +285,11 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
               {[
                 { label: "Stage",       value: call.call_stage  ?? "—" },
                 { label: "Result",      value: call.call_result ?? "—" },
-                { label: "Agent Type",  value: call.agent?.agent_type ? (call.agent.agent_type === "dispo_fus" ? "DISPO FUS" : call.agent.agent_type.toUpperCase()) : "—" },
+                { label: "Agent Type",  value: call.agent?.agent_type
+                    ? call.agent.agent_type === "none"
+                      ? (call.agent.access_role === "admin" || call.agent.access_role === "super_admin" ? "Admin" : "User")
+                      : call.agent.agent_type === "dispo_fus" ? "DISPO FUS" : call.agent.agent_type.toUpperCase()
+                    : "—" },
                 { label: "Opportunity", value: ev?.opportunity_level  ?? "—" },
                 { label: "Call Type",   value: ev?.call_type          ?? "—" },
                 { label: "Confidence",  value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
@@ -808,8 +812,12 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                   {/* Agent */}
                   <td style={{ padding: "12px 14px", textAlign: "center" }}>
                     <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>{agentName}</p>
-                    {c.agent?.agent_type && c.agent.agent_type !== "none" && (
-                      <Badge variant={c.agent.agent_type as any} />
+                    {c.agent?.agent_type && (
+                      <Badge variant={
+                        c.agent.agent_type === "none"
+                          ? (c.agent.access_role === "admin" || c.agent.access_role === "super_admin" ? "admin" : "user")
+                          : c.agent.agent_type as any
+                      } />
                     )}
                   </td>
 

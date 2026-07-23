@@ -40,6 +40,14 @@ export default async function BillingPage() {
       .limit(500),
   ])
 
+  // Fetch addresses for deal-type usage logs
+  const dealIds = (usageLogs ?? []).filter(r => r.entity_type === 'deal').map(r => r.entity_id)
+  let dealAddresses: Record<string, string> = {}
+  if (dealIds.length > 0) {
+    const { data: deals } = await admin.from('deals').select('id, address').in('id', dealIds)
+    dealAddresses = Object.fromEntries((deals ?? []).map((d: { id: string; address: string }) => [d.id, d.address]))
+  }
+
   const planId   = sub?.plan_id as PlanId | null
   const isActive = sub?.status === 'active' || sub?.status === 'trialing'
 
@@ -60,6 +68,7 @@ export default async function BillingPage() {
       appSpend={appSpend ?? []}
       topUpOptions={TOP_UP_OPTIONS}
       usageLogs={usageLogs ?? []}
+      dealAddresses={dealAddresses}
       autoTopup={{
         enabled:   companyRow?.auto_topup_enabled   ?? false,
         priceId:   companyRow?.auto_topup_price_id  ?? null,

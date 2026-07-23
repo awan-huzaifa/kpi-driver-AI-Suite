@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash });
 
     if (!error) {
-      const redirectTo = type === "invite" ? "/auth/set-password" : "/dashboard";
+      const redirectTo = (type === "invite" || type === "recovery") ? "/auth/set-password" : "/dashboard";
       return NextResponse.redirect(new URL(redirectTo, origin));
     }
   }

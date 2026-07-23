@@ -333,7 +333,9 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                   {/* Agent Type */}
                   <td style={{ padding: "12px 16px" }}>
                     <span style={{ fontSize: 12, color: "#8b9cb0", fontWeight: 600 }}>
-                      {u.agent_type === "none" ? "—" : u.agent_type === "dispo_fus" ? "DISPO FUS" : u.agent_type.toUpperCase()}
+                      {u.agent_type === "none"
+                        ? (u.access_role === "admin" || u.access_role === "super_admin" ? "Admin" : "User")
+                        : u.agent_type === "dispo_fus" ? "DISPO FUS" : u.agent_type.toUpperCase()}
                     </span>
                   </td>
 
