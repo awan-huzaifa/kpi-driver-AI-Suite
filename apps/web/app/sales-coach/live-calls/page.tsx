@@ -18,7 +18,7 @@ export default async function LiveCallsPage() {
     .from("live_calls")
     .select(`*, agent:users(full_name, agent_type, access_role)`)
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(2000);
 
   if (profile?.access_role === "admin" && profile.company_id) {
     query = query.eq("company_id", profile.company_id);

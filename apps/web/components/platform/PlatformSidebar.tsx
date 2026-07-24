@@ -425,7 +425,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
         </div>
         <div style={{ overflow: 'hidden', flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-            <p style={{ fontSize: 13, fontWeight: 700, color: C.white, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <p style={{ fontSize: 13, fontWeight: 400, color: C.white, margin: 0, lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {display}
             </p>
             {accessRole && (
