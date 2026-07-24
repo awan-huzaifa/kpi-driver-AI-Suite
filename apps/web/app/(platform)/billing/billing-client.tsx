@@ -40,6 +40,7 @@ interface Props {
   usageLogs:      UsageLogRow[]
   autoTopup:      AutoTopup
   dealAddresses:  Record<string, string>
+  dealRunNumbers: Record<string, number>
 }
 
 const TABS = [
@@ -47,7 +48,7 @@ const TABS = [
   { id: 'usage'  as const, label: 'Usage',  icon: BarChart3 },
 ]
 
-export default function BillingClient({ user, planId, access, accessRole, balance, appSpend, topUpOptions, usageLogs, autoTopup, dealAddresses }: Props) {
+export default function BillingClient({ user, planId, access, accessRole, balance, appSpend, topUpOptions, usageLogs, autoTopup, dealAddresses, dealRunNumbers }: Props) {
   const [tab, setTab] = useState<'wallet' | 'usage'>('wallet')
 
   return (
@@ -98,7 +99,7 @@ export default function BillingClient({ user, planId, access, accessRole, balanc
         {tab === 'wallet' ? (
           <WalletTab balance={balance} appSpend={appSpend} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} usageLogs={usageLogs} />
         ) : (
-          <UsageTab rows={usageLogs} dealAddresses={dealAddresses} />
+          <UsageTab rows={usageLogs} dealAddresses={dealAddresses} dealRunNumbers={dealRunNumbers} />
         )}
       </motion.div>
     </PlatformShell>

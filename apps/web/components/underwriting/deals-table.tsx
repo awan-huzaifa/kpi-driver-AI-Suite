@@ -132,6 +132,7 @@ type Deal = {
   agent_name?: string | null;
   company_id?: string | null;
   company_name?: string | null;
+  last_rerun_by_name?: string | null;
 };
 
 type CompanyUser = { id: string; full_name: string | null; email: string | null };
@@ -283,10 +284,25 @@ export function DealsTable({
   const isAdmin = accessRole === "admin" || accessRole === "super_admin";
   const hasCompanyContext = !isSuperAdmin && companyUsers.length > 0;
 
-  const [viewMode,      setViewMode]      = useState<ViewMode>("mine");
-  const [userFilter,    setUserFilter]    = useState("all");
+  const STORAGE_KEY = "uw-deals-filter";
+  function readStored() {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) as { agent: string; company: string } : null;
+    } catch { return null; }
+  }
+  function writeStored(agent: string, company: string) {
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ agent, company })); } catch {}
+  }
+
+  const stored = readStored();
+  const initialAgent   = stored?.agent   ?? "mine";
+  const initialCompany = stored?.company ?? "all";
+
+  const [viewMode,      setViewMode]      = useState<ViewMode>(initialAgent === "mine" ? "mine" : "all");
+  const [userFilter,    setUserFilter]    = useState(initialAgent === "mine" ? "all" : initialAgent);
   const [search,        setSearch]        = useState("");
-  const [companyId,     setCompanyId]     = useState("all");
+  const [companyId,     setCompanyId]     = useState(initialCompany);
   const [selected,      setSelected]      = useState<Set<string>>(new Set());
   const [deleteTargets, setDeleteTargets] = useState<Deal[]>([]);
   const [page,          setPage]          = useState(1);
@@ -383,8 +399,8 @@ export function DealsTable({
                   .map((u) => ({ value: u.id, label: getUserLabel(u) })),
               ]}
               onChange={(v) => {
-                if (v === "mine") { setViewMode("mine"); setUserFilter("all"); }
-                else              { setViewMode("all");  setUserFilter(v);     }
+                if (v === "mine") { setViewMode("mine"); setUserFilter("all"); writeStored("mine", companyId); }
+                else              { setViewMode("all");  setUserFilter(v);     writeStored(v, companyId);      }
                 clearSelection();
               }}
               minWidth={150}
@@ -399,7 +415,7 @@ export function DealsTable({
                 { value: "all", label: "All Companies" },
                 ...companies.map((c) => ({ value: c.id, label: c.name })),
               ]}
-              onChange={(v) => { setCompanyId(v); clearSelection(); }}
+              onChange={(v) => { setCompanyId(v); writeStored(viewMode === "mine" ? "mine" : userFilter, v); clearSelection(); }}
               minWidth={170}
             />
           )}
@@ -458,6 +474,7 @@ export function DealsTable({
                       <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Company</th>
                     )}
                     <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Agent</th>
+                    <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Last Re-run By</th>
                     <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Status</th>
                     <th className="text-center px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">Recommendation</th>
                     <th className="text-right px-4 py-3 text-[11px] font-extrabold text-white uppercase tracking-wider">ARV Range</th>
@@ -468,7 +485,6 @@ export function DealsTable({
                 <tbody className="divide-y divide-edge">
                   {pageRows.map((deal) => {
                     const isSelected = selected.has(deal.id);
-                    const isOwn = deal.user_id === currentUserId;
                     return (
                       <tr
                         key={deal.id}
@@ -499,6 +515,12 @@ export function DealsTable({
                         )}
                         <td className="px-4 py-4 text-center">
                           <span className="text-white text-[12px] font-medium">{deal.agent_name ?? "—"}</span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          {deal.last_rerun_by_name
+                            ? <span className="text-[12px] font-medium" style={{ color: "#FCAF17" }}>{deal.last_rerun_by_name}</span>
+                            : <span className="text-[11px] font-medium" style={{ color: "#334155" }}>No Re-run</span>
+                          }
                         </td>
                         <td className="px-4 py-4 text-center"><StatusBadge status={deal.status} /></td>
                         <td className="px-4 py-4 text-center"><RecommendationBadge value={deal.recommendation} /></td>

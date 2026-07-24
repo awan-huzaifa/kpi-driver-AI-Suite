@@ -48,6 +48,21 @@ export default async function BillingPage() {
     dealAddresses = Object.fromEntries((deals ?? []).map((d: { id: string; address: string }) => [d.id, d.address]))
   }
 
+  // Compute run number per log entry (grouped by deal, sorted oldest→newest)
+  // index 0 = "Run 1", index 1 = "Re-run 1", index 2 = "Re-run 2", etc.
+  const dealRunNumbers: Record<string, number> = {}
+  const byDeal: Record<string, { id: string; created_at: string }[]> = {}
+  for (const log of usageLogs ?? []) {
+    if (log.entity_type === 'deal') {
+      if (!byDeal[log.entity_id]) byDeal[log.entity_id] = []
+      byDeal[log.entity_id].push({ id: log.id, created_at: log.created_at })
+    }
+  }
+  for (const logs of Object.values(byDeal)) {
+    logs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+    logs.forEach((log, i) => { dealRunNumbers[log.id] = i })
+  }
+
   const planId   = sub?.plan_id as PlanId | null
   const isActive = sub?.status === 'active' || sub?.status === 'trialing'
 
@@ -69,6 +84,7 @@ export default async function BillingPage() {
       topUpOptions={TOP_UP_OPTIONS}
       usageLogs={usageLogs ?? []}
       dealAddresses={dealAddresses}
+      dealRunNumbers={dealRunNumbers}
       autoTopup={{
         enabled:   companyRow?.auto_topup_enabled   ?? false,
         priceId:   companyRow?.auto_topup_price_id  ?? null,

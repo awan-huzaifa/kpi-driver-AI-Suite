@@ -136,7 +136,7 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
 
 const PAGE_SIZE = 15
 
-export default function UsageTab({ rows = [], dealAddresses = {} }: { rows?: UsageLogRow[]; dealAddresses?: Record<string, string> }) {
+export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers = {} }: { rows?: UsageLogRow[]; dealAddresses?: Record<string, string>; dealRunNumbers?: Record<string, number> }) {
   const [period, setPeriod]           = useState<Period>('month')
   const [appFilter, setAppFilter]     = useState<AppFilter>('all')
   const [customFrom, setCustomFrom]   = useState<string>(todayStr())
@@ -345,6 +345,18 @@ export default function UsageTab({ rows = [], dealAddresses = {} }: { rows?: Usa
                                 <span style={{ fontSize: 12, fontWeight: 700, color: C.green }}>
                                   {dealAddresses[r.entity_id]}
                                 </span>
+                                {(() => {
+                                  const idx = dealRunNumbers[r.id] ?? 0
+                                  const label = idx === 0 ? 'Run 1' : `Re-run ${idx}`
+                                  const color = idx === 0 ? C.dimText : '#FCAF17'
+                                  return (
+                                    <span style={{
+                                      fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
+                                      background: idx === 0 ? 'rgba(255,255,255,0.05)' : 'rgba(252,175,23,0.1)',
+                                      color, border: `1px solid ${idx === 0 ? 'rgba(255,255,255,0.08)' : 'rgba(252,175,23,0.25)'}`,
+                                    }}>{label}</span>
+                                  )
+                                })()}
                               </div>
                             )}
                             {bdKeys.map((key) => (

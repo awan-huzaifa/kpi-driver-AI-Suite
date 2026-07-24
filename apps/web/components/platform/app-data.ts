@@ -54,6 +54,19 @@ export const APP_REGISTRY: AppEntry[] = [
     ],
   },
   {
+    id: 'training-coach', label: 'AI Training Coach', status: 'live',
+    tagline: 'Onboard Reps 3× Faster',
+    desc: 'Score AI Role-Play Training Calls Against The Same Rubrics As Live Calls — So Reps Improve Before Touching A Real Lead.',
+    features: ['AI Role-Play Scoring', 'Per-Agent Practice History', 'Same Rubric As Live Calls'],
+    href: '/training-coach', icon: GraduationCap, accessKey: 'trainingCoach', accentRgb: '252,175,23',
+    subNav: [
+      { href: '/training-coach',                        label: 'Training Calls', icon: Phone,   exact: true           },
+      { href: '/training-coach/my-numbers',             label: 'My Numbers',  icon: Hash,  maxRole: 'admin'      },
+      { href: '/training-coach/agents',                 label: 'AI Agents',   icon: Bot                           },
+      { href: '/training-coach/admin/user-phones',      label: 'User Phones', icon: Users,   minRole: 'super_admin' },
+    ],
+  },
+  {
     id: 'deal-uw', label: 'AI Deal Underwriter', status: 'live',
     tagline: 'Underwrite Deals In Minutes',
     desc: 'Pull Live Comps, Run ARV Calculations, And Generate A Full Investment Report Automatically — Close Faster With Confidence.',
@@ -66,16 +79,13 @@ export const APP_REGISTRY: AppEntry[] = [
     ],
   },
   {
-    id: 'training-coach', label: 'AI Training Coach', status: 'live',
-    tagline: 'Onboard Reps 3× Faster',
-    desc: 'Score AI Role-Play Training Calls Against The Same Rubrics As Live Calls — So Reps Improve Before Touching A Real Lead.',
-    features: ['AI Role-Play Scoring', 'Per-Agent Practice History', 'Same Rubric As Live Calls'],
-    href: '/training-coach', icon: GraduationCap, accessKey: 'trainingCoach', accentRgb: '252,175,23',
+    id: 'skip-tracing', label: 'AI Skip Tracing', status: 'live',
+    tagline: 'Find Anyone, Instantly',
+    desc: 'Run APN Lookups, Skip Traces, And DNC Checks Against Tracerfy — All Logs And Costs Tracked Automatically From Your n8n Workflows.',
+    features: ['APN & Address Skip Trace', 'DNC Lookup & Clean Flag', 'Per-Lookup Credit Tracking'],
+    href: '/skip-tracing', icon: Search, accessKey: 'skipTracing', accentRgb: '67,183,73',
     subNav: [
-      { href: '/training-coach',                        label: 'Training Calls', icon: Phone,   exact: true           },
-      { href: '/training-coach/my-numbers',             label: 'My Numbers',  icon: Hash,  maxRole: 'admin'      },
-      { href: '/training-coach/agents',                 label: 'AI Agents',   icon: Bot                           },
-      { href: '/training-coach/admin/user-phones',      label: 'User Phones', icon: Users,   minRole: 'super_admin' },
+      { href: '/skip-tracing', label: 'Lookup Logs', icon: Search, exact: true },
     ],
   },
   {
@@ -96,16 +106,6 @@ export const APP_REGISTRY: AppEntry[] = [
     href: '/data-enrichment', icon: Database, accessKey: 'dataEnrichment', accentRgb: '48,125,192',
     subNav: [
       { href: '/data-enrichment', label: 'Enrichment', icon: Database, exact: true },
-    ],
-  },
-  {
-    id: 'skip-tracing', label: 'AI Skip Tracing', status: 'live',
-    tagline: 'Find Anyone, Instantly',
-    desc: 'Run APN Lookups, Skip Traces, And DNC Checks Against Tracerfy — All Logs And Costs Tracked Automatically From Your n8n Workflows.',
-    features: ['APN & Address Skip Trace', 'DNC Lookup & Clean Flag', 'Per-Lookup Credit Tracking'],
-    href: '/skip-tracing', icon: Search, accessKey: 'skipTracing', accentRgb: '67,183,73',
-    subNav: [
-      { href: '/skip-tracing', label: 'Lookup Logs', icon: Search, exact: true },
     ],
   },
   {

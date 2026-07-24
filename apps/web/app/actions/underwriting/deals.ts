@@ -10,7 +10,7 @@ export async function cleanupStuckDeals() {
 
   await supabase
     .from("deals")
-    .update({ status: "failed", error_message: "Pipeline timed out — marked failed automatically" })
+    .update({ status: "failed" })
     .eq("user_id", user.id)
     .eq("status", "pending")
     .lt("created_at", new Date(Date.now() - 10 * 60 * 1000).toISOString());

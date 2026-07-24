@@ -205,26 +205,30 @@ export async function POST(request: NextRequest) {
   try {
     // ── STEP 1: Create new deal OR reset existing deal for re-run ───────────
     if (rerunDealId) {
-      const { data: existing, error: verifyErr } = await supabase
+      const rerunAdminDb = createAdminClient();
+
+      // Any authenticated user can re-run any deal they can see — no user_id restriction
+      const { data: existing, error: verifyErr } = await rerunAdminDb
         .from("deals")
         .select("id")
         .eq("id", rerunDealId)
-        .eq("user_id", user.id)
         .single();
 
       if (verifyErr || !existing) {
         return NextResponse.json<UnderwriteErrorResponse>({ error: "Deal not found" }, { status: 404 });
       }
 
-      await supabase.from("underwriting_reports").delete().eq("deal_id", rerunDealId);
-      await supabase.from("deals").update({
+      // Use adminDb to bypass RLS when re-runner is not the original owner
+      await rerunAdminDb.from("underwriting_reports").delete().eq("deal_id", rerunDealId);
+      const { error: rerunUpdateErr } = await rerunAdminDb.from("deals").update({
         status: "pending",
         recommendation: null,
         arv_low: null,
         arv_high: null,
         max_offer: null,
-        error_message: null,
+        last_rerun_by: user.id,
       }).eq("id", rerunDealId);
+      if (rerunUpdateErr) console.error("[underwrite] last_rerun_by update failed:", rerunUpdateErr);
 
       dealId = rerunDealId;
     } else {
@@ -245,7 +249,6 @@ export async function POST(request: NextRequest) {
           arv_low: null,
           arv_high: null,
           max_offer: null,
-          error_message: null,
         }).eq("id", existingFailed.id);
         dealId = existingFailed.id as string;
       } else {
@@ -504,7 +507,8 @@ export async function POST(request: NextRequest) {
     console.log("=".repeat(60) + "\n");
 
     // ── STEP 13: Save completed report to underwriting_reports ──────────────
-    const { error: reportError } = await supabase
+    const finishAdminDb = createAdminClient();
+    const { error: reportError } = await finishAdminDb
       .from("underwriting_reports")
       .insert({
         deal_id: dealId,
@@ -547,7 +551,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ── STEP 14: Update deal status to completed ─────────────────────────────
-    const { error: dealUpdateError } = await supabase
+    const { error: dealUpdateError } = await finishAdminDb
       .from("deals")
       .update({
         status: "completed",
@@ -609,9 +613,9 @@ export async function POST(request: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unexpected error";
 
-    // Mark deal failed — fire-and-forget so we return promptly
+    // Mark deal failed — use admin client to bypass RLS (re-runner may not own the deal)
     if (dealId) {
-      await supabase
+      await createAdminClient()
         .from("deals")
         .update({ status: "failed" })
         .eq("id", dealId)

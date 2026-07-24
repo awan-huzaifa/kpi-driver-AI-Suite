@@ -35,6 +35,7 @@ export default async function DealsPage() {
     agent_name?: string | null;
     company_id?: string | null;
     company_name?: string | null;
+    last_rerun_by_name?: string | null;
   };
 
   type CompanyUser = { id: string; full_name: string | null; email: string | null };
@@ -47,11 +48,14 @@ export default async function DealsPage() {
     const admin = createAdminClient();
     const { data: allDeals } = await admin
       .from("deals")
-      .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at, user_id")
+      .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at, user_id, last_rerun_by")
       .order("created_at", { ascending: false });
 
     if (allDeals?.length) {
-      const uniqueUserIds = [...new Set(allDeals.map((d) => d.user_id as string))];
+      const uniqueUserIds = [...new Set([
+        ...allDeals.map((d) => d.user_id as string),
+        ...allDeals.map((d) => d.last_rerun_by as string | null).filter(Boolean) as string[],
+      ])];
       const { data: userRows } = await admin
         .from("users")
         .select("id, company_id, full_name, email")
@@ -72,9 +76,10 @@ export default async function DealsPage() {
         const cid = userCompanyMap.get(d.user_id as string) ?? null;
         return {
           ...d,
-          agent_name:   userNameMap.get(d.user_id as string) ?? null,
-          company_id:   cid,
-          company_name: cid ? (companyNameMap.get(cid) ?? null) : null,
+          agent_name:         userNameMap.get(d.user_id as string) ?? null,
+          company_id:         cid,
+          company_name:       cid ? (companyNameMap.get(cid) ?? null) : null,
+          last_rerun_by_name: d.last_rerun_by ? (userNameMap.get(d.last_rerun_by as string) ?? null) : null,
         };
       });
     }
@@ -82,7 +87,7 @@ export default async function DealsPage() {
     // RLS returns all company deals after migration 024
     const { data } = await supabase
       .from("deals")
-      .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at, user_id")
+      .select("id, address, status, recommendation, arv_low, arv_high, max_offer, created_at, user_id, last_rerun_by")
       .order("created_at", { ascending: false });
 
     // Fetch company members for the user filter dropdown + agent name enrichment
@@ -97,7 +102,29 @@ export default async function DealsPage() {
     }
 
     const nameMap = new Map(companyUsers.map((u) => [u.id, u.full_name || u.email || null]));
-    rows = (data ?? []).map((d) => ({ ...d, agent_name: nameMap.get(d.user_id as string) ?? null })) as DealRow[];
+
+    // Resolve re-runner names — they may be outside companyUsers (e.g. super_admin, different company)
+    const unknownRerunIds = [...new Set(
+      (data ?? [])
+        .map((d) => d.last_rerun_by as string | null)
+        .filter((id): id is string => !!id && !nameMap.has(id))
+    )];
+    if (unknownRerunIds.length > 0) {
+      const adminForNames = createAdminClient();
+      const { data: extraUsers } = await adminForNames
+        .from("users")
+        .select("id, full_name, email")
+        .in("id", unknownRerunIds);
+      for (const u of extraUsers ?? []) {
+        nameMap.set(u.id as string, (u.full_name || u.email || null) as string | null);
+      }
+    }
+
+    rows = (data ?? []).map((d) => ({
+      ...d,
+      agent_name:         nameMap.get(d.user_id as string) ?? null,
+      last_rerun_by_name: d.last_rerun_by ? (nameMap.get(d.last_rerun_by as string) ?? null) : null,
+    })) as DealRow[];
   }
 
   const completed = rows.filter((d) => d.status === "completed").length;
