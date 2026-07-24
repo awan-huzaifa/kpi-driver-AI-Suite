@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@kpidriver/auth/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import type { EmailOtpType } from '@supabase/supabase-js'
 
 export async function GET(request: Request) {
@@ -11,10 +12,34 @@ export async function GET(request: Request) {
 
   const supabase = await createClient()
 
-  // PKCE flow (newer Supabase default)
+  // PKCE flow (newer Supabase default — also used by Google OAuth)
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error && data.user) {
+      // Use admin client to bypass RLS and get the actual users row
+      const admin = createAdminClient()
+      const { data: profile } = await admin
+        .from('users')
+        .select('id, company_id, access_role')
+        .eq('id', data.user.id)
+        .maybeSingle()
+
+      // A properly invited user always has a company_id OR is super_admin.
+      // The DB trigger auto-creates a users row for any new auth user (including
+      // uninvited Google sign-ins) with company_id=null and access_role='user',
+      // so we must check more than just row existence.
+      const isProperlyInvited =
+        profile &&
+        (profile.access_role === 'super_admin' || profile.company_id !== null)
+
+      if (!isProperlyInvited) {
+        // Clear the session and delete the orphan auth user created by the trigger
+        await supabase.auth.signOut()
+        await admin.auth.admin.deleteUser(data.user.id)
+        return NextResponse.redirect(`${origin}/auth/no-access`)
+      }
+      return NextResponse.redirect(`${origin}${next}`)
+    }
   }
 
   // OTP / token_hash flow (legacy or non-PKCE)

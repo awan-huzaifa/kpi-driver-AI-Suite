@@ -60,8 +60,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+*, *::before, *::after {
+  cursor: none !important;
+}
+
 button, [role="button"] {
-  cursor: pointer;
+  cursor: none;
 }
 
 /* ── Primary button — sharp, glowing, brand green ──── */

@@ -58,7 +58,7 @@ function parseYMD(s: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-function fmtDisplay(s: string): string {
+export function fmtDisplay(s: string): string {
   const d = parseYMD(s);
   if (!d) return "Pick date";
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -76,7 +76,7 @@ interface CalendarPopupProps {
   align?:    "left" | "right";
 }
 
-function CalendarPopup({ value, from, to, onSelect, onClose, compact, align = "left" }: CalendarPopupProps) {
+export function CalendarPopup({ value, from, to, onSelect, onClose, compact, align = "left" }: CalendarPopupProps) {
   const now      = new Date();
   const initDate = parseYMD(value) ?? now;
   const [viewYear,  setViewYear]  = useState(initDate.getFullYear());

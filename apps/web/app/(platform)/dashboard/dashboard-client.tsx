@@ -238,10 +238,11 @@ function ToolCard({ app, unlocked, index }: { app: AppEntry; unlocked: boolean; 
           </p>
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {app.features.map((f) => (
-              <li key={f} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                 <span style={{
                   width: 4, height: 4, borderRadius: '50%',
                   background: `rgb(${rgb})`, flexShrink: 0,
+                  marginTop: 5,
                   boxShadow: unlocked ? `0 0 4px rgba(${rgb},0.6)` : 'none',
                 }} />
                 <span style={{ fontSize: 12, fontWeight: 500, color: unlocked ? C.bodyText : C.dimText }}>{f}</span>
@@ -393,7 +394,7 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
         </p>
         <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(252,175,23,0.3) 0%, rgba(67,183,73,0.15) 50%, transparent 100%)' }} />
         <span style={{ fontSize: 11, color: C.dimText, fontWeight: 500 }}>
-          {APPS.filter(a => a.status === 'live' && (a.accessKey ? access[a.accessKey] : true)).length} Of {APPS.filter(a => a.status === 'live').length} Apps Active
+          {APPS.filter(a => a.id !== 'knowledge-base' && a.status === 'live' && (a.accessKey ? access[a.accessKey] : true)).length} Of {APPS.filter(a => a.id !== 'knowledge-base' && a.status === 'live').length} Apps Active
         </span>
       </motion.div>
 

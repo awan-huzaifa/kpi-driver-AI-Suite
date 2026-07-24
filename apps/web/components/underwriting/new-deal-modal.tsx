@@ -8,6 +8,7 @@ import {
   SlidersHorizontal, Wrench as WrenchIcon, Check, Plus, Trash2,
 } from "lucide-react";
 import type { ConditionGrade, ExtraItem, UploadedPhoto, RepairMode } from "@/lib/underwriting/types";
+import { AddressAutocomplete } from "@/components/underwriting/address-autocomplete";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -354,9 +355,10 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                 {/* Address */}
                 <div className="space-y-2">
                   <SectionHeader icon={Home} title="Property Details" />
-                  <input
-                    type="text" value={address} onChange={(e) => setAddress(e.target.value)}
-                    placeholder="123 Main St, Miami, FL 33101" required disabled={disabled}
+                  <AddressAutocomplete
+                    value={address}
+                    onChange={setAddress}
+                    disabled={disabled}
                     className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
                   />
 

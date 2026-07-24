@@ -6,65 +6,17 @@ import { createClient } from '@kpidriver/auth/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   Mail, Lock, ArrowRight, AlertCircle,
-  Building2, Mic, FileText, Database, Clock,
   Eye, EyeOff,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import ParticlesBg from '@/components/ui/particles-bg'
 
-const PRODUCTS = [
-  {
-    icon:      Building2,
-    name:      'Deal Underwriter',
-    tagline:   'AI underwriting in minutes',
-    desc:      'Pull live comps, run ARV calculations, and generate a full investment report — automatically.',
-    accent:    '#22c55e',
-    accentDim: 'rgba(34,197,94,0.08)',
-    status:    'live' as const,
-  },
-  {
-    icon:      Mic,
-    name:      'Sales Coach',
-    tagline:   'Every call, scored & coached',
-    desc:      'Score transcripts against FUS/ACQ rubrics and surface actionable insights for your team.',
-    accent:    '#0ea5e9',
-    accentDim: 'rgba(14,165,233,0.08)',
-    status:    'live' as const,
-  },
-  {
-    icon:      FileText,
-    name:      'AI Note Taker',
-    tagline:   'Auto-notes from every call',
-    desc:      'Capture, structure, and summarize key moments from sales calls without lifting a finger.',
-    accent:    '#f59e0b',
-    accentDim: 'rgba(245,158,11,0.08)',
-    status:    'soon' as const,
-  },
-  {
-    icon:      Database,
-    name:      'Data Enrichment',
-    tagline:   'Supercharge your lead data',
-    desc:      'Enrich property leads with ownership history, market data, and AI-scored investment potential.',
-    accent:    '#a855f7',
-    accentDim: 'rgba(168,85,247,0.08)',
-    status:    'soon' as const,
-  },
-]
-
 const STATS = [
-  { value: '1,200+', label: 'Deals underwritten' },
-  { value: '18,000+', label: 'Calls scored' },
-  { value: '40+', label: 'RE teams powered' },
+  { value: '5,000+',   label: 'Deals Underwritten'  },
+  { value: '250,000+', label: 'Calls Scored'         },
+  { value: '30+',      label: 'RE Teams Geared Up'   },
 ]
-
-const cardIn = {
-  hidden: { opacity: 0, y: 14 },
-  show:   (i: number) => ({
-    opacity: 1, y: 0,
-    transition: { delay: 0.4 + i * 0.08, duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94] },
-  }),
-}
 
 export default function LoginForm() {
   const [email,       setEmail]       = useState('')
@@ -72,6 +24,7 @@ export default function LoginForm() {
   const [showPw,      setShowPw]      = useState(false)
   const [error,       setError]       = useState<string | null>(null)
   const [loading,     setLoading]     = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const router       = useRouter()
   const searchParams = useSearchParams()
@@ -86,6 +39,19 @@ export default function LoginForm() {
     if (error) { setError(error.message); setLoading(false); return }
     router.push(next)
     router.refresh()
+  }
+
+  async function handleGoogle() {
+    setGoogleLoading(true)
+    setError(null)
+    const supabase = createClient()
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
+    })
+    if (error) { setError(error.message); setGoogleLoading(false) }
   }
 
   return (
@@ -108,40 +74,42 @@ export default function LoginForm() {
         style={{
           width: '58%',
           height: '100%',
-          padding: '28px 52px',
+          padding: '48px 60px',
           zIndex: 10,
-          justifyContent: 'space-between',
+          justifyContent: 'center',
+          position: 'relative',
         }}
       >
-        {/* Logo + eyebrow inline */}
+        {/* Logo + tagline — pinned top-left */}
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          style={{ display: 'flex', alignItems: 'center', gap: 14 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.05 }}
+          style={{ position: 'absolute', top: 36, left: 60, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}
         >
-          <Image src="/logo.png" alt="KPI DRIVER" width={90} height={32} style={{ objectFit: 'contain', flexShrink: 0 }} priority />
-          <p style={{
-            fontSize: 13, fontWeight: 600, letterSpacing: '0.08em',
-            textTransform: 'uppercase', color: '#22c55e', margin: 0,
-          }}>
-            AI-powered real estate platform
+          <Image src="/logo2.png" alt="KPI DRIVER" width={240} height={88} style={{ objectFit: 'contain' }} priority />
+          <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+            <span style={{ color: '#22c55e' }}>Built By </span>
+            <span style={{ color: '#64748b' }}>RE Investors</span>
+            <span style={{ color: '#22c55e' }}> For </span>
+            <span style={{ color: '#64748b' }}>RE Investors</span>
           </p>
         </motion.div>
 
-        {/* Hero + products (middle, vertically centred) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 0 }}
         >
           {/* Headline */}
           <h1 style={{
-            fontSize: 'clamp(24px,2.5vw,40px)',
-            fontWeight: 700,
-            lineHeight: 1.18,
+            fontSize: 'clamp(28px,2.8vw,46px)',
+            fontWeight: 800,
+            lineHeight: 1.15,
             color: '#f1f5f9',
-            marginBottom: 10,
+            marginBottom: 14,
+            letterSpacing: '-0.02em',
           }}>
             Your complete AI stack<br />
             <span style={{
@@ -154,91 +122,33 @@ export default function LoginForm() {
 
           {/* Description */}
           <p style={{
-            fontSize: 13, fontWeight: 600, lineHeight: 1.7, color: '#64748b',
-            maxWidth: 420, marginBottom: 16,
+            fontSize: 13, fontWeight: 500, lineHeight: 1.75, color: '#64748b',
+            maxWidth: 440, marginBottom: 32,
           }}>
-            From underwriting deals to coaching your acquisitions team —
-            every critical workflow automated with AI so you can focus on closing.
+            Everything You Ever Dreamed of, Data Enrichment, Skiptracing, Transcription, Taking Notes, Filling CRM Fields, Coaching Insights on Live Calls, Training on All Situations, Underwriting. You Name it, We Have it DFY.
           </p>
 
           {/* Stats */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '14px 0', marginBottom: 20, display: 'inline-flex', gap: 32, width: 'fit-content' }}>
-            {STATS.map((s) => (
-              <div key={s.label}>
-                <p style={{ fontSize: 18, fontWeight: 700, color: '#f1f5f9', lineHeight: 1, marginBottom: 5 }}>
+          <div style={{
+            display: 'flex', gap: 0,
+            borderTop: '1px solid rgba(255,255,255,0.06)',
+            paddingTop: 24,
+            width: 'fit-content',
+          }}>
+            {STATS.map((s, i) => (
+              <div key={s.label} style={{
+                paddingRight: i < STATS.length - 1 ? 36 : 0,
+                marginRight: i < STATS.length - 1 ? 36 : 0,
+                borderRight: i < STATS.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+              }}>
+                <p style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', lineHeight: 1, marginBottom: 6, letterSpacing: '-0.02em' }}>
                   {s.value}
                 </p>
-                <p style={{ fontSize: 10, fontWeight: 600, color: '#64748b' }}>{s.label}</p>
+                <p style={{ fontSize: 10, fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{s.label}</p>
               </div>
             ))}
           </div>
 
-          {/* Product cards — 2×2 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, maxWidth: 520 }}>
-            {PRODUCTS.map((p, i) => {
-              const Icon = p.icon
-              return (
-                <motion.div
-                  key={p.name}
-                  custom={i}
-                  variants={cardIn}
-                  initial="hidden"
-                  animate="show"
-                  style={{
-                    background: p.accentDim,
-                    border:     `1px solid ${p.accent}22`,
-                    borderRadius: 12,
-                    padding: '12px 14px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div style={{
-                      width: 30, height: 30, borderRadius: 8,
-                      background: `${p.accent}16`,
-                      border: `1px solid ${p.accent}28`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                    }}>
-                      <Icon size={14} style={{ color: p.accent }} />
-                    </div>
-                    {p.status === 'live' ? (
-                      <span style={{
-                        display: 'flex', alignItems: 'center', gap: 4,
-                        fontSize: 9, fontWeight: 600,
-                        padding: '2px 7px', borderRadius: 999,
-                        background: 'rgba(34,197,94,0.10)',
-                        color: '#4ade80',
-                        border: '1px solid rgba(34,197,94,0.2)',
-                      }}>
-                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
-                        Live
-                      </span>
-                    ) : (
-                      <span style={{
-                        display: 'flex', alignItems: 'center', gap: 3,
-                        fontSize: 9, fontWeight: 600,
-                        padding: '2px 7px', borderRadius: 999,
-                        background: 'rgba(251,146,60,0.12)',
-                        color: '#fb923c',
-                        border: '1px solid rgba(251,146,60,0.25)',
-                      }}>
-                        <Clock size={8} />
-                        Soon
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontSize: 12, fontWeight: 700, color: '#f1f5f9', marginBottom: 2 }}>
-                    {p.name}
-                  </p>
-                  <p style={{ fontSize: 11, fontWeight: 600, color: p.accent, marginBottom: 4 }}>
-                    {p.tagline}
-                  </p>
-                  <p style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.6, color: '#94a3b8' }}>
-                    {p.desc}
-                  </p>
-                </motion.div>
-              )
-            })}
-          </div>
         </motion.div>
 
       </div>
@@ -273,17 +183,17 @@ export default function LoginForm() {
           }}
         >
           <h2 style={{ fontSize: 22, fontWeight: 700, color: '#ffffff', marginBottom: 4 }}>
-            Sign in
+            Sign In
           </h2>
           <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 28 }}>
-            Welcome back — enter your credentials to continue.
+            Enter Your Credentials & Start Your Engine
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {/* Email */}
             <div>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#94a3b8', marginBottom: 6 }}>
-                Email address
+                Email Address
               </label>
               <div style={{ position: 'relative' }}>
                 <Mail size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#334155', pointerEvents: 'none' }} />
@@ -370,26 +280,79 @@ export default function LoginForm() {
                 transition: 'opacity 0.2s',
               }}
             >
-              {loading ? 'Signing in…' : <><span>Sign in</span><ArrowRight size={14} /></>}
+              {loading ? 'Signing in…' : <><span>Sign In</span><ArrowRight size={14} /></>}
+            </motion.button>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 4 }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ fontSize: 11, color: '#475569', fontWeight: 500 }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+
+            {/* Google button */}
+            <motion.button
+              whileTap={{ scale: 0.98 }}
+              type="button"
+              onClick={handleGoogle}
+              disabled={googleLoading || loading}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                width: '100%', padding: '10px 0', borderRadius: 12,
+                fontSize: 13, fontWeight: 600, color: '#f1f5f9',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                opacity: (googleLoading || loading) ? 0.7 : 1,
+                cursor: (googleLoading || loading) ? 'not-allowed' : 'pointer',
+                transition: 'opacity 0.2s, background 0.2s',
+              }}
+              onMouseEnter={e => { if (!googleLoading && !loading) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.09)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)' }}
+            >
+              {/* Google G icon */}
+              <svg width="16" height="16" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              {googleLoading ? 'Redirecting…' : 'Sign In With Google'}
             </motion.button>
           </form>
 
         </motion.div>
       </div>
 
-      {/* Copyright — centred across full page */}
-      <motion.p
+      {/* Footer — centred across full page */}
+      <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.9, duration: 0.5 }}
         style={{
           position: 'absolute', bottom: 16, left: 0, right: 0,
-          textAlign: 'center', zIndex: 20,
-          fontSize: 11, fontWeight: 600, color: '#475569',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          zIndex: 20,
         }}
       >
-        2026 KPI DRIVER · Built for serious RE investors
-      </motion.p>
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
+          KPI DRIVER · Built By RE Investors For RE Investors
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
+          >
+            Terms & Conditions
+          </a>
+          <span style={{ color: '#2d3f52', fontSize: 11 }}>·</span>
+          <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
+          >
+            Privacy Policy
+          </a>
+        </div>
+      </motion.div>
     </div>
   )
 }

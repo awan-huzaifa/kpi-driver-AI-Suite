@@ -6,13 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, PhoneIncoming, PhoneOutgoing, ExternalLink, X,
   TrendingUp, TrendingDown, ChevronDown, Search, ChevronRight,
-  Mic, Target, Clock, Calendar,
+  Mic, Target, Clock, Calendar, Download,
 } from "lucide-react";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Badge } from "@/components/ui/badge";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
+import { ExportModal, type ColDef } from "@/components/ui/export-modal";
 import type { AccessRole } from "@/types/database";
 
 /* ── Types ──────────────────────────────────────────────────────── */
@@ -551,6 +552,38 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
   const [customFrom,  setCustomFrom]  = useState("");
   const [customTo,    setCustomTo]    = useState("");
   const [page,        setPage]        = useState(1);
+  const [exportOpen,  setExportOpen]  = useState(false);
+
+  const isAdmin = accessRole === "admin" || accessRole === "super_admin";
+
+  const exportDefaultCols: ColDef<LiveCall>[] = [
+    { label: "Date",        getValue: r => new Date(r.created_at).toLocaleDateString() },
+    { label: "Time",        getValue: r => new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    { label: "Contact",     getValue: r => r.contact_name },
+    { label: "Phone",       getValue: r => r.contact_phone },
+    { label: "Agent",       getValue: r => r.agent?.full_name },
+    { label: "Agent Type",  getValue: r => r.agent?.agent_type },
+    { label: "Direction",   getValue: r => r.direction },
+    { label: "Duration",    getValue: r => `${Math.floor(r.duration_sec / 60)}:${String(r.duration_sec % 60).padStart(2, "0")}` },
+    { label: "Score",       getValue: r => r.score },
+    { label: "Scorable",    getValue: r => r.scorable ? "Yes" : "No" },
+    { label: "Result",      getValue: r => r.call_result },
+    { label: "Stage",       getValue: r => r.call_stage },
+    { label: "Lead Source", getValue: r => r.evaluation?.meta?.lead_source },
+    { label: "CRM Link",    getValue: r => r.crm_link },
+  ];
+  const exportExtraCols: ColDef<LiveCall>[] = [
+    { label: "Score Band",           getValue: r => r.evaluation?.score_band },
+    { label: "Call Type",            getValue: r => r.evaluation?.call_type },
+    { label: "Opportunity Level",    getValue: r => r.evaluation?.opportunity_level },
+    { label: "Confidence",           getValue: r => r.evaluation?.confidence != null ? `${Math.round(r.evaluation.confidence * 100)}%` : null },
+    { label: "Score Reasoning",      getValue: r => r.evaluation?.score_reasoning },
+    { label: "Strengths",            getValue: r => r.evaluation?.strengths?.join("; ") },
+    { label: "Missed Opportunities", getValue: r => r.evaluation?.missed_opportunities?.join("; ") },
+    { label: "Coaching Actions",     getValue: r => r.evaluation?.coaching_actions?.map(a => `[${a.type}] ${a.action}`).join(" | ") },
+    { label: "Penalties",            getValue: r => r.evaluation?.penalties?.map(p => `${p.type} -${p.points}pts: ${p.reason}`).join(" | ") },
+    { label: "Transcript",           getValue: r => r.transcript },
+  ];
 
   const agents = useMemo(() => {
     const map = new Map<string, string>();
@@ -627,7 +660,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
               Call Log
             </h1>
             <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-              {calls.length} Calls Total — Click Any Row To View Scoring Details.
+              {calls.length} Calls Total. Click Any Row To View Scoring Details.
             </p>
           </div>
 
@@ -737,6 +770,20 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
               {leadSources.map(ls => <SelectItem key={ls} value={ls}>{ls}</SelectItem>)}
             </SelectContent>
           </Select>
+        )}
+
+        {isAdmin && (
+          <button
+            onClick={() => setExportOpen(true)}
+            style={{
+              marginLeft: "auto", display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 13px", borderRadius: 9, cursor: "pointer",
+              background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.25)",
+              color: "#307DC0", fontSize: 12, fontWeight: 700,
+            }}
+          >
+            <Download size={12} /> Export
+          </button>
         )}
       </motion.div>
 
@@ -960,6 +1007,15 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
       </motion.div>
 
       {selected && <DetailModal call={selected} onClose={() => setSelected(null)} />}
+      {exportOpen && (
+        <ExportModal
+          onClose={() => setExportOpen(false)}
+          data={calls as unknown as Record<string, unknown>[]}
+          defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
+          extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
+          filenamePrefix="live-calls"
+        />
+      )}
     </div>
   );
 }

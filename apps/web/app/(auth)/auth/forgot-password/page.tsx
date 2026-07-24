@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
         >
           {/* Logo */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-            <Image src="/logo.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: 'contain' }} priority />
+            <Image src="/logo2.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: 'contain' }} priority />
           </div>
 
           {/* Card */}

@@ -10,6 +10,7 @@ import {
 import type { ConditionGrade, ExtraItem, UploadedPhoto, NormalizedComp, ManualComp, CompCategory, RepairMode } from "@/lib/underwriting/types";
 import { SingleDateInput } from "@/components/ui/date-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
+import { AddressAutocomplete } from "@/components/underwriting/address-autocomplete";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -949,13 +950,14 @@ export function RerunDealModal({
                               disabled={disabled}
                               className="w-4 h-4 accent-brand shrink-0 disabled:opacity-50"
                             />
-                            <input
-                              type="text"
-                              value={comp.address}
-                              onChange={(e) => updateEditableComp(i, "address", e.target.value)}
-                              disabled={disabled || !comp.included}
-                              className="flex-1 bg-transparent border-b border-edge text-white text-[12px] placeholder:text-muted/50 focus:outline-none focus:border-brand pb-0.5 transition-colors disabled:opacity-50"
-                            />
+                            <div className="flex-1 min-w-0">
+                              <AddressAutocomplete
+                                value={comp.address}
+                                onChange={(v) => updateEditableComp(i, "address", v)}
+                                disabled={disabled || !comp.included}
+                                className="w-full bg-transparent border-b border-edge text-white text-[12px] placeholder:text-muted/50 focus:outline-none focus:border-brand pb-0.5 transition-colors disabled:opacity-50"
+                              />
+                            </div>
                             <Select
                               value={comp.category || "_ai"}
                               onValueChange={(v) => updateEditableComp(i, "category", v === "_ai" ? "" : v)}
@@ -1081,14 +1083,15 @@ export function RerunDealModal({
 
                       {/* Address row */}
                       <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          placeholder="Full address (required)"
-                          value={comp.address}
-                          onChange={(e) => updateComp(comp.id, "address", e.target.value)}
-                          disabled={disabled}
-                          className="flex-1 bg-transparent border-b border-edge text-white text-[13px] placeholder:text-muted/50 focus:outline-none focus:border-brand pb-1 transition-colors disabled:opacity-50"
-                        />
+                        <div className="flex-1 min-w-0">
+                          <AddressAutocomplete
+                            value={comp.address}
+                            onChange={(v) => updateComp(comp.id, "address", v)}
+                            disabled={disabled}
+                            placeholder="Full address (required)"
+                            className="w-full bg-transparent border-b border-edge text-white text-[13px] placeholder:text-muted/50 focus:outline-none focus:border-brand pb-1 transition-colors disabled:opacity-50"
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => removeManualComp(comp.id)}

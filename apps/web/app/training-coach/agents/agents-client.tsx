@@ -133,7 +133,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-white truncate">{a.agent_name}</p>
                     <p className="text-xs truncate" style={{ color: "#8b9cb0" }}>
-                      {a.companies?.name ?? "Global · All Companies"}
+                      {a.companies?.name ?? <span style={{ color: '#307DC0', fontWeight: 700 }}>Global</span>}
                     </p>
                   </div>
                 </div>
@@ -218,7 +218,7 @@ export default function AgentsClient({ agents, accessRole, companies }: Props) {
                 <Select value={form.company_id} onValueChange={(v) => setForm({ ...form, company_id: v })}>
                   <SelectTrigger placeholder="Select Company" />
                   <SelectContent>
-                    <SelectItem value="global">Global · All Companies</SelectItem>
+                    <SelectItem value="global">Global</SelectItem>
                     {companies.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>

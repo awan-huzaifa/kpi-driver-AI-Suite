@@ -87,7 +87,7 @@ export default function ParticlesBg({ className, ...props }: Props) {
       posAttr.needsUpdate = true
 
       renderer.render(scene, camera)
-      count += 0.1
+      count += 0.03
     }
 
     animate()

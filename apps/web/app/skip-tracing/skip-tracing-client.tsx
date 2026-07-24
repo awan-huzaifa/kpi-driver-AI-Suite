@@ -2,10 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, ChevronDown, Phone, Mail, MapPin, Shield, AlertTriangle, CheckCircle, User } from "lucide-react";
+import { Search, X, ChevronDown, Phone, Mail, MapPin, Shield, AlertTriangle, CheckCircle, User, Download } from "lucide-react";
 import { C } from "@/components/platform/brand";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
+import { ExportModal, type ColDef } from "@/components/ui/export-modal";
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
@@ -438,8 +439,39 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
   const [period,     setPeriod]     = useState<DatePeriod>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo,   setCustomTo]   = useState("");
-  const [selected, setSelected] = useState<SkipLog | null>(null);
-  const [page,     setPage]     = useState(1);
+  const [selected,   setSelected]   = useState<SkipLog | null>(null);
+  const [page,       setPage]       = useState(1);
+  const [exportOpen, setExportOpen] = useState(false);
+
+  const isAdmin = accessRole === "admin" || accessRole === "super_admin";
+
+  const exportDefaultCols: ColDef<SkipLog>[] = [
+    { label: "Date",        getValue: r => fmtDate(r.created_at) },
+    { label: "Time",        getValue: r => fmtTime(r.created_at) },
+    { label: "Flow Type",   getValue: r => FLOW_LABELS[getDisplayType(r)] ?? r.flow_type },
+    { label: "Hit",         getValue: r => r.flow_type === "dnc" ? (r.is_clean ? "Clean" : "Flagged") : (r.hit ? "Hit" : "Miss") },
+    { label: "Address",     getValue: r => r.address },
+    { label: "City",        getValue: r => r.city },
+    { label: "State",       getValue: r => r.state },
+    { label: "Zip",         getValue: r => r.zip },
+    { label: "Parcel ID",   getValue: r => r.parcel_id },
+    { label: "County",      getValue: r => r.county },
+    { label: "Lead Source", getValue: r => r.lead_source },
+    { label: "Cost ($)",    getValue: r => r.cost_usd },
+  ];
+  const exportExtraCols: ColDef<SkipLog>[] = [
+    { label: "Phone",        getValue: r => r.phone },
+    { label: "Is Clean",     getValue: r => r.is_clean == null ? null : r.is_clean ? "Yes" : "No" },
+    { label: "National DNC", getValue: r => r.national_dnc == null ? null : r.national_dnc ? "Yes" : "No" },
+    { label: "State DNC",    getValue: r => r.state_dnc == null ? null : r.state_dnc ? "Yes" : "No" },
+    { label: "DMA",          getValue: r => r.dma == null ? null : r.dma ? "Yes" : "No" },
+    { label: "Litigator",    getValue: r => r.litigator == null ? null : r.litigator ? "Yes" : "No" },
+    { label: "Phone Type",   getValue: r => r.phone_type },
+    { label: "Find Owner",   getValue: r => r.find_owner == null ? null : r.find_owner ? "Yes" : "No" },
+    { label: "Persons Count",  getValue: r => r.persons_count },
+    { label: "Person Names",   getValue: r => ((r.payload.persons as { full_name?: string }[] | undefined) ?? []).map(p => p.full_name).filter(Boolean).join("; ") },
+    { label: "Person Phones",  getValue: r => ((r.payload.persons as { phones?: { number: string }[] }[] | undefined) ?? []).flatMap(p => (p.phones ?? []).map(ph => ph.number)).join("; ") },
+  ];
 
   const filtered = useMemo(() => {
     const { from: pFrom, to: pTo } = periodBounds(period, customFrom, customTo);
@@ -490,7 +522,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
           Skip Tracing
         </h1>
         <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>
-          APN Lookups, Skip Traces & DNC Checks — All Activity Logged Here.
+          Skiptracing, Address Only Skiptracing, APN Lookups & DNC Checks. Click Any Row To View The Full Details.
         </p>
       </motion.div>
 
@@ -578,6 +610,20 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
           onCustomTo={setCustomTo}
           activeColor={C.blue}
         />
+
+        {isAdmin && (
+          <button
+            onClick={() => setExportOpen(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 13px", borderRadius: 9, cursor: "pointer",
+              background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.25)",
+              color: "#307DC0", fontSize: 12, fontWeight: 700,
+            }}
+          >
+            <Download size={13} /> Export
+          </button>
+        )}
       </motion.div>
 
       {/* Table */}
@@ -725,6 +771,16 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
       <AnimatePresence>
         {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
       </AnimatePresence>
+
+      {exportOpen && (
+        <ExportModal
+          onClose={() => setExportOpen(false)}
+          data={logs as unknown as Record<string, unknown>[]}
+          defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
+          extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
+          filenamePrefix="skip-tracing"
+        />
+      )}
     </div>
   );
 }

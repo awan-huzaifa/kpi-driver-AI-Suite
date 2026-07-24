@@ -10,6 +10,7 @@ import {
 import { C } from "@/components/platform/brand";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
+import { ExportModal, type ColDef } from "@/components/ui/export-modal";
 import type { AccessRole } from "@/types/database";
 
 interface NoteCall {
@@ -246,6 +247,26 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
   const [search,           setSearch]           = useState("");
   const [selected,         setSelected]         = useState<NoteCall | null>(null);
   const [page,             setPage]             = useState(1);
+  const [exportOpen,       setExportOpen]       = useState(false);
+
+  const isAdmin = accessRole === "admin" || accessRole === "super_admin";
+
+  const exportDefaultCols: ColDef<NoteCall>[] = [
+    { label: "Date",          getValue: r => new Date(r.created_at).toLocaleDateString() },
+    { label: "Time",          getValue: r => new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
+    { label: "Agent",         getValue: r => r.agent_name },
+    { label: "Direction",     getValue: r => r.call_direction },
+    { label: "Contact Phone", getValue: r => r.contact_phone },
+    { label: "Agent Phone",   getValue: r => r.agent_phone },
+    { label: "Lead Source",   getValue: r => r.lead_source },
+    { label: "Cost ($)",      getValue: r => r.cost_usd },
+  ];
+  const exportExtraCols: ColDef<NoteCall>[] = [
+    { label: "AI Summary",     getValue: r => r.ai_summary },
+    { label: "Normal Summary", getValue: r => r.normal_summary },
+    { label: "Input Tokens",   getValue: r => r.input_tokens },
+    { label: "Output Tokens",  getValue: r => r.output_tokens },
+  ];
 
   const agentNames = useMemo(() => {
     const names = calls.map(c => c.agent_name).filter((n): n is string => !!n);
@@ -314,7 +335,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           Call Logs
         </h1>
         <p style={{ fontSize: 13, color: C.bodyText, marginTop: 6 }}>
-          All Call Notes — Click Any Row To View The Full Transcript.
+          All Call Notes. Click Any Row To View The Full Transcript.
         </p>
       </motion.div>
 
@@ -423,6 +444,20 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
               {fmtCost(totalCost)} Total
             </div>
           )}
+
+          {isAdmin && (
+            <button
+              onClick={() => setExportOpen(true)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "7px 13px", borderRadius: 9, cursor: "pointer",
+                background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.25)",
+                color: "#307DC0", fontSize: 12, fontWeight: 700,
+              }}
+            >
+              ↓ Export
+            </button>
+          )}
         </div>
       </motion.div>
 
@@ -438,7 +473,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
               {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
-                  padding: "12px 16px", textAlign: "left",
+                  padding: "12px 16px",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
                   textTransform: "uppercase", color: "#e2e8f0", textAlign: "center",
                 }}>{h}</th>
@@ -545,6 +580,15 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
 
       {/* Detail modal */}
       {selected && <DetailModal call={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
+      {exportOpen && (
+        <ExportModal
+          onClose={() => setExportOpen(false)}
+          data={calls as unknown as Record<string, unknown>[]}
+          defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
+          extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
+          filenamePrefix="note-taker-calls"
+        />
+      )}
     </div>
   );
 }

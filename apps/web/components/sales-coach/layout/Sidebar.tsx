@@ -39,8 +39,7 @@ export default function Sidebar({ user, accessRole }: Props) {
 
   async function signOut() {
     await createClient().auth.signOut();
-    router.push("/login");
-    router.refresh();
+    window.location.href = '/login';
   }
 
   const initials = (user.full_name ?? user.email ?? "U")[0].toUpperCase();
@@ -67,7 +66,7 @@ export default function Sidebar({ user, accessRole }: Props) {
         padding: "16px 18px", borderBottom: `1px solid ${C.border}`,
         display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
       }}>
-        <Image src="/logo.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: "contain", flexShrink: 0 }} priority />
+        <Image src="/logo2.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: "contain", flexShrink: 0 }} priority />
         <p style={{ fontSize: 12, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
           <span style={{ color: C.green }}>Built By </span>
           <span style={{ color: C.dimText }}>RE Investors</span>

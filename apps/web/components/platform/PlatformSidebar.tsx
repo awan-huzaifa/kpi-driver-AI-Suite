@@ -74,7 +74,8 @@ function AppNavItem({ app, unlocked, pathname, accessRole }: {
   app: AppEntry; unlocked: boolean; pathname: string; accessRole?: string
 }) {
   const Icon      = app.icon
-  const isActive  = app.href !== '#' && !app.href.startsWith('http') && pathname.startsWith(app.href)
+  const appBase   = '/' + (app.href.split('/').filter(Boolean)[0] ?? '')
+  const isActive  = app.href !== '#' && !app.href.startsWith('http') && pathname.startsWith(appBase)
   const isAdmin   = accessRole === 'admin' || accessRole === 'super_admin'
   const isSuperAdmin = accessRole === 'super_admin'
 
@@ -250,8 +251,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
 
   async function signOut() {
     await fetch('/api/auth/signout', { method: 'POST' })
-    router.push('/login')
-    router.refresh()
+    window.location.href = '/login'
   }
 
   const sortedApps = [...APP_REGISTRY].sort((a: AppEntry, b: AppEntry) => {
@@ -284,7 +284,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
           />
         ) : (
           <>
-            <Image src="/logo.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: 'contain' }} priority />
+            <Image src="/logo2.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: 'contain' }} priority />
             <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5, textAlign: 'center' }}>
               <span style={{ color: C.green }}>Built By </span>
               <span style={{ color: C.dimText }}>RE Investors</span>

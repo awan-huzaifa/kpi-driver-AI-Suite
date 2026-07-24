@@ -9,6 +9,7 @@ const PUBLIC_PATHS = [
   '/auth/invite-callback',
   '/auth/set-password',
   '/auth/forgot-password',
+  '/auth/no-access',
   '/api/stripe/webhook',
   '/api/calls/ingest',
   '/api/training-coach/ingest',

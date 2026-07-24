@@ -3,11 +3,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Database, X, Search, ExternalLink, Copy, Check, ChevronRight, Calendar, Hash, Layers } from "lucide-react";
+import { Database, X, Search, ExternalLink, Copy, Check, ChevronRight, Calendar, Hash, Layers, Download } from "lucide-react";
 import { C } from "@/components/platform/brand";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import type { AccessRole } from "@/types/database";
+import { ExportModal, type ColDef } from "@/components/ui/export-modal";
 
 interface EnrichmentField {
   key:   string;
@@ -359,8 +360,11 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
   const [customTo,   setCustomTo]   = useState("");
   const [companyId, setCompanyId] = useState<string>("all");
   const [search,   setSearch]   = useState("");
-  const [selected, setSelected] = useState<EnrichmentLog | null>(null);
-  const [page,     setPage]     = useState(1);
+  const [selected,   setSelected]   = useState<EnrichmentLog | null>(null);
+  const [page,       setPage]       = useState(1);
+  const [exportOpen, setExportOpen] = useState(false);
+
+  const isAdmin = accessRole === "admin" || accessRole === "super_admin";
 
   useEffect(() => {
     const logId = searchParams.get("logId");
@@ -397,6 +401,30 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
   const totalFields = useMemo(() => filtered.reduce((s, l) => s + l.fields.length, 0), [filtered]);
   const totalCost   = useMemo(() => filtered.reduce((s, l) => s + (l.cost_usd ?? 0), 0), [filtered]);
 
+  const allFieldKeys = useMemo(() => {
+    const keys = new Set<string>();
+    logs.forEach(l => l.fields.forEach(f => keys.add(f.key)));
+    return Array.from(keys).sort();
+  }, [logs]);
+
+  const exportDefaultCols: ColDef<EnrichmentLog>[] = [
+    { label: "Date",          getValue: r => fmtDate(r.created_at) },
+    { label: "Time",          getValue: r => fmtTime(r.created_at) },
+    { label: "Contact Name",  getValue: r => r.contact_name },
+    { label: "Contact Phone", getValue: r => r.contact_phone },
+    { label: "External ID",   getValue: r => r.external_id },
+    { label: "Lead Source",   getValue: r => r.lead_source },
+    { label: "Fields Count",  getValue: r => r.fields.length },
+    { label: "Cost ($)",      getValue: r => r.cost_usd },
+  ];
+  const exportExtraCols: ColDef<EnrichmentLog>[] = allFieldKeys.map(key => ({
+    label: fmtKey(key),
+    getValue: (r) => {
+      const f = r.fields.find(fld => fld.key === key);
+      return f ? fmtValue(f.value) : null;
+    },
+  }));
+
   return (
     <div style={{ padding: "32px 36px" }}>
 
@@ -426,7 +454,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
               Enrichment Logs
             </h1>
             <p style={{ fontSize: 13, color: C.bodyText, marginTop: 4 }}>
-              All Enrichment Records — Click Any Row To View The Full Details.
+              All Enrichment Records. Click Any Row To View The Full Details.
             </p>
           </div>
           {/* Stats */}
@@ -511,6 +539,20 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
             </button>
           )}
         </div>
+
+        {isAdmin && (
+          <button
+            onClick={() => setExportOpen(true)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 13px", borderRadius: 9, cursor: "pointer",
+              background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.25)",
+              color: "#307DC0", fontSize: 12, fontWeight: 700,
+            }}
+          >
+            <Download size={13} /> Export
+          </button>
+        )}
       </motion.div>
 
       {/* Table */}
@@ -703,6 +745,16 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
       </motion.div>
 
       {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
+
+      {exportOpen && (
+        <ExportModal
+          onClose={() => setExportOpen(false)}
+          data={logs as unknown as Record<string, unknown>[]}
+          defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
+          extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
+          filenamePrefix="data-enrichment"
+        />
+      )}
     </div>
   );
 }

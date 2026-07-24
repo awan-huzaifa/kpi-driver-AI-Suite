@@ -1,10 +1,11 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import { BarChart3, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react'
+import { BarChart3, ChevronDown, ChevronRight, ExternalLink, Download } from 'lucide-react'
 import Link from 'next/link'
 import { C } from '@/components/platform/brand'
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select'
+import { ExportModal, type ColDef } from '@/components/ui/export-modal'
 
 interface CostBreakdown {
   property_api_1?: number
@@ -126,6 +127,18 @@ const DATE_INPUT_STYLE: React.CSSProperties = {
   width: '100%',
 }
 
+function getPageWindow(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+  const pages: (number | '...')[] = [1]
+  if (current > 3) pages.push('...')
+  const start = Math.max(2, current - 2)
+  const end   = Math.min(total - 1, current + 2)
+  for (let i = start; i <= end; i++) pages.push(i)
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+}
+
 function FilterLabel({ children }: { children: React.ReactNode }) {
   return (
     <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 6px' }}>
@@ -142,7 +155,26 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
   const [customFrom, setCustomFrom]   = useState<string>(todayStr())
   const [customTo,   setCustomTo]     = useState<string>(todayStr())
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
-  const [page, setPage]               = useState(1)
+  const [page,        setPage]         = useState(1)
+  const [exportOpen,  setExportOpen]   = useState(false)
+
+  const exportDefaultCols: ColDef<UsageLogRow>[] = [
+    { label: 'Date',          getValue: r => fmtDate(r.created_at) },
+    { label: 'Time',          getValue: r => fmtTime(r.created_at) },
+    { label: 'App',           getValue: r => APP_LABELS[r.app] },
+    { label: 'Flow',          getValue: r => ENTITY_LABELS[r.entity_type] },
+    { label: 'Input Tokens',  getValue: r => r.input_tokens },
+    { label: 'Output Tokens', getValue: r => r.output_tokens },
+    { label: 'Cost ($)',      getValue: r => r.cost_usd },
+  ]
+  const exportExtraCols: ColDef<UsageLogRow>[] = [
+    { label: 'Model',        getValue: r => r.model },
+    { label: 'Property API 1', getValue: r => r.cost_breakdown?.property_api_1 ?? null },
+    { label: 'Property API 2', getValue: r => r.cost_breakdown?.property_api_2 ?? null },
+    { label: 'AI Analysis',    getValue: r => r.cost_breakdown?.ai ?? null },
+    { label: 'Transcription',  getValue: r => r.cost_breakdown?.transcription ?? null },
+    { label: 'AI Voice',       getValue: r => r.cost_breakdown?.voice_agent ?? null },
+  ]
 
   function toggleRow(id: string) {
     setExpandedRows(prev => {
@@ -247,11 +279,19 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
               Token Usage And Cost Per Workflow Run, Across Every App.
             </p>
           </div>
-          {filtered.length > 0 && (
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.dimText }}>
-              {((safePage - 1) * PAGE_SIZE) + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button
+              onClick={() => setExportOpen(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                background: 'rgba(48,125,192,0.1)', border: '1px solid rgba(48,125,192,0.25)',
+                color: '#307DC0', fontSize: 12, fontWeight: 700,
+              }}
+            >
+              <Download size={13} /> Export
+            </button>
+          </div>
         </div>
 
         {filtered.length === 0 ? (
@@ -386,29 +426,38 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '12px 22px', borderTop: `1px solid ${C.border}`,
           }}>
+            {/* Row count */}
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.dimText }}>
+              {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+            </span>
+
             {/* Page number pills */}
-            <div style={{ display: 'flex', gap: 4 }}>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                const isActive = p === safePage
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    style={{
-                      minWidth: 32, height: 32, borderRadius: 8, border: 'none',
-                      fontSize: 12, fontWeight: isActive ? 700 : 500,
-                      cursor: isActive ? 'default' : 'pointer',
-                      background: isActive ? C.blue : 'transparent',
-                      color: isActive ? '#fff' : C.dimText,
-                      transition: 'background 0.15s, color 0.15s',
-                    }}
-                    onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
-                    onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
-                  >
-                    {p}
-                  </button>
-                )
-              })}
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              {getPageWindow(safePage, totalPages).map((p, i) =>
+                p === '...'
+                  ? <span key={`ellipsis-${i}`} style={{ fontSize: 12, color: C.dimText, padding: '0 2px', userSelect: 'none' }}>…</span>
+                  : (() => {
+                      const isActive = p === safePage
+                      return (
+                        <button
+                          key={p}
+                          onClick={() => setPage(p)}
+                          style={{
+                            minWidth: 32, height: 32, borderRadius: 8, border: 'none',
+                            fontSize: 12, fontWeight: isActive ? 700 : 500,
+                            cursor: isActive ? 'default' : 'pointer',
+                            background: isActive ? C.blue : 'rgba(255,255,255,0.04)',
+                            color: isActive ? '#fff' : C.dimText,
+                            transition: 'background 0.15s, color 0.15s',
+                          }}
+                          onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.06)' }}
+                          onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)' }}
+                        >
+                          {p}
+                        </button>
+                      )
+                    })()
+              )}
             </div>
 
             {/* Prev / Next */}
@@ -449,6 +498,16 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
           </div>
         )}
       </div>
+
+      {exportOpen && (
+        <ExportModal
+          onClose={() => setExportOpen(false)}
+          data={rows as unknown as Record<string, unknown>[]}
+          defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
+          extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
+          filenamePrefix="billing-usage"
+        />
+      )}
     </div>
   )
 }
