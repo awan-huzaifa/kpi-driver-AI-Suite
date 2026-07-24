@@ -111,12 +111,12 @@ export default function LoginForm() {
             marginBottom: 14,
             letterSpacing: '-0.02em',
           }}>
-            Your complete AI stack<br />
+            Your Complete AI Stack<br />
             <span style={{
               background: 'linear-gradient(135deg,#22c55e 0%,#4ade80 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             }}>
-              for RE investors
+              For RE Investors
             </span>
           </h1>
 

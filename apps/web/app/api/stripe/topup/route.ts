@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   // Fetch company name for Stripe description
   const { data: companyRow } = await admin.from('companies').select('name').eq('id', companyId).single()
   const companyName = companyRow?.name ?? 'Unknown Company'
-  const description = `$${option.amount} AI Suite top-up — ${companyName} (KPI DRIVER)`
+  const description = `Auto-Recharge for Sub-Account - ${companyName} of USD ${option.amount} was successfully added to the wallet. Please, check the billing page for more details: ${appUrl}/billing`
 
   console.log('[topup] companyId:', companyId)
   console.log('[topup] companyName:', companyName)
