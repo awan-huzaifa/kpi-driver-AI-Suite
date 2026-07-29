@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -55,7 +55,7 @@ export default function LoginForm() {
   }
 
   return (
-    /* Lock to exactly one viewport height — no page scroll */
+    /* Lock to exactly one viewport height â€” no page scroll */
     <div
       style={{
         height: '100dvh',
@@ -66,9 +66,9 @@ export default function LoginForm() {
     >
       <ParticlesBg />
 
-      {/* ═══════════════════════════════════════════════
-          LEFT PANEL — marketing / product overview
-      ═══════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          LEFT PANEL â€” marketing / product overview
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div
         className="hidden lg:flex flex-col"
         style={{
@@ -80,14 +80,14 @@ export default function LoginForm() {
           position: 'relative',
         }}
       >
-        {/* Logo + tagline — pinned top-left */}
+        {/* Logo + tagline â€” pinned top-left */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.05 }}
           style={{ position: 'absolute', top: 36, left: 60, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}
         >
-          <Image src="/logo2.png" alt="KPI DRIVER" width={240} height={88} style={{ objectFit: 'contain' }} priority />
+          <Image src="/logo3.png" alt="KPI DRIVER" width={240} height={88} style={{ objectFit: 'contain' }} priority />
           <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
             <span style={{ color: '#22c55e' }}>Built By </span>
             <span style={{ color: '#64748b' }}>RE Investors</span>
@@ -153,9 +153,9 @@ export default function LoginForm() {
 
       </div>
 
-      {/* ═══════════════════════════════════════════════
-          RIGHT PANEL — login form
-      ═══════════════════════════════════════════════ */}
+      {/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+          RIGHT PANEL â€” login form
+      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
       <div
         style={{
           flex: 1,
@@ -221,7 +221,7 @@ export default function LoginForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   className="input-dark"
                   style={{ width: '100%', paddingLeft: 36, paddingRight: 38, paddingTop: 10, paddingBottom: 10, fontSize: 13 }}
                 />
@@ -280,7 +280,7 @@ export default function LoginForm() {
                 transition: 'opacity 0.2s',
               }}
             >
-              {loading ? 'Signing in…' : <><span>Sign In</span><ArrowRight size={14} /></>}
+              {loading ? 'Signing inâ€¦' : <><span>Sign In</span><ArrowRight size={14} /></>}
             </motion.button>
 
             {/* Divider */}
@@ -316,14 +316,14 @@ export default function LoginForm() {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              {googleLoading ? 'Redirecting…' : 'Sign In With Google'}
+              {googleLoading ? 'Redirectingâ€¦' : 'Sign In With Google'}
             </motion.button>
           </form>
 
         </motion.div>
       </div>
 
-      {/* Footer — centred across full page */}
+      {/* Footer â€” centred across full page */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -335,7 +335,7 @@ export default function LoginForm() {
         }}
       >
         <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
-          KPI DRIVER · Built By RE Investors For RE Investors
+          KPI DRIVER Â· Built By RE Investors For RE Investors
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
@@ -344,7 +344,7 @@ export default function LoginForm() {
           >
             Terms & Conditions
           </a>
-          <span style={{ color: '#2d3f52', fontSize: 11 }}>·</span>
+          <span style={{ color: '#2d3f52', fontSize: 11 }}>Â·</span>
           <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
             onMouseLeave={e => (e.currentTarget.style.color = '#475569')}

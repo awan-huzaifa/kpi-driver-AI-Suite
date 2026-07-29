@@ -562,8 +562,9 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
     { label: "Contact",     getValue: r => r.contact_name },
     { label: "Phone",       getValue: r => r.contact_phone },
     { label: "Agent",       getValue: r => r.agent?.full_name },
-    { label: "Agent Type",  getValue: r => r.agent?.agent_type },
-    { label: "Direction",   getValue: r => r.direction },
+    { label: "Agent Phone", getValue: r => r.agent_phone },
+    { label: "Agent Type",  getValue: r => r.agent?.agent_type?.toUpperCase() },
+    { label: "Direction",   getValue: r => r.direction ? r.direction.charAt(0).toUpperCase() + r.direction.slice(1) : null },
     { label: "Duration",    getValue: r => `${Math.floor(r.duration_sec / 60)}:${String(r.duration_sec % 60).padStart(2, "0")}` },
     { label: "Score",       getValue: r => r.score },
     { label: "Scorable",    getValue: r => r.scorable ? "Yes" : "No" },
@@ -1014,6 +1015,22 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
           filenamePrefix="live-calls"
+          onServerExport={(cols, fromDate, toDate) => {
+            const params = new URLSearchParams();
+            if (fromDate) params.set("from", fromDate);
+            if (toDate)   params.set("to",   toDate);
+            if (direction  !== "all") params.set("direction",  direction);
+            if (duration   !== "all") params.set("duration",   duration);
+            if (role       !== "all") params.set("role",       role);
+            if (scorable   !== "all") params.set("scorable",   scorable);
+            if (leadSource !== "all") params.set("leadSource", leadSource);
+            if (agentIds.length > 0)  params.set("agentIds",   agentIds.join(","));
+            if (companyId  !== "all") params.set("companyId",  companyId);
+            params.set("cols", cols.join(","));
+            const a = document.createElement("a");
+            a.href = `/api/sales-coach/live-calls/export?${params.toString()}`;
+            a.click();
+          }}
         />
       )}
     </div>

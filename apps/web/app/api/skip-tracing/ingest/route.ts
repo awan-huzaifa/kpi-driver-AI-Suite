@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
   const contact_id   = body.contact_id   as string | null | undefined;
   const contact_name = (body.contact_name as string | null | undefined) ?? null;
   const lead_source  = (body.lead_source  as string | null | undefined) ?? null;
+  const crm_link     = (body.crmLink      as string | null | undefined) ?? null;
 
   if (!location_id) {
     return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
@@ -108,6 +109,7 @@ export async function POST(req: NextRequest) {
     cost_usd:         deductionUsd,
     persons_count:    personsCount,
     lead_source:      lead_source,
+    crm_link:         crm_link,
     payload:          body,
   };
 

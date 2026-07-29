@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { UserPlus, Pencil, UserX, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search } from "lucide-react";
@@ -229,7 +229,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           </Button>
         </div>
 
-        {/* Company filter — super_admin only */}
+        {/* Company filter â€” super_admin only */}
         {isSuperAdmin && companies.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>
@@ -283,7 +283,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
               {active.length === 0 && inactive.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ padding: "40px 16px", textAlign: "center", color: "#475569", fontSize: 13 }}>
-                    No Team Members Yet — Invite Your First One.
+                    No Team Members Yet â€” Invite Your First One.
                   </td>
                 </tr>
               )}
@@ -310,12 +310,12 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                       </div>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>
-                          {u.full_name ?? "—"}
+                          {u.full_name ?? "â€”"}
                           {u.id === currentUserId && (
                             <span style={{ marginLeft: 6, fontSize: 10, color: C.blue, fontWeight: 700 }}>YOU</span>
                           )}
                         </p>
-                        <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>{u.email ?? "—"}</p>
+                        <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>{u.email ?? "â€”"}</p>
                         {isSuperAdmin && u.company_id && (
                           <p style={{ fontSize: 10, color: C.blue, margin: "2px 0 0", fontWeight: 600 }}>
                             {companyMap[u.company_id] ?? "Unknown Company"}
@@ -345,7 +345,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                       <AppChip active={u.app_training_coach} icon={GraduationCap} label="AI Training Coach" />
                       <AppChip active={u.app_note_taker}      icon={NotebookPen}   label="AI Note Taker" />
                       <AppChip active={u.app_data_enrichment} icon={Database}      label="AI Data Enrichment" />
-                      <AppChip active={u.app_skip_tracing}    icon={Search}        label="Skip Tracing" />
+                      <AppChip active={u.app_skip_tracing}    icon={Search}        label="Skiptracing" />
                     </div>
                   </td>
 
@@ -391,11 +391,11 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
         </div>
       </div>
 
-      {/* ── Invite Modal ── */}
+      {/* â”€â”€ Invite Modal â”€â”€ */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent title="Invite Team Member" description="They'll Receive An Email With A Link To Set Their Password.">
           <div className="space-y-4">
-            {/* Company picker — super_admin only */}
+            {/* Company picker â€” super_admin only */}
             {isSuperAdmin && companies.length > 0 && (
               <div>
                 <Label>Company *</Label>
@@ -473,7 +473,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                   onChange={(v) => setForm({ ...form, app_data_enrichment: v })}
                 />
                 <AppCheckbox
-                  checked={form.app_skip_tracing} icon={Search} label="Skip Tracing"
+                  checked={form.app_skip_tracing} icon={Search} label="Skiptracing"
                   onChange={(v) => setForm({ ...form, app_skip_tracing: v })}
                 />
               </div>
@@ -488,13 +488,13 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           <DialogFooter>
             <Button variant="secondary" size="sm" onClick={() => setInviteOpen(false)}>Cancel</Button>
             <Button size="sm" onClick={handleInvite} disabled={inviteLoad}>
-              {inviteLoad ? "Sending…" : "Send Invite"}
+              {inviteLoad ? "Sendingâ€¦" : "Send Invite"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Edit Modal ── */}
+      {/* â”€â”€ Edit Modal â”€â”€ */}
       <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
         <DialogContent title="Edit Member" description={editTarget?.email ?? ""}>
           <div className="space-y-4">
@@ -544,7 +544,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                   onChange={(v) => setEditForm({ ...editForm, app_data_enrichment: v })}
                 />
                 <AppCheckbox
-                  checked={editForm.app_skip_tracing} icon={Search} label="Skip Tracing"
+                  checked={editForm.app_skip_tracing} icon={Search} label="Skiptracing"
                   onChange={(v) => setEditForm({ ...editForm, app_skip_tracing: v })}
                 />
               </div>
@@ -559,13 +559,13 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           <DialogFooter>
             <Button variant="secondary" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
             <Button size="sm" onClick={handleEdit} disabled={editLoad}>
-              {editLoad ? "Saving…" : "Save Changes"}
+              {editLoad ? "Savingâ€¦" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* ── Remove Confirm ── */}
+      {/* â”€â”€ Remove Confirm â”€â”€ */}
       <AlertDialog open={!!removeTarget} onOpenChange={(o) => !o && setRemoveTarget(null)}>
         <AlertDialogContent
           title="Deactivate Member?"

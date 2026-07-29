@@ -28,9 +28,9 @@ const CONDITION_OPTIONS: { value: ConditionGrade; label: string; sqft: string; c
 ];
 
 const REPAIR_MODES: { value: RepairMode; label: string; desc: string }[] = [
-  { value: "known_cost",  label: "Cost Known",  desc: "I know the exact repair cost" },
-  { value: "scope_known", label: "Scope Known", desc: "Itemise what needs fixing"    },
-  { value: "standard",    label: "Standard",    desc: "Condition-based estimate"     },
+  { value: "known_cost",  label: "Cost Known",  desc: "I Know The Exact Repair Cost" },
+  { value: "scope_known", label: "Scope Known", desc: "Itemise What Needs Fixing"    },
+  { value: "standard",    label: "Standard",    desc: "Condition-Based Estimate"     },
 ];
 
 function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
@@ -267,8 +267,8 @@ export function RerunDealModal({
   function addCustomItem() {
     const label = newItemLabel.trim();
     const cost  = parseInt(newItemCost.replace(/[^0-9]/g, ""), 10) || 0;
-    if (!label)    { setAddItemErr("Item name is required."); return; }
-    if (cost <= 0) { setAddItemErr("Cost must be greater than $0."); return; }
+    if (!label)    { setAddItemErr("Item Name Is Required."); return; }
+    if (cost <= 0) { setAddItemErr("Cost Must Be Greater Than $0."); return; }
     setCustomItems((prev) => [...prev, { label, cost }]);
     setNewItemLabel(""); setNewItemCost(""); setAddItemErr("");
   }
@@ -410,14 +410,14 @@ export function RerunDealModal({
 
       const data = await res.json();
       if (!res.ok) {
-        setState({ phase: "error", message: data.error ?? "Something went wrong." });
+        setState({ phase: "error", message: data.error ?? "Something Went Wrong." });
         return;
       }
       setState({ phase: "success" });
       setOpen(false);
       router.refresh();
     } catch {
-      setState({ phase: "error", message: "Network error — please try again." });
+      setState({ phase: "error", message: "Network Error. Please Try Again." });
     }
   }
 
@@ -435,7 +435,7 @@ export function RerunDealModal({
       <Dialog.Trigger asChild>
         <button className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-uw-warn/10 border border-uw-warn/30 text-uw-warn hover:bg-uw-warn/20 hover:border-uw-warn/50 text-[12px] font-semibold transition-colors print:hidden">
           <RefreshCw size={13} />
-          Re-run
+          Re-Run
         </button>
       </Dialog.Trigger>
 
@@ -446,7 +446,7 @@ export function RerunDealModal({
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-6 pb-4 shrink-0">
             <div>
-              <Dialog.Title className="text-white font-semibold text-base">Re-run Underwriting</Dialog.Title>
+              <Dialog.Title className="text-white font-semibold text-base">Re-Run Underwriting</Dialog.Title>
               <p className="text-muted text-[12px] mt-0.5 truncate max-w-sm">{address}</p>
             </div>
             <Dialog.Close asChild>
@@ -458,8 +458,8 @@ export function RerunDealModal({
           {state.phase === "success" && (
             <div className="flex flex-col items-center text-center py-10 px-6 gap-3">
               <CheckCircle2 size={40} className="text-brand" strokeWidth={1.5} />
-              <p className="text-white font-medium">Re-run complete</p>
-              <p className="text-muted text-sm">Report updated with fresh analysis.</p>
+              <p className="text-white font-medium">Re-Run Complete</p>
+              <p className="text-muted text-sm">Report Updated With Fresh Analysis.</p>
             </div>
           )}
 
@@ -467,10 +467,10 @@ export function RerunDealModal({
           {state.phase === "error" && (
             <div className="flex flex-col items-center text-center py-10 px-6 gap-3">
               <AlertCircle size={40} className="text-uw-danger" strokeWidth={1.5} />
-              <p className="text-white font-medium">Something went wrong</p>
+              <p className="text-white font-medium">Something Went Wrong</p>
               <p className="text-muted text-sm max-w-sm">{state.message}</p>
               <button onClick={() => setState({ phase: "idle" })} className="btn-primary mt-2">
-                Try again
+                Try Again
               </button>
             </div>
           )}
@@ -504,7 +504,7 @@ export function RerunDealModal({
                         />
                       </div>
                     ))}
-                    <span className="text-[10px] text-muted/50">(leave blank to keep original)</span>
+                    <span className="text-[10px] text-muted/50">(Leave Blank To Keep Original)</span>
                   </div>
                 </div>
 
@@ -578,7 +578,7 @@ export function RerunDealModal({
                         disabled={disabled} className="w-full accent-brand disabled:opacity-50"
                       />
                       <div className="flex justify-between text-muted text-[10px]">
-                        <span>0.5× Low-cost</span><span>3.0× High-end</span>
+                        <span>0.5× Low-Cost</span><span>3.0× High-End</span>
                       </div>
                     </div>
 
@@ -593,7 +593,7 @@ export function RerunDealModal({
                         />
                         <span className="text-muted text-[13px] pr-3.5">%</span>
                       </div>
-                      <p className="text-muted text-[10px]">% of net sales price (ARV × 0.92)</p>
+                      <p className="text-muted text-[10px]">% Of Net Sales Price (ARV × 0.92)</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -606,7 +606,7 @@ export function RerunDealModal({
                           className="flex-1 bg-transparent px-2 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums"
                         />
                       </div>
-                      <p className="text-muted text-[10px]">Deducted from Max Offer (low &amp; high)</p>
+                      <p className="text-muted text-[10px]">Deducted From Max Offer (Low &amp; High)</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -622,7 +622,7 @@ export function RerunDealModal({
                         />
                         <span className="text-muted text-[13px] pr-3.5">$/sqft</span>
                       </div>
-                      <p className="text-muted text-[10px]">Overrides comp-based ARV estimate. Leave blank to use comps.</p>
+                      <p className="text-muted text-[10px]">Overrides Comp-Based ARV Estimate. Leave Blank To Use Comps.</p>
                     </div>
 
                     {(repairMode === "scope_known" || repairMode === "standard") && (
@@ -631,7 +631,7 @@ export function RerunDealModal({
                           Notes <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
                         </label>
                         <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                          placeholder="Updated observations, new info from site visit..."
+                          placeholder="Updated Observations, New Info From Site Visit..."
                           rows={3} disabled={disabled}
                           className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-brand transition-colors resize-none disabled:opacity-50"
                         />
@@ -647,7 +647,7 @@ export function RerunDealModal({
                       <>
                         <div className="space-y-2">
                           <SectionHeader icon={WrenchIcon} title="Known Repair Cost" />
-                          <p className="text-muted text-[11px]">Enter the exact repair cost you already have for this property.</p>
+                          <p className="text-muted text-[11px]">Enter The Exact Repair Cost You Already Have For This Property.</p>
                           <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
                             <span className="text-muted text-[13px] pl-3">$</span>
                             <input
@@ -660,7 +660,7 @@ export function RerunDealModal({
                             />
                           </div>
                           {knownRepairCost > 0 && (
-                            <p className="text-brand text-[12px] font-semibold tabular-nums">{fmtCost(knownRepairCost)} in repair costs</p>
+                            <p className="text-brand text-[12px] font-semibold tabular-nums">{fmtCost(knownRepairCost)} In Repair Costs</p>
                           )}
                         </div>
                         <div className="space-y-1.5">
@@ -668,7 +668,7 @@ export function RerunDealModal({
                             Notes <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
                           </label>
                           <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-                            placeholder="Updated observations, new info from site visit..."
+                            placeholder="Updated Observations, New Info From Site Visit..."
                             rows={3} disabled={disabled}
                             className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-brand transition-colors resize-none disabled:opacity-50"
                           />
@@ -709,7 +709,7 @@ export function RerunDealModal({
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
                             <SectionHeader icon={WrenchIcon} title="Repair Items" />
-                            {scopeTotal > 0 && <p className="text-brand text-[12px] font-semibold tabular-nums">+{fmtCost(scopeTotal)} total</p>}
+                            {scopeTotal > 0 && <p className="text-brand text-[12px] font-semibold tabular-nums">+{fmtCost(scopeTotal)} Total</p>}
                           </div>
                           <div className="space-y-1.5">
                             {extraItems.map((item, i) => (
@@ -759,7 +759,7 @@ export function RerunDealModal({
                               <div className="flex gap-2">
                                 <input type="text" value={newItemLabel}
                                   onChange={(e) => { setNewItemLabel(e.target.value); setAddItemErr(""); }}
-                                  placeholder="Item name" disabled={disabled}
+                                  placeholder="Item Name" disabled={disabled}
                                   className="flex-1 bg-surface border border-edge rounded px-2.5 py-1.5 text-white text-[12px] placeholder:text-muted focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
                                 />
                                 <div className="flex items-center bg-surface border border-edge rounded overflow-hidden focus-within:border-brand transition-colors">
@@ -834,7 +834,7 @@ export function RerunDealModal({
                           <div className="flex items-center justify-between">
                             <SectionHeader icon={WrenchIcon} title="Additional Repair Items" />
                             {(standardItemsTotal + customItemsTotal) > 0 && (
-                              <p className="text-brand text-[12px] font-semibold tabular-nums">+{fmtCost(standardItemsTotal + customItemsTotal)} selected</p>
+                              <p className="text-brand text-[12px] font-semibold tabular-nums">+{fmtCost(standardItemsTotal + customItemsTotal)} Selected</p>
                             )}
                           </div>
                           <div className="space-y-1.5">
@@ -845,7 +845,7 @@ export function RerunDealModal({
                                     <div className="border-t border-edge" />
                                     {condition === "poor" && (
                                       <p className="mt-2 text-[11px] text-uw-warn/80 leading-snug">
-                                        Poor condition already includes full gut costs above. Only check foundation if applicable.
+                                        Poor Condition Already Includes Full Gut Costs Above. Only Check Foundation If Applicable.
                                       </p>
                                     )}
                                   </div>
@@ -894,7 +894,7 @@ export function RerunDealModal({
                               <div className="flex gap-2">
                                 <input type="text" value={newItemLabel}
                                   onChange={(e) => { setNewItemLabel(e.target.value); setAddItemErr(""); }}
-                                  placeholder="Item name" disabled={disabled}
+                                  placeholder="Item Name" disabled={disabled}
                                   className="flex-1 bg-surface border border-edge rounded px-2.5 py-1.5 text-white text-[12px] placeholder:text-muted focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
                                 />
                                 <div className="flex items-center bg-surface border border-edge rounded overflow-hidden focus-within:border-brand transition-colors">
@@ -1088,7 +1088,7 @@ export function RerunDealModal({
                             value={comp.address}
                             onChange={(v) => updateComp(comp.id, "address", v)}
                             disabled={disabled}
-                            placeholder="Full address (required)"
+                            placeholder="Full Address (Required)"
                             className="w-full bg-transparent border-b border-edge text-white text-[13px] placeholder:text-muted/50 focus:outline-none focus:border-brand pb-1 transition-colors disabled:opacity-50"
                           />
                         </div>
@@ -1110,8 +1110,8 @@ export function RerunDealModal({
                         className="flex items-center gap-1 text-[11px] text-brand hover:text-brand/80 transition-colors disabled:opacity-50"
                       >
                         <ChevronDown size={12} className={`transition-transform ${comp.expanded ? "rotate-180" : ""}`} />
-                        {comp.expanded ? "Hide details" : "Fill in details"}
-                        {!comp.expanded && <span className="text-muted normal-case font-normal">(or we'll look up via address)</span>}
+                        {comp.expanded ? "Hide Details" : "Fill In Details"}
+                        {!comp.expanded && <span className="text-muted normal-case font-normal">(Or We'll Look Up Via Address)</span>}
                       </button>
 
                       {comp.expanded && (
@@ -1269,11 +1269,11 @@ export function RerunDealModal({
                   {propertyPhotos.length < MAX_PHOTOS && (
                     <label className={`flex items-center justify-center gap-2 w-full border border-dashed border-edge rounded-lg py-3 transition-colors ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-brand/50 hover:bg-brand/5"}`}>
                       <Upload size={14} className="text-muted" />
-                      <span className="text-muted text-[12px]">{propertyPhotos.length === 0 ? "Upload your own photos" : "Add more"}</span>
+                      <span className="text-muted text-[12px]">{propertyPhotos.length === 0 ? "Upload Your Own Photos" : "Add More"}</span>
                       <input type="file" accept="image/*" multiple disabled={disabled} onChange={handlePhotoUpload} className="hidden" />
                     </label>
                   )}
-                  {propertyPhotos.length > 0 && <p className="text-muted/60 text-[11px]">These will be used instead of listing photos from Zillow.</p>}
+                  {propertyPhotos.length > 0 && <p className="text-muted/60 text-[11px]">These Will Be Used Instead Of Listing Photos From Zillow.</p>}
                 </div>
                 )}
 
@@ -1284,7 +1284,7 @@ export function RerunDealModal({
                 <button type="submit" disabled={disabled}
                   className="btn-primary w-full"
                 >
-                  {disabled ? <><Loader2 size={15} className="animate-spin" />Re-running...</> : "Re-run Underwriting"}
+                  {disabled ? <><Loader2 size={15} className="animate-spin" />Re-Running...</> : "Re-Run Underwriting"}
                 </button>
               </div>
             </form>

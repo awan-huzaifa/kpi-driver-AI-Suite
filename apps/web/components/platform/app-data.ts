@@ -1,4 +1,4 @@
-import type { ElementType } from 'react'
+﻿import type { ElementType } from 'react'
 import {
   Mic, Building2, Bot, GraduationCap, BookOpen, NotebookPen, Database, Search,
   LayoutDashboard, Phone, Trophy, BarChart3, BarChart2, Users, ShieldCheck, Hash, FolderOpen,
@@ -47,7 +47,7 @@ export const APP_REGISTRY: AppEntry[] = [
     features: ['Post Call Rubric Driven Analysis', 'Leaderboard & Team Analytics', 'Receive Feedback Daily, Weekly, Monthly Via Email'],
     href: '/sales-coach/live-calls', icon: Mic, accessKey: 'salesCoach', accentRgb: '48,125,192',
     subNav: [
-      { href: '/sales-coach/live-calls',                label: 'Live Calls',  icon: Phone                               },
+      { href: '/sales-coach/live-calls',                label: 'Call Logs',   icon: Phone                               },
       { href: '/sales-coach/leaderboard',               label: 'Leaderboard', icon: Trophy                              },
       { href: '/sales-coach/analytics',                 label: 'Analytics',   icon: BarChart3                           },
       { href: '/sales-coach/super-admin/companies',     label: 'Companies',   icon: ShieldCheck, minRole: 'super_admin' },
@@ -79,7 +79,7 @@ export const APP_REGISTRY: AppEntry[] = [
     ],
   },
   {
-    id: 'skip-tracing', label: 'AI Skip Tracing', status: 'live',
+    id: 'skip-tracing', label: 'AI Skiptracing', status: 'live',
     tagline: 'Find Anyone, Instantly',
     desc: 'Instantly Skiptrace Anything on Your CRM. No Name No Problem, Address Only Skiptracing is Available, Stuck on an APN, We Got you!',
     features: ['Address Only & APN Skiptrace', 'DNC & Litigator Scrub', 'See All Your Results in One Place'],

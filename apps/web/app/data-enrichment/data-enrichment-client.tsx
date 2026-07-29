@@ -753,6 +753,16 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
           filenamePrefix="data-enrichment"
+          onServerExport={(cols, fromDate, toDate) => {
+            const params = new URLSearchParams();
+            if (fromDate) params.set("from",      fromDate);
+            if (toDate)   params.set("to",        toDate);
+            if (companyId !== "all") params.set("companyId", companyId);
+            params.set("cols", cols.join(","));
+            const a = document.createElement("a");
+            a.href = `/api/data-enrichment/export?${params.toString()}`;
+            a.click();
+          }}
         />
       )}
     </div>

@@ -26,9 +26,9 @@ const CONDITION_OPTIONS: { value: ConditionGrade; label: string; sqft: string; c
 ];
 
 const REPAIR_MODES: { value: RepairMode; label: string; desc: string }[] = [
-  { value: "known_cost",  label: "Cost Known",  desc: "I know the exact repair cost" },
-  { value: "scope_known", label: "Scope Known", desc: "Itemise what needs fixing"    },
-  { value: "standard",    label: "Standard",    desc: "Condition-based estimate"     },
+  { value: "known_cost",  label: "Cost Known",  desc: "I Know The Exact Repair Cost" },
+  { value: "scope_known", label: "Scope Known", desc: "Itemise What Needs Fixing"    },
+  { value: "standard",    label: "Standard",    desc: "Condition-Based Estimate"     },
 ];
 
 function SectionHeader({ icon: Icon, title }: { icon: React.ElementType; title: string }) {
@@ -100,10 +100,10 @@ function NotesField({ value, onChange, disabled }: { value: string; onChange: (v
   return (
     <div className="space-y-1.5">
       <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-        Notes <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
+        Notes <span className="normal-case text-muted/60 tracking-normal font-normal">(Optional)</span>
       </label>
       <textarea value={value} onChange={(e) => onChange(e.target.value)}
-        placeholder="Tenant occupied, seller motivated, permit issues..."
+        placeholder="Tenant Occupied, Seller Motivated, Permit Issues..."
         rows={4} disabled={disabled}
         className="w-full bg-surface border border-edge rounded-lg px-3.5 py-2.5 text-white text-sm placeholder:text-muted focus:outline-none focus:border-brand transition-colors resize-none disabled:opacity-50"
       />
@@ -205,8 +205,8 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
   function addCustomItem() {
     const label = newItemLabel.trim();
     const cost  = parseInt(newItemCost.replace(/[^0-9]/g, ""), 10) || 0;
-    if (!label)    { setAddItemErr("Item name is required."); return; }
-    if (cost <= 0) { setAddItemErr("Cost must be greater than $0."); return; }
+    if (!label)    { setAddItemErr("Item Name Is Required."); return; }
+    if (cost <= 0) { setAddItemErr("Cost Must Be Greater Than $0."); return; }
     setCustomItems((prev) => [...prev, { label, cost }]);
     setNewItemLabel(""); setNewItemCost(""); setAddItemErr("");
   }
@@ -236,7 +236,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
     if (repairMode === "scope_known") {
       const hasItems = extraItems.some((i) => i.checked) || customItems.length > 0;
       if (!hasItems) {
-        setState({ phase: "error", message: "Please select at least one repair item or add a custom item." });
+        setState({ phase: "error", message: "Please Select At Least One Repair Item Or Add A Custom Item." });
         return;
       }
     }
@@ -287,13 +287,13 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
       const res  = await fetch("/api/underwrite", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json();
 
-      if (!res.ok) { setState({ phase: "error", message: data.error ?? "Something went wrong." }); return; }
+      if (!res.ok) { setState({ phase: "error", message: data.error ?? "Something Went Wrong." }); return; }
 
       localStorage.removeItem(DRAFT_KEY);
       setState({ phase: "success", dealId: data.dealId });
       router.push(`/underwriting/deals/${data.dealId}`);
     } catch {
-      setState({ phase: "error", message: "Network error — please try again." });
+      setState({ phase: "error", message: "Network Error — Please Try Again." });
     }
   }
 
@@ -324,8 +324,8 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
           {state.phase === "success" && (
             <div className="flex flex-col items-center text-center py-10 px-6 gap-3">
               <CheckCircle2 size={40} className="text-brand" strokeWidth={1.5} />
-              <p className="text-white font-medium">Deal underwritten successfully</p>
-              <p className="text-muted text-sm">Redirecting to report…</p>
+              <p className="text-white font-medium">Deal Underwritten Successfully</p>
+              <p className="text-muted text-sm">Redirecting To Report…</p>
             </div>
           )}
 
@@ -333,9 +333,9 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
           {state.phase === "error" && (
             <div className="flex flex-col items-center text-center py-10 px-6 gap-3">
               <AlertCircle size={40} className="text-uw-danger" strokeWidth={1.5} />
-              <p className="text-white font-medium">Something went wrong</p>
+              <p className="text-white font-medium">Something Went Wrong</p>
               <p className="text-muted text-sm max-w-sm">{state.message}</p>
-              <button onClick={() => setState({ phase: "idle" })} className="btn-primary mt-2">Try again</button>
+              <button onClick={() => setState({ phase: "idle" })} className="btn-primary mt-2">Try Again</button>
             </div>
           )}
 
@@ -347,8 +347,8 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                 {/* Draft banner */}
                 {draftRestored && (
                   <div className="flex items-center justify-between bg-uw-warn/10 border border-uw-warn/20 rounded-lg px-3.5 py-2">
-                    <span className="text-uw-warn text-[12px]">Draft restored</span>
-                    <button type="button" onClick={reset} className="text-uw-warn/70 hover:text-uw-warn text-[11px] underline transition-colors">Start fresh</button>
+                    <span className="text-uw-warn text-[12px]">Draft Restored</span>
+                    <button type="button" onClick={reset} className="text-uw-warn/70 hover:text-uw-warn text-[11px] underline transition-colors">Start Fresh</button>
                   </div>
                 )}
 
@@ -381,7 +381,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                         />
                       </div>
                     ))}
-                    <span className="text-[10px] text-muted/50">(optional — leave blank to auto-detect)</span>
+                    <span className="text-[10px] text-muted/50">(Optional — Leave Blank To Auto-Detect)</span>
                   </div>
                 </div>
 
@@ -441,7 +441,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                         />
                         <span className="text-muted text-[13px] pr-3.5">%</span>
                       </div>
-                      <p className="text-muted text-[10px]">% of net sales price (ARV × 0.92)</p>
+                      <p className="text-muted text-[10px]">% Of Net Sales Price (ARV × 0.92)</p>
                     </div>
 
                     <div className="space-y-1.5">
@@ -457,7 +457,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                           className="flex-1 bg-transparent px-2 py-2.5 text-white text-sm focus:outline-none disabled:opacity-50 tabular-nums"
                         />
                       </div>
-                      <p className="text-muted text-[10px]">Deducted from Max Offer (low &amp; high)</p>
+                      <p className="text-muted text-[10px]">Deducted From Max Offer (Low &amp; High)</p>
                     </div>
 
                     {(repairMode === "scope_known" || repairMode === "standard") && (
@@ -473,7 +473,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                       <>
                         <div className="space-y-2">
                           <SectionHeader icon={WrenchIcon} title="Known Repair Cost" />
-                          <p className="text-muted text-[11px]">Enter the exact repair cost you already have for this property. Condition will be assessed by AI from photos.</p>
+                          <p className="text-muted text-[11px]">Enter The Exact Repair Cost You Already Have For This Property. Condition Will Be Assessed By AI From Photos.</p>
                           <div className="flex items-center bg-surface border border-edge rounded-lg overflow-hidden focus-within:border-brand transition-colors">
                             <span className="text-muted text-[13px] pl-3">$</span>
                             <input
@@ -582,7 +582,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                                 <input
                                   type="text" value={newItemLabel}
                                   onChange={(e) => { setNewItemLabel(e.target.value); setAddItemErr(""); }}
-                                  placeholder="Item name"
+                                  placeholder="Item Name"
                                   disabled={disabled}
                                   className="flex-1 bg-surface border border-edge rounded px-2.5 py-1.5 text-white text-[12px] placeholder:text-muted focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
                                 />
@@ -729,7 +729,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                                 <input
                                   type="text" value={newItemLabel}
                                   onChange={(e) => { setNewItemLabel(e.target.value); setAddItemErr(""); }}
-                                  placeholder="Item name"
+                                  placeholder="Item Name"
                                   disabled={disabled}
                                   className="flex-1 bg-surface border border-edge rounded px-2.5 py-1.5 text-white text-[12px] placeholder:text-muted focus:outline-none focus:border-brand transition-colors disabled:opacity-50"
                                 />
@@ -764,7 +764,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-[11px] font-semibold text-muted uppercase tracking-wider">
-                      Property Photos <span className="normal-case text-muted/60 tracking-normal font-normal">(optional)</span>
+                      Property Photos <span className="normal-case text-muted/60 tracking-normal font-normal">(Optional)</span>
                     </label>
                     {propertyPhotos.length > 0 && <span className="text-muted text-[11px]">{propertyPhotos.length}/{MAX_PHOTOS}</span>}
                   </div>
@@ -784,11 +784,11 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                   {propertyPhotos.length < MAX_PHOTOS && (
                     <label className={`flex items-center justify-center gap-2 w-full border border-dashed border-edge rounded-lg py-2.5 transition-colors ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:border-brand/50 hover:bg-brand/5"}`}>
                       <Upload size={14} className="text-muted" />
-                      <span className="text-muted text-[12px]">{propertyPhotos.length === 0 ? "Upload property photos" : "Add more"}</span>
+                      <span className="text-muted text-[12px]">{propertyPhotos.length === 0 ? "Upload Property Photos" : "Add More"}</span>
                       <input type="file" accept="image/*" multiple disabled={disabled} onChange={handlePhotoUpload} className="hidden" />
                     </label>
                   )}
-                  {propertyPhotos.length > 0 && <p className="text-muted/60 text-[11px]">These replace listing photos from Zillow.</p>}
+                  {propertyPhotos.length > 0 && <p className="text-muted/60 text-[11px]">These Replace Listing Photos From Zillow.</p>}
                 </div>
               </div>
 
@@ -796,7 +796,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
               <div className="px-6 py-4 border-t border-edge shrink-0">
                 <button type="submit" disabled={!address.trim() || disabled} className="btn-primary w-full">
                   {disabled
-                    ? <><Loader2 size={15} className="animate-spin" />Underwriting deal...</>
+                    ? <><Loader2 size={15} className="animate-spin" />Underwriting Deal...</>
                     : "Run Underwriting"
                   }
                 </button>

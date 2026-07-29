@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { BarChart2, Wrench, MapPin, Activity, SlidersHorizontal, X } from "lucide-react";
+import { BarChart2, Wrench, MapPin, Activity, SlidersHorizontal, X, Download } from "lucide-react";
 import { AnalyticsMetricCard } from "@/components/underwriting/analytics-metric-card";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
@@ -222,6 +222,12 @@ export default function AnalyticsClient({
   return (
     <div className="space-y-8 max-w-6xl mx-auto w-full">
 
+      {/* Print-only header */}
+      <div data-print-only style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#0D1C2A" }}>Deal Underwriting — Analytics</div>
+        <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Exported {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
+      </div>
+
       {/* Page header */}
       <div className="flex items-start justify-between gap-6">
         <div>
@@ -244,8 +250,8 @@ export default function AnalyticsClient({
           </p>
         </div>
 
-        {/* Date range picker */}
-        <div className="shrink-0">
+        {/* Date range picker + Export PDF */}
+        <div className="shrink-0 flex items-center gap-3">
           <DateRangePicker
             period={period}
             customFrom={customFrom}
@@ -255,12 +261,34 @@ export default function AnalyticsClient({
             onCustomTo={setCustomTo}
             activeColor="#FCAF17"
           />
+          <button
+            data-no-print
+            onClick={() => {
+              const p = new URLSearchParams();
+              p.set("period", period);
+              if (customFrom) p.set("from",      customFrom);
+              if (customTo)   p.set("to",        customTo);
+              if (companyId !== "all") p.set("companyId", companyId);
+              if (userId    !== "all") p.set("userId",    userId);
+              if (city      !== "all") p.set("city",      city);
+              window.open(`/uw-analytics?${p.toString()}`, "_blank");
+            }}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 14px", borderRadius: 9,
+              background: "rgba(252,175,23,0.08)", border: "1px solid rgba(252,175,23,0.2)",
+              color: "#FCAF17", fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}
+          >
+            <Download size={13} />
+            Export PDF
+          </button>
         </div>
       </div>
 
       {/* Filter row */}
       {showFilters && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div data-no-print className="flex flex-wrap items-center gap-2">
           <div
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg mr-1"
             style={{ background: "rgba(252,175,23,0.08)", border: "1px solid rgba(252,175,23,0.15)" }}

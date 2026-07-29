@@ -8,7 +8,7 @@ import { C } from "@/components/platform/brand";
 
 const PATH_TITLES: Record<string, string> = {
   "/sales-coach":                      "Dashboard",
-  "/sales-coach/live-calls":           "Live Calls",
+  "/sales-coach/live-calls":           "Call Logs",
   "/sales-coach/leaderboard":          "Leaderboard",
   "/sales-coach/analytics":            "Analytics",
   "/sales-coach/settings":             "Settings",

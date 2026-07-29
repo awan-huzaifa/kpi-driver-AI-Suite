@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -13,7 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { C } from './brand'
 import { APP_REGISTRY, type Access, type AppEntry, type SubNavItem } from './app-data'
 
-/* ── Types ──────────────────────────────────────────────────────── */
+/* â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export interface PlatformSidebarProps {
   user:        { email: string; fullName: string | null }
@@ -21,7 +21,7 @@ export interface PlatformSidebarProps {
   accessRole?: 'admin' | 'super_admin' | 'user'
 }
 
-/* ── Bottom / workspace nav ─────────────────────────────────────── */
+/* â”€â”€ Bottom / workspace nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const BOTTOM_NAV = [
   { id: 'users',   label: 'Users',             href: '/admin/users', icon: Users    },
@@ -35,7 +35,7 @@ const SETTINGS_SUB = [
 
 const UNLOCK_FORM_URL = 'https://link.kpidriver.com/widget/form/vUL1Mt66ystym8CfIXHM'
 
-/* ── Sub-nav link ────────────────────────────────────────────────── */
+/* â”€â”€ Sub-nav link â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function SubNavLink({ item, pathname }: { item: SubNavItem; pathname: string }) {
   const active = item.exact ? pathname === item.href : pathname.startsWith(item.href)
@@ -68,7 +68,7 @@ function SubNavLink({ item, pathname }: { item: SubNavItem; pathname: string }) 
   )
 }
 
-/* ── App nav item (with accordion) ──────────────────────────────── */
+/* â”€â”€ App nav item (with accordion) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function AppNavItem({ app, unlocked, pathname, accessRole }: {
   app: AppEntry; unlocked: boolean; pathname: string; accessRole?: string
@@ -153,7 +153,7 @@ function AppNavItem({ app, unlocked, pathname, accessRole }: {
   )
 }
 
-/* ── Sidebar nav item (workspace / home) ────────────────────────── */
+/* â”€â”€ Sidebar nav item (workspace / home) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function NavLink({ href, icon: Icon, label, exact }: { href: string; icon: React.ElementType; label: string; exact?: boolean }) {
   const pathname = usePathname()
@@ -194,7 +194,7 @@ function NavLink({ href, icon: Icon, label, exact }: { href: string; icon: React
   )
 }
 
-/* ── Main export ─────────────────────────────────────────────────── */
+/* â”€â”€ Main export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export default function PlatformSidebar({ user, access, accessRole }: PlatformSidebarProps) {
   const isAdmin      = accessRole === 'admin' || accessRole === 'super_admin'
@@ -284,7 +284,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
           />
         ) : (
           <>
-            <Image src="/logo2.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: 'contain' }} priority />
+            <Image src="/logo3.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: 'contain' }} priority />
             <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5, textAlign: 'center' }}>
               <span style={{ color: C.green }}>Built By </span>
               <span style={{ color: C.dimText }}>RE Investors</span>

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMotionValue } from "framer-motion";
 import { usePathname } from "next/navigation";
@@ -14,7 +14,7 @@ export default function ContentShell({ children }: { children: React.ReactNode }
   const mouseX   = useMotionValue(0);
   const mouseY   = useMotionValue(0);
   const pathname = usePathname();
-  const pageTitle = PATH_TITLES[pathname] ?? "Skip Tracing";
+  const pageTitle = PATH_TITLES[pathname] ?? "Skiptracing";
 
   return (
     <main
@@ -36,7 +36,7 @@ export default function ContentShell({ children }: { children: React.ReactNode }
         position: "sticky", top: 0, zIndex: 30,
       }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: C.dimText, letterSpacing: "0.06em" }}>
-          KPI DRIVER / SKIP TRACING / {pageTitle.toUpperCase()}
+          KPI DRIVER / Skiptracing / {pageTitle.toUpperCase()}
         </span>
       </header>
 

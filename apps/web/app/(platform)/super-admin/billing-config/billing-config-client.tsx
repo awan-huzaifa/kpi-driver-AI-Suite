@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useTransition } from 'react'
 import { Loader2, Save, CheckCircle2, RotateCcw, Globe, Building2 } from 'lucide-react'
@@ -30,7 +30,7 @@ const APP_LABELS: Record<string, string> = {
   training_coach: 'AI Training Coach',
   note_taker:     'AI Note Taker',
   data_enrichment:'AI Data Enrichment',
-  skip_tracing:   'Skip Tracing',
+  skip_tracing:   'Skiptracing',
 }
 
 const APP_DESC: Record<string, string> = {
@@ -84,7 +84,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   function handleSave(app: string) {
     const val = parseFloat(values[app] ?? '')
     if (isNaN(val) || val < 1) {
-      setErrors(e => ({ ...e, [app]: 'Must Be ≥ 1 (1 = No Markup, 1.3 = 30% Markup)' }))
+      setErrors(e => ({ ...e, [app]: 'Must Be â‰¥ 1 (1 = No Markup, 1.3 = 30% Markup)' }))
       return
     }
     setErrors(e => ({ ...e, [app]: '' }))
@@ -119,7 +119,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
 
   const markupPct = (app: string) => {
     const n = parseFloat(values[app] ?? '1')
-    return isNaN(n) ? '—' : `+${Math.round((n - 1) * 100)}%`
+    return isNaN(n) ? 'â€”' : `+${Math.round((n - 1) * 100)}%`
   }
 
   return (
@@ -168,7 +168,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
           <Select value={selectedCompany} onValueChange={handleCompanyChange}>
             <SelectTrigger placeholder="Select Company" className="w-auto min-w-[200px] text-sm" />
             <SelectContent>
-              <SelectItem value="global">🌐 Global Defaults</SelectItem>
+              <SelectItem value="global">ðŸŒ Global Defaults</SelectItem>
               {companies.map(c => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
@@ -213,7 +213,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <p style={{ fontSize: 12, color: C.dimText, margin: '0 0 3px' }}>{APP_DESC[app]}</p>
                   {companyId && !isOverride && (
                     <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>
-                      Global Default: <strong style={{ color: '#78ABD6' }}>{globalFallback}×</strong>
+                      Global Default: <strong style={{ color: '#78ABD6' }}>{globalFallback}Ã—</strong>
                     </p>
                   )}
                   {lastUpdated && (
@@ -255,12 +255,12 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         {saved === app ? 'Saved' : 'Save'}
                       </button>
 
-                      {/* Reset to global — only shown when viewing a company that has an override */}
+                      {/* Reset to global â€” only shown when viewing a company that has an override */}
                       {companyId && isOverride && (
                         <button
                           onClick={() => handleReset(app)}
                           disabled={resetting === app || saving === app}
-                          title="Remove Override — Revert To Global Default"
+                          title="Remove Override â€” Revert To Global Default"
                           style={{
                             display: 'flex', alignItems: 'center', gap: 5,
                             padding: '9px 13px', borderRadius: 9,

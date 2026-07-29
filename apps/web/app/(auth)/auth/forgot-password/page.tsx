@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -48,7 +48,7 @@ export default function ForgotPasswordPage() {
         >
           {/* Logo */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-            <Image src="/logo2.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: 'contain' }} priority />
+            <Image src="/logo3.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: 'contain' }} priority />
           </div>
 
           {/* Card */}
@@ -62,7 +62,7 @@ export default function ForgotPasswordPage() {
             boxShadow:            'inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 48px rgba(0,0,0,0.3)',
           }}>
             {sent ? (
-              /* ── Success state ── */
+              /* â”€â”€ Success state â”€â”€ */
               <div style={{ textAlign: 'center' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
                   <div style={{
@@ -91,7 +91,7 @@ export default function ForgotPasswordPage() {
                 </Link>
               </div>
             ) : (
-              /* ── Form state ── */
+              /* â”€â”€ Form state â”€â”€ */
               <>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
                   <div style={{

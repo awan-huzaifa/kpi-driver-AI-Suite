@@ -34,8 +34,8 @@ export default async function NoAccessPage() {
           Access Not Granted
         </h1>
         <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 28 }}>
-          Your Google account isn&apos;t linked to a KPI Driver invite.<br />
-          Contact your admin to get access.
+          Your Google Account Isn&apos;t Linked To A KPI DRIVER Invite.<br />
+          Contact Your Admin To Get Access.
         </p>
 
         <Link

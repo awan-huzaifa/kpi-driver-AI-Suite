@@ -5,6 +5,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend,
 } from "recharts";
+import { Download } from "lucide-react";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
@@ -338,6 +339,12 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
   return (
     <div className="px-8 py-8 space-y-6">
 
+      {/* Print-only header */}
+      <div data-print-only style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 18, fontWeight: 700, color: "#0D1C2A" }}>Sales Coach — Analytics</div>
+        <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>Exported {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
+      </div>
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -387,11 +394,41 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
             onCustomTo={setCustomTo}
             activeColor="#307DC0"
           />
+
+          {/* Export PDF */}
+          <button
+            data-no-print
+            onClick={() => {
+              const p = new URLSearchParams();
+              p.set("period", period);
+              if (customFrom)           p.set("from",       customFrom);
+              if (customTo)             p.set("to",         customTo);
+              if (direction  !== "all") p.set("direction",  direction);
+              if (duration   !== "all") p.set("duration",   duration);
+              if (role       !== "all") p.set("role",       role);
+              if (scorable   !== "all") p.set("scorable",   scorable);
+              if (leadSource !== "all") p.set("leadSource", leadSource);
+              if (agentIds.length > 0)  p.set("agentIds",   agentIds.join(","));
+              if (companyId  !== "all") p.set("companyId",  companyId);
+              if (view       !== "company") p.set("view",   view);
+              window.open(`/sc-analytics?${p.toString()}`, "_blank");
+            }}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 14px", borderRadius: 9,
+              background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.2)",
+              color: "#307DC0", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              transition: "background 0.15s",
+            }}
+          >
+            <Download size={13} />
+            Export PDF
+          </button>
         </div>
       </div>
 
       {/* Filter row */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div data-no-print className="flex flex-wrap items-center gap-2">
         <Select value={direction} onValueChange={(v) => setDirection(v as typeof direction)}>
           <SelectTrigger placeholder="Direction" className="w-auto min-w-[90px] text-xs py-1.5" />
           <SelectContent>

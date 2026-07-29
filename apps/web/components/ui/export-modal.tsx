@@ -10,12 +10,13 @@ export type ColDef<T = Record<string, unknown>> = {
 };
 
 interface Props<T extends Record<string, unknown>> {
-  onClose:        () => void;
-  data:           T[];
-  dateField?:     string;
-  defaultCols:    ColDef<T>[];
-  extraCols?:     ColDef<T>[];
-  filenamePrefix: string;
+  onClose:          () => void;
+  data:             T[];
+  dateField?:       string;
+  defaultCols:      ColDef<T>[];
+  extraCols?:       ColDef<T>[];
+  filenamePrefix:   string;
+  onServerExport?:  (cols: string[], fromDate: string, toDate: string) => void;
 }
 
 function escCSV(v: string | number | null | undefined): string {
@@ -64,22 +65,19 @@ function ExportDateField({
 
   return (
     <div style={{ position: "relative" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ display: "flex", flexDirection: "column", gap: 3, cursor: "pointer" }}
+      >
         <span style={{ fontSize: 9, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.07em" }}>
           {label}
         </span>
-        <button
-          type="button"
-          onClick={() => setOpen(o => !o)}
-          style={{
-            background: "none", border: "none", cursor: "pointer", padding: 0,
-            fontSize: 12, fontWeight: 500,
-            color: value ? "#e2e8f0" : "#475569",
-            textAlign: "left", whiteSpace: "nowrap",
-          }}
-        >
+        <span style={{
+          fontSize: 12, fontWeight: 500, whiteSpace: "nowrap",
+          color: value ? "#e2e8f0" : "#475569",
+        }}>
           {fmtDisplay(value)}
-        </button>
+        </span>
       </div>
 
       {open && (
@@ -99,6 +97,7 @@ function ExportDateField({
 export function ExportModal<T extends Record<string, unknown>>({
   onClose, data, dateField = "created_at",
   defaultCols, extraCols = [], filenamePrefix,
+  onServerExport,
 }: Props<T>) {
   const [fromDate, setFromDate] = useState("");
   const [toDate,   setToDate]   = useState("");
@@ -117,6 +116,12 @@ export function ExportModal<T extends Record<string, unknown>>({
   }
 
   function handleExport() {
+    if (onServerExport) {
+      onServerExport(selectedCols.map(c => c.label), fromDate, toDate);
+      onClose();
+      return;
+    }
+
     let rows = data;
     if (fromDate) {
       const from = new Date(fromDate);
@@ -157,7 +162,7 @@ export function ExportModal<T extends Record<string, unknown>>({
       style={{
         position: "fixed", inset: 0, zIndex: 200,
         background: "rgba(0,0,0,0.72)", backdropFilter: "blur(6px)",
-        display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+        display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "80px 24px 24px",
       }}
       onClick={onClose}
     >
@@ -189,7 +194,7 @@ export function ExportModal<T extends Record<string, unknown>>({
             </div>
             <div>
               <p style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", margin: 0 }}>Export as CSV</p>
-              <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>{exportCount} rows · {selectedCols.length} columns</p>
+              <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>{onServerExport ? "All matching rows" : `${exportCount} rows`} · {selectedCols.length} columns</p>
             </div>
           </div>
           <button

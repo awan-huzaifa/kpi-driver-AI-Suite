@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -79,7 +79,7 @@ export default function SetPasswordPage() {
         >
           {/* Logo */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-            <Image src="/logo2.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: "contain" }} priority />
+            <Image src="/logo3.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: "contain" }} priority />
           </div>
 
           {/* Card */}

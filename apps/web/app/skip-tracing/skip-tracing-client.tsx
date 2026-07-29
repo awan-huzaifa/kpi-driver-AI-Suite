@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,7 +8,7 @@ import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { ExportModal, type ColDef } from "@/components/ui/export-modal";
 
-/* ── Types ──────────────────────────────────────────────────────── */
+/* â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 interface SkipLog {
   id:               string;
@@ -35,6 +35,7 @@ interface SkipLog {
   zip:              string | null;
   find_owner:       boolean | null;
   lead_source:      string | null;
+  crm_link:         string | null;
   payload:          Record<string, unknown>;
   created_at:       string;
 }
@@ -61,7 +62,7 @@ interface Props {
   accessRole: string;
 }
 
-/* ── Helpers ────────────────────────────────────────────────────── */
+/* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 const FLOW_LABELS: Record<string, string> = {
   apn:               "APN",
@@ -100,10 +101,10 @@ function fmt(iso: string) {
 }
 
 function contextLabel(log: SkipLog) {
-  if (log.flow_type === "apn")      return log.parcel_id ?? log.county ?? "—";
-  if (log.flow_type === "dnc")      return log.phone ? fmtPhone(log.phone) : "—";
+  if (log.flow_type === "apn")      return log.parcel_id ?? log.county ?? "â€”";
+  if (log.flow_type === "dnc")      return log.phone ? fmtPhone(log.phone) : "â€”";
   if (log.address)                  return [log.address, log.city, log.state].filter(Boolean).join(", ");
-  return "—";
+  return "â€”";
 }
 
 function fmtPhone(p: string) {
@@ -111,7 +112,7 @@ function fmtPhone(p: string) {
   return p;
 }
 
-/* ── Stat card ──────────────────────────────────────────────────── */
+/* â”€â”€ Stat card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function StatChip({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
@@ -126,7 +127,7 @@ function StatChip({ label, value, color }: { label: string; value: string | numb
   );
 }
 
-/* ── Modal ──────────────────────────────────────────────────────── */
+/* â”€â”€ Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () => void; accessRole: string }) {
   const persons     = (log.payload.persons as Person[] | undefined) ?? [];
@@ -174,12 +175,12 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             </span>
             {log.flow_type === "dnc" ? (
               log.is_clean
-                ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>✓ Clean — Safe to Contact</span>
-                : <span style={{ fontSize: 13, fontWeight: 700, color: C.red }}>⚠ Flagged — Do Not Call</span>
+                ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>âœ“ Clean â€” Safe to Contact</span>
+                : <span style={{ fontSize: 13, fontWeight: 700, color: C.red }}>âš  Flagged â€” Do Not Call</span>
             ) : (
               log.hit
-                ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>✓ Hit — {log.persons_count} Person{log.persons_count !== 1 ? "s" : ""} Found</span>
-                : <span style={{ fontSize: 13, fontWeight: 700, color: C.dimText }}>✗ Miss — No Results</span>
+                ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>âœ“ Hit â€” {log.persons_count} Person{log.persons_count !== 1 ? "s" : ""} Found</span>
+                : <span style={{ fontSize: 13, fontWeight: 700, color: C.dimText }}>âœ— Miss â€” No Results</span>
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -213,6 +214,21 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             <MetaItem label="Date" value={fmt(log.created_at)} />
             {log.lead_source && (
               <MetaItem label="Lead Source" value={log.lead_source} />
+            )}
+            {log.crm_link && (
+              <div style={{
+                background: "rgba(255,255,255,0.025)", borderRadius: 10,
+                padding: "10px 14px", border: "1px solid rgba(255,255,255,0.05)",
+              }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: C.dimText, margin: "0 0 4px", letterSpacing: "0.06em", textTransform: "uppercase" }}>CRM Link</p>
+                <a href={log.crm_link} target="_blank" rel="noopener noreferrer"
+                  style={{ fontSize: 13, fontWeight: 600, color: C.blue, wordBreak: "break-all", textDecoration: "none" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+                >
+                  {log.crm_link}
+                </a>
+              </div>
             )}
             {log.flow_type === "apn" && (
               <>
@@ -350,8 +366,8 @@ function PersonCard({ person }: { person: Person }) {
           <p style={{ fontSize: 14, fontWeight: 700, color: C.white, margin: 0 }}>{person.full_name}</p>
           <p style={{ fontSize: 11, color: C.dimText, margin: "2px 0 0" }}>
             {person.age && `Age ${person.age}`}
-            {person.dob && ` · DOB ${person.dob}`}
-            {person.deceased && " · Deceased"}
+            {person.dob && ` Â· DOB ${person.dob}`}
+            {person.deceased && " Â· Deceased"}
           </p>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -399,7 +415,7 @@ function PersonCard({ person }: { person: Person }) {
                     {ph.dnc && (
                       <span style={{ fontSize: 10, fontWeight: 700, color: C.red, background: "rgba(237,31,36,0.1)", padding: "1px 7px", borderRadius: 99, border: "1px solid rgba(237,31,36,0.2)" }}>DNC</span>
                     )}
-                    <span style={{ fontSize: 11, color: C.dimText, marginLeft: "auto" }}>Rank {ph.rank} · {ph.carrier}</span>
+                    <span style={{ fontSize: 11, color: C.dimText, marginLeft: "auto" }}>Rank {ph.rank} Â· {ph.carrier}</span>
                   </div>
                 ))}
               </div>
@@ -429,7 +445,7 @@ function PersonCard({ person }: { person: Person }) {
   );
 }
 
-/* ── Main component ─────────────────────────────────────────────── */
+/* â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 export default function SkipTracingClient({ logs, companies, accessRole }: Props) {
   const [search,    setSearch]    = useState("");
@@ -519,7 +535,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         style={{ marginBottom: 28 }}
       >
         <h1 style={{ fontSize: 28, fontWeight: 900, color: C.white, margin: "0 0 4px", letterSpacing: "-0.02em" }}>
-          Skip Tracing
+          Skiptracing
         </h1>
         <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>
           Skiptracing, Address Only Skiptracing, APN Lookups & DNC Checks. Click Any Row To View The Full Details.
@@ -565,7 +581,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
           />
         </div>
 
-        {/* Company — super_admin only */}
+        {/* Company â€” super_admin only */}
         {accessRole === "super_admin" && companies.length > 0 && (
           <Select value={companyId} onValueChange={setCompanyId}>
             <SelectTrigger placeholder="All Companies" className="w-auto min-w-[140px] text-xs py-1.5" />
@@ -636,12 +652,11 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
-              {["Date", "Contact", "Type", "Result", "Context", "Lead Source", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Contact", "Type", "Result", "Context", "Lead Source", "CRM", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", textAlign: "center", fontSize: 10, fontWeight: 800, color: "#e2e8f0", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {h}
                 </th>
               ))}
-              <th />
             </tr>
           </thead>
           <tbody>
@@ -682,7 +697,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                         ) : log.contact_id ? (
                           <span style={{ fontSize: 12, color: C.dimText, fontFamily: "monospace" }}>{log.contact_id}</span>
                         ) : (
-                          <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                          <span style={{ fontSize: 12, color: "#334155" }}>â€”</span>
                         )}
                       </td>
                       <td style={{ padding: "11px 14px", textAlign: "center" }}>
@@ -712,6 +727,26 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                             {log.lead_source}
                           </span>
                         ) : (
+                          <span style={{ fontSize: 12, color: "#334155" }}>â€”</span>
+                        )}
+                      </td>
+                      <td style={{ padding: "11px 14px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                        {log.crm_link ? (
+                          <a
+                            href={log.crm_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "inline-flex", alignItems: "center", gap: 4,
+                              fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6,
+                              color: C.blue, background: "rgba(48,125,192,0.1)",
+                              border: "1px solid rgba(48,125,192,0.25)", textDecoration: "none",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            Open ↗
+                          </a>
+                        ) : (
                           <span style={{ fontSize: 12, color: "#334155" }}>—</span>
                         )}
                       </td>
@@ -720,9 +755,6 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                           ${log.cost_usd.toFixed(4)}
                         </td>
                       )}
-                      <td style={{ padding: "11px 14px", textAlign: "center" }}>
-                        <span style={{ fontSize: 11, color: C.blue, fontWeight: 600 }}>View →</span>
-                      </td>
                     </motion.tr>
                   );
                 })
@@ -733,7 +765,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         {/* Pagination */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 20px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
-            {filtered.length === 0 ? "0 results" : `${(safePage - 1) * PAGE_SIZE + 1}–${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
+            {filtered.length === 0 ? "0 results" : `${(safePage - 1) * PAGE_SIZE + 1}â€“${Math.min(safePage * PAGE_SIZE, filtered.length)} of ${filtered.length}`}
           </span>
           {filtered.length > PAGE_SIZE && (
             <div style={{ display: "flex", gap: 4 }}>
@@ -755,13 +787,13 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                 fontSize: 12, fontWeight: 600, background: "transparent",
                 cursor: safePage === 1 ? "default" : "pointer",
                 color: safePage === 1 ? "#334155" : "#94a3b8", opacity: safePage === 1 ? 0.4 : 1,
-              }}>← Prev</button>
+              }}>â† Prev</button>
               <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={safePage === totalPages} style={{
                 padding: "5px 12px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)",
                 fontSize: 12, fontWeight: 600, background: "transparent",
                 cursor: safePage === totalPages ? "default" : "pointer",
                 color: safePage === totalPages ? "#334155" : "#94a3b8", opacity: safePage === totalPages ? 0.4 : 1,
-              }}>Next →</button>
+              }}>Next â†’</button>
             </div>
           )}
         </div>
@@ -779,13 +811,25 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
           filenamePrefix="skip-tracing"
+          onServerExport={(cols, fromDate, toDate) => {
+            const params = new URLSearchParams();
+            if (fromDate) params.set("from",      fromDate);
+            if (toDate)   params.set("to",        toDate);
+            if (flowType  !== "all") params.set("flowType",  flowType);
+            if (result    !== "all") params.set("result",    result);
+            if (companyId !== "all") params.set("companyId", companyId);
+            params.set("cols", cols.join(","));
+            const a = document.createElement("a");
+            a.href = `/api/skip-tracing/export?${params.toString()}`;
+            a.click();
+          }}
         />
       )}
     </div>
   );
 }
 
-/* ── Filter pills ───────────────────────────────────────────────── */
+/* â”€â”€ Filter pills â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
 function FilterPills({ options, value, onChange }: {
   options: { value: string; label: string }[];

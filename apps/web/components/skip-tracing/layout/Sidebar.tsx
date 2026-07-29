@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -44,7 +44,7 @@ export default function Sidebar({ user, accessRole }: Props) {
         padding: "16px 18px", borderBottom: `1px solid ${C.border}`,
         display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
       }}>
-        <Image src="/logo2.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: "contain", flexShrink: 0 }} priority />
+        <Image src="/logo3.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: "contain", flexShrink: 0 }} priority />
         <p style={{ fontSize: 12, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
           <span style={{ color: C.green }}>Built By </span>
           <span style={{ color: C.dimText }}>RE Investors</span>
@@ -66,7 +66,7 @@ export default function Sidebar({ user, accessRole }: Props) {
           fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
           color: C.blue, textTransform: "uppercase",
           padding: "0 8px", marginBottom: 4,
-        }}>Skip Tracing</p>
+        }}>Skiptracing</p>
 
         {NAV_MAIN.map((n) => (
           <SidebarNavItem key={n.href} href={n.href} icon={n.icon} label={n.label} pillId="st-pill" exact={n.exact} />

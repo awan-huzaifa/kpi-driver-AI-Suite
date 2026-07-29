@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   NotebookPen, PhoneIncoming, PhoneOutgoing, Phone,
-  X, ChevronDown, Search, Coins,
+  X, ChevronDown, Search, Coins, ExternalLink,
 } from "lucide-react";
 import { C } from "@/components/platform/brand";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
@@ -23,6 +23,7 @@ interface NoteCall {
   agent_phone:     string | null;
   agent_name:      string | null;
   lead_source:     string | null;
+  crm_link:        string | null;
   ai_summary:      string | null;
   normal_summary:  string | null;
   input_tokens:    number;
@@ -141,14 +142,31 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              style={{ background: "none", border: "none", cursor: "pointer", color: C.dimText, padding: 4 }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = C.white)}
-              onMouseLeave={(e) => (e.currentTarget.style.color = C.dimText)}
-            >
-              <X size={18} />
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              {call.crm_link && (
+                <a
+                  href={call.crm_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex", alignItems: "center", gap: 5,
+                    fontSize: 12, fontWeight: 600, color: "#307DC0", textDecoration: "none",
+                    background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
+                    padding: "6px 12px", borderRadius: 9,
+                  }}
+                >
+                  <ExternalLink size={12} /> CRM LINK
+                </a>
+              )}
+              <button
+                onClick={onClose}
+                style={{ background: "none", border: "none", cursor: "pointer", color: C.dimText, padding: 4 }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = C.white)}
+                onMouseLeave={(e) => (e.currentTarget.style.color = C.dimText)}
+              >
+                <X size={18} />
+              </button>
+            </div>
           </div>
 
           {/* Meta row */}
@@ -255,7 +273,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
     { label: "Date",          getValue: r => new Date(r.created_at).toLocaleDateString() },
     { label: "Time",          getValue: r => new Date(r.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) },
     { label: "Agent",         getValue: r => r.agent_name },
-    { label: "Direction",     getValue: r => r.call_direction },
+    { label: "Direction",     getValue: r => r.call_direction ? r.call_direction.charAt(0).toUpperCase() + r.call_direction.slice(1) : null },
     { label: "Contact Phone", getValue: r => r.contact_phone },
     { label: "Agent Phone",   getValue: r => r.agent_phone },
     { label: "Lead Source",   getValue: r => r.lead_source },
@@ -587,6 +605,19 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
           filenamePrefix="note-taker-calls"
+          onServerExport={(cols, fromDate, toDate) => {
+            const params = new URLSearchParams();
+            if (fromDate) params.set("from", fromDate);
+            if (toDate)   params.set("to",   toDate);
+            if (direction        !== "all") params.set("direction",   direction);
+            if (agentFilter      !== "all") params.set("agentFilter", agentFilter);
+            if (leadSourceFilter !== "all") params.set("leadSource",  leadSourceFilter);
+            if (companyId        !== "all") params.set("companyId",   companyId);
+            params.set("cols", cols.join(","));
+            const a = document.createElement("a");
+            a.href = `/api/note-taker/export?${params.toString()}`;
+            a.click();
+          }}
         />
       )}
     </div>

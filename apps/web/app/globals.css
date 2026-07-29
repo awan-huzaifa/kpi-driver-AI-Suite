@@ -41,7 +41,7 @@
   --color-text-2:       #94a3b8;
   --color-text-3:       #475569;
 
-  --font-sans: system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 *, *::before, *::after {
@@ -113,6 +113,29 @@ button, [role="button"] {
 .uw-dialog-overlay[data-state="closed"] { animation: uw-overlay-out 0.15s ease-in; }
 .uw-dialog-content { animation: uw-content-in 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
 .uw-dialog-content[data-state="closed"] { animation: uw-content-out 0.15s ease-in; }
+
+/* ── Print / PDF export ─────────────────────────────── */
+@media print {
+  @page { margin: 1.2cm; size: landscape; }
+
+  /* Hide sidebar, cursors, scrollbars */
+  aside, [data-no-print] { display: none !important; }
+
+  /* Reset dark background to white */
+  html, body { background: #fff !important; color: #000 !important; }
+
+  /* Remove content margin that offsets the sidebar */
+  main { margin-left: 0 !important; overflow: visible !important; }
+
+  /* Flatten dark cards to white with border */
+  * { color-scheme: light !important; }
+
+  /* Show print-only header */
+  [data-print-only] { display: block !important; }
+}
+
+/* Hide print-only elements on screen */
+[data-print-only] { display: none; }
 
 /* ── Scrollbar ──────────────────────────────────────── */
 ::-webkit-scrollbar            { width: 6px; height: 6px; }
