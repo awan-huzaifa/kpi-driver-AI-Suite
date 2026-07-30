@@ -1,4 +1,4 @@
-﻿import type { ElementType } from 'react'
+import type { ElementType } from 'react'
 import {
   Mic, Building2, Bot, GraduationCap, BookOpen, NotebookPen, Database, Search,
   LayoutDashboard, Phone, Trophy, BarChart3, BarChart2, Users, ShieldCheck, Hash, FolderOpen,
@@ -60,10 +60,11 @@ export const APP_REGISTRY: AppEntry[] = [
     features: ['AI Role-Play Scoring', 'Per-Agent Practice History', 'Same Rubric As Live Calls'],
     href: '/training-coach', icon: GraduationCap, accessKey: 'trainingCoach', accentRgb: '252,175,23',
     subNav: [
-      { href: '/training-coach',                        label: 'Training Calls', icon: Phone,   exact: true           },
-      { href: '/training-coach/my-numbers',             label: 'My Numbers',  icon: Hash,  maxRole: 'admin'      },
-      { href: '/training-coach/agents',                 label: 'AI Agents',   icon: Bot                           },
-      { href: '/training-coach/admin/user-phones',      label: 'User Phones', icon: Users,   minRole: 'super_admin' },
+      { href: '/training-coach',                        label: 'Training Calls', icon: Phone,     exact: true           },
+      { href: '/training-coach/my-numbers',             label: 'My Numbers',     icon: Hash,      maxRole: 'admin'      },
+      { href: '/training-coach/agents',                 label: 'AI Agents',      icon: Bot                              },
+      { href: '/training-coach/admin/user-phones',      label: 'User Phones',    icon: Users,     minRole: 'super_admin' },
+      { href: '/training-coach/analytics',              label: 'Analytics',      icon: BarChart2                        },
     ],
   },
   {
@@ -95,7 +96,7 @@ export const APP_REGISTRY: AppEntry[] = [
     features: ['Focus on Closing Deals, Leave the Notes on Us', 'Transcription & AI Summaries', 'Too Lazy To Fill Fields? No Problem!'],
     href: '/note-taker', icon: NotebookPen, accessKey: 'noteTaker', accentRgb: '48,125,192',
     subNav: [
-      { href: '/note-taker', label: 'Call Logs', icon: LayoutDashboard, exact: true },
+      { href: '/note-taker', label: 'Notes Logs', icon: LayoutDashboard, exact: true },
     ],
   },
   {
@@ -105,7 +106,7 @@ export const APP_REGISTRY: AppEntry[] = [
     features: ['Dynamic Field Enrichment', 'Per-Record Detail View', 'Full Enrichment Audit Trail'],
     href: '/data-enrichment', icon: Database, accessKey: 'dataEnrichment', accentRgb: '48,125,192',
     subNav: [
-      { href: '/data-enrichment', label: 'Enrichment', icon: Database, exact: true },
+      { href: '/data-enrichment', label: 'Enrichment Logs', icon: Database, exact: true },
     ],
   },
   {

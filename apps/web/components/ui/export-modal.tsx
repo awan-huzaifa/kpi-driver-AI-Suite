@@ -17,6 +17,7 @@ interface Props<T extends Record<string, unknown>> {
   extraCols?:       ColDef<T>[];
   filenamePrefix:   string;
   onServerExport?:  (cols: string[], fromDate: string, toDate: string) => void;
+  filterSlot?:      React.ReactNode;
 }
 
 function escCSV(v: string | number | null | undefined): string {
@@ -97,7 +98,7 @@ function ExportDateField({
 export function ExportModal<T extends Record<string, unknown>>({
   onClose, data, dateField = "created_at",
   defaultCols, extraCols = [], filenamePrefix,
-  onServerExport,
+  onServerExport, filterSlot,
 }: Props<T>) {
   const [fromDate, setFromDate] = useState("");
   const [toDate,   setToDate]   = useState("");
@@ -211,6 +212,9 @@ export function ExportModal<T extends Record<string, unknown>>({
 
         {/* Body */}
         <div style={{ padding: "20px 22px", display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* Optional filter slot (e.g. app selector) */}
+          {filterSlot}
 
           {/* Date Range */}
           <div>

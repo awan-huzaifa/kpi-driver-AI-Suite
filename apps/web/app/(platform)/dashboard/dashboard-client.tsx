@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import {
   Mic, Building2, GraduationCap,
-  Lock, ArrowRight, Zap, Wallet, TrendingUp,
+  Lock, ArrowRight, Zap, Wallet, TrendingUp, X,
 } from 'lucide-react'
 import type { PlanId } from '@kpidriver/auth/types'
 import PlatformShell, { type Access } from '@/components/platform/PlatformShell'
@@ -62,6 +62,7 @@ interface Props {
   access:     Access
   accessRole: 'admin' | 'super_admin' | 'user'
   stats:      Stats
+  noAccess?:  boolean
 }
 
 /* ── Stat card ──────────────────────────────────────────────────── */
@@ -305,7 +306,8 @@ function ToolCard({ app, unlocked, index }: { app: AppEntry; unlocked: boolean; 
 
 /* ── Main component ─────────────────────────────────────────────── */
 
-export default function DashboardClient({ user, planId, access, accessRole, stats }: Props) {
+export default function DashboardClient({ user, planId, access, accessRole, stats, noAccess }: Props) {
+  const [showNoAccessBanner, setShowNoAccessBanner] = useState(!!noAccess)
   const display = user.fullName ?? user.email.split('@')[0]
 
   const sortedApps = [...APPS].sort((a: AppEntry, b: AppEntry) => {
@@ -332,6 +334,30 @@ export default function DashboardClient({ user, planId, access, accessRole, stat
 
   return (
     <PlatformShell planId={planId} pageTitle="Home">
+
+      {/* No-access banner */}
+      {showNoAccessBanner && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 18px', borderRadius: 12, marginBottom: 20,
+          background: 'rgba(237,31,36,0.08)', border: '1px solid rgba(237,31,36,0.2)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Lock size={14} style={{ color: '#ED1F24', flexShrink: 0 }} />
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#f1f5f9', margin: 0 }}>
+              You Don&apos;t Have Access To That App.{' '}
+              <span style={{ color: '#94a3b8', fontWeight: 500 }}>Contact Your Admin To Get Access.</span>
+            </p>
+          </div>
+          <button
+            onClick={() => setShowNoAccessBanner(false)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#475569', padding: 4, display: 'flex' }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
 
       {/* ── Hero ── */}
       <motion.div

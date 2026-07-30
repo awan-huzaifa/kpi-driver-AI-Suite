@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useTransition } from 'react'
 import { Loader2, Save, CheckCircle2, RotateCcw, Globe, Building2 } from 'lucide-react'
@@ -119,7 +119,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
 
   const markupPct = (app: string) => {
     const n = parseFloat(values[app] ?? '1')
-    return isNaN(n) ? 'â€”' : `+${Math.round((n - 1) * 100)}%`
+    return isNaN(n) ? '—' : `+${Math.round((n - 1) * 100)}%`
   }
 
   return (
@@ -255,12 +255,12 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         {saved === app ? 'Saved' : 'Save'}
                       </button>
 
-                      {/* Reset to global â€” only shown when viewing a company that has an override */}
+                      {/* Reset to global — only shown when viewing a company that has an override */}
                       {companyId && isOverride && (
                         <button
                           onClick={() => handleReset(app)}
                           disabled={resetting === app || saving === app}
-                          title="Remove Override â€” Revert To Global Default"
+                          title="Remove Override — Revert To Global Default"
                           style={{
                             display: 'flex', alignItems: 'center', gap: 5,
                             padding: '9px 13px', borderRadius: 9,

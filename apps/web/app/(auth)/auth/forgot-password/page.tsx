@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
@@ -6,7 +6,6 @@ import { Mail, ArrowRight, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 
 import Image from 'next/image'
 import Link from 'next/link'
 import { requestPasswordReset } from '@/app/actions/auth/reset-password'
-import ParticlesBg from '@/components/ui/particles-bg'
 
 export default function ForgotPasswordPage() {
   const [email,     setEmail]     = useState('')
@@ -33,7 +32,6 @@ export default function ForgotPasswordPage() {
 
   return (
     <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden', background: '#0d1b2e' }}>
-      <ParticlesBg />
 
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
@@ -48,7 +46,7 @@ export default function ForgotPasswordPage() {
         >
           {/* Logo */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-            <Image src="/logo3.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: 'contain' }} priority />
+            <Image src="/logo3.png" alt="KPI DRIVER" width={210} height={77} style={{ objectFit: 'contain' }} priority />
           </div>
 
           {/* Card */}
@@ -78,7 +76,7 @@ export default function ForgotPasswordPage() {
                   Check Your Email
                 </h2>
                 <p style={{ fontSize: 13, color: '#94a3b8', lineHeight: 1.6, marginBottom: 24 }}>
-                  We sent a password reset link to <strong style={{ color: '#e2e8f0' }}>{email}</strong>. Click the link in that email to set a new password.
+                  We Sent A Password Reset Link To <strong style={{ color: '#e2e8f0' }}>{email}</strong>. Click The Link In That Email To Set A New Password.
                 </p>
                 <Link
                   href="/login"
@@ -108,7 +106,7 @@ export default function ForgotPasswordPage() {
                   Forgot Password?
                 </h2>
                 <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 28, textAlign: 'center' }}>
-                  Enter your email and we'll send you a reset link.
+                  Enter Your Email And We'll Send You A Reset Link.
                 </p>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

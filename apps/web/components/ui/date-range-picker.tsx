@@ -246,25 +246,27 @@ function DateField({ label, value, from, to, onChange }: DateFieldProps) {
 
   return (
     <div style={{ position: "relative" }}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <span style={{
-          fontSize: 9, fontWeight: 700, color: "#475569",
-          textTransform: "uppercase", letterSpacing: "0.07em",
-        }}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 7,
+          padding: "6px 12px", borderRadius: 9,
+          background: "#0b1929",
+          border: `1px solid ${open ? "rgba(48,125,192,0.5)" : "rgba(48,125,192,0.25)"}`,
+          boxShadow: open ? "0 0 0 1px rgba(48,125,192,0.15)" : "none",
+          cursor: "pointer", whiteSpace: "nowrap",
+          transition: "all 0.15s",
+        }}
+      >
+        <span style={{ fontSize: 9, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.08em" }}>
           {label}
         </span>
-        <button
-          onClick={() => setOpen((o) => !o)}
-          style={{
-            background: "none", border: "none", cursor: "pointer", padding: 0,
-            fontSize: 12, fontWeight: 500,
-            color: value ? "#e2e8f0" : "#475569",
-            textAlign: "left", whiteSpace: "nowrap",
-          }}
-        >
-          {fmtDisplay(value)}
-        </button>
-      </div>
+        <span style={{ width: 1, height: 12, background: "rgba(255,255,255,0.1)", flexShrink: 0 }} />
+        <span style={{ fontSize: 12, fontWeight: 500, color: value ? "#e2e8f0" : "#475569" }}>
+          {value ? fmtDisplay(value) : "Pick date"}
+        </span>
+        <Calendar size={11} style={{ color: "#475569", flexShrink: 0 }} />
+      </button>
 
       {open && (
         <CalendarPopup
@@ -373,15 +375,7 @@ export default function DateRangePicker({
 
       {/* Custom date range */}
       {period === "custom" && (
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: 12,
-          padding: "10px 14px", borderRadius: 10,
-          background: "rgba(48,125,192,0.06)",
-          border: "1px solid rgba(48,125,192,0.2)",
-          width: "fit-content",
-        }}>
-          <Calendar size={13} style={{ color: "#307DC0", flexShrink: 0 }} />
-
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <DateField
             label="From"
             value={customFrom}
@@ -389,9 +383,7 @@ export default function DateRangePicker({
             to={customTo}
             onChange={onCustomFrom}
           />
-
-          <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.08)", flexShrink: 0 }} />
-
+          <span style={{ fontSize: 11, color: "#334155" }}>→</span>
           <DateField
             label="To"
             value={customTo}

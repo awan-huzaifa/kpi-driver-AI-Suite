@@ -194,7 +194,7 @@ function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => voi
               </div>
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <h2 style={{ fontSize: 16, fontWeight: 800, color: "#fff", margin: 0 }}>{call.agent?.full_name ?? "Unknown Rep"}</h2>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, color: "#fff", margin: 0 }}>{call.agent?.full_name ?? "Unknown Agent"}</h2>
                   <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#94a3b8", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
                     vs {call.ai_agent?.agent_name ?? "Unknown AI Agent"}
                   </span>
@@ -225,7 +225,7 @@ function DetailModal({ call, onClose }: { call: TrainingCall; onClose: () => voi
           {/* Meta grid */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
             {[
-              { label: "Rep",         value: call.agent?.full_name     ?? "—" },
+              { label: "Agent",       value: call.agent?.full_name     ?? "—" },
               { label: "Agent Role",  value: (call.agent?.agent_type ?? "—").toUpperCase() },
               { label: "Agent Phone", value: call.from_phone           ?? "—" },
               { label: "AI Agent",    value: call.ai_agent?.agent_name ?? "—" },
@@ -595,14 +595,14 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Date</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Rep</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AI Agent</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Duration</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Score</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Scorable</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Reason</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>Result</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>DATE</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AGENT</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AI AGENT</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>DURATION</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>SCORE</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>SCORABLE</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>REASON</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>RESULT</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

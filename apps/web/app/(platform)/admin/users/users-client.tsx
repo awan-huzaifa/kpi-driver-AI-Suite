@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
-import { useState } from "react";
-import { UserPlus, Pencil, UserX, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search } from "lucide-react";
+import { useState, useRef } from "react";
+import { UserPlus, Pencil, UserX, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search, Camera } from "lucide-react";
 import PlatformShell, { type Access } from "@/components/platform/PlatformShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
-import { inviteUser, updateUser, removeUser } from "@/app/actions/admin/users";
+import { inviteUser, updateUser, removeUser, updateUserAvatar } from "@/app/actions/admin/users";
 import type { PlanId } from "@kpidriver/auth/types";
 import type { AccessRole, AgentType } from "@/types/database";
 import { C } from "@/components/platform/brand";
@@ -146,8 +146,15 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
   const [removeTarget, setRemoveTarget] = useState<UserRow | null>(null);
   const [removeLoad, setRemoveLoad]     = useState(false);
 
+  const [editAvatarUrl, setEditAvatarUrl]   = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarErr, setAvatarErr]           = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   function openEdit(u: UserRow) {
     setEditTarget(u);
+    setEditAvatarUrl(u.avatar_url);
+    setAvatarErr(null);
     setEditForm({
       email: u.email ?? "",
       full_name: u.full_name ?? "",
@@ -162,6 +169,27 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       company_id:          u.company_id ?? "",
     });
     setEditErr(null);
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !editTarget) return;
+    setAvatarUploading(true);
+    setAvatarErr(null);
+    const preview = URL.createObjectURL(file);
+    setEditAvatarUrl(preview);
+    try {
+      const fd = new FormData();
+      fd.append("avatar", file);
+      const url = await updateUserAvatar(editTarget.id, fd);
+      setEditAvatarUrl(url);
+    } catch (err) {
+      setAvatarErr(err instanceof Error ? err.message : "Upload failed.");
+      setEditAvatarUrl(editTarget.avatar_url);
+    } finally {
+      setAvatarUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   async function handleInvite() {
@@ -229,7 +257,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           </Button>
         </div>
 
-        {/* Company filter â€” super_admin only */}
+        {/* Company filter — super_admin only */}
         {isSuperAdmin && companies.length > 0 && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>
@@ -283,7 +311,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
               {active.length === 0 && inactive.length === 0 && (
                 <tr>
                   <td colSpan={6} style={{ padding: "40px 16px", textAlign: "center", color: "#475569", fontSize: 13 }}>
-                    No Team Members Yet â€” Invite Your First One.
+                    No Team Members Yet — Invite Your First One.
                   </td>
                 </tr>
               )}
@@ -310,12 +338,12 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                       </div>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>
-                          {u.full_name ?? "â€”"}
+                          {u.full_name ?? "—"}
                           {u.id === currentUserId && (
                             <span style={{ marginLeft: 6, fontSize: 10, color: C.blue, fontWeight: 700 }}>YOU</span>
                           )}
                         </p>
-                        <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>{u.email ?? "â€”"}</p>
+                        <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>{u.email ?? "—"}</p>
                         {isSuperAdmin && u.company_id && (
                           <p style={{ fontSize: 10, color: C.blue, margin: "2px 0 0", fontWeight: 600 }}>
                             {companyMap[u.company_id] ?? "Unknown Company"}
@@ -395,7 +423,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent title="Invite Team Member" description="They'll Receive An Email With A Link To Set Their Password.">
           <div className="space-y-4">
-            {/* Company picker â€” super_admin only */}
+            {/* Company picker — super_admin only */}
             {isSuperAdmin && companies.length > 0 && (
               <div>
                 <Label>Company *</Label>
@@ -488,7 +516,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           <DialogFooter>
             <Button variant="secondary" size="sm" onClick={() => setInviteOpen(false)}>Cancel</Button>
             <Button size="sm" onClick={handleInvite} disabled={inviteLoad}>
-              {inviteLoad ? "Sendingâ€¦" : "Send Invite"}
+              {inviteLoad ? "Sending…" : "Send Invite"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -498,6 +526,50 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
         <DialogContent title="Edit Member" description={editTarget?.email ?? ""}>
           <div className="space-y-4">
+
+            {/* Avatar upload */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div
+                onClick={() => !avatarUploading && fileInputRef.current?.click()}
+                style={{
+                  width: 64, height: 64, borderRadius: 16, flexShrink: 0,
+                  background: "rgba(48,125,192,0.15)", border: `2px solid ${avatarUploading ? C.blue : "rgba(48,125,192,0.25)"}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: C.blue, fontSize: 22, fontWeight: 800, overflow: "hidden",
+                  cursor: avatarUploading ? "default" : "pointer", position: "relative",
+                }}
+                title="Click to change photo"
+              >
+                {editAvatarUrl
+                  ? <img src={editAvatarUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  : initials(editTarget?.full_name ?? null, editTarget?.email ?? null)}
+                <div
+                  style={{
+                    position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                    background: "rgba(0,0,0,0.45)", opacity: avatarUploading ? 1 : 0, transition: "opacity 0.15s",
+                  }}
+                  onMouseEnter={(e) => { if (!avatarUploading) (e.currentTarget as HTMLElement).style.opacity = "1"; }}
+                  onMouseLeave={(e) => { if (!avatarUploading) (e.currentTarget as HTMLElement).style.opacity = "0"; }}
+                >
+                  {avatarUploading
+                    ? <div style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+                    : <Camera size={18} color="#fff" />}
+                </div>
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>Profile Photo</p>
+                <p style={{ fontSize: 11, color: "#475569", margin: "3px 0 0" }}>Click the avatar to upload a new photo.</p>
+                {avatarErr && <p style={{ fontSize: 11, color: "#ED1F24", margin: "4px 0 0" }}>{avatarErr}</p>}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={handleAvatarChange}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Role</Label>
@@ -559,7 +631,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           <DialogFooter>
             <Button variant="secondary" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
             <Button size="sm" onClick={handleEdit} disabled={editLoad}>
-              {editLoad ? "Savingâ€¦" : "Save Changes"}
+              {editLoad ? "Saving…" : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

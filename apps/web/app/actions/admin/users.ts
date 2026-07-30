@@ -119,6 +119,35 @@ export async function updateUser(userId: string, data: UpdateUserData) {
   revalidatePath("/admin/users");
 }
 
+export async function updateUserAvatar(userId: string, formData: FormData): Promise<string> {
+  const caller = await getCallerProfile();
+  const admin = createAdminClient();
+
+  const file = formData.get("avatar") as File | null;
+  if (!file || file.size === 0) throw new Error("No file provided");
+
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+  const path = `${userId}/avatar.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const { error: uploadErr } = await admin.storage
+    .from("avatars")
+    .upload(path, buffer, { contentType: file.type, upsert: true });
+  if (uploadErr) throw new Error(uploadErr.message);
+
+  const { data: { publicUrl } } = admin.storage.from("avatars").getPublicUrl(path);
+
+  let query = admin.from("users").update({ avatar_url: publicUrl }).eq("id", userId);
+  if (caller.access_role === "admin") {
+    query = query.eq("company_id", caller.company_id!);
+  }
+  const { error } = await query;
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/users");
+  return publicUrl;
+}
+
 export async function removeUser(userId: string) {
   const caller = await getCallerProfile();
   const admin = createAdminClient();

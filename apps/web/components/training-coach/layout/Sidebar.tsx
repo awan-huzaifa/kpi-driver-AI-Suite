@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, Bot, Phone, Home, LogOut } from "lucide-react";
+import { LayoutDashboard, Bot, Phone, Home, LogOut, BarChart2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { C } from "@/components/platform/brand";
 import SidebarNavItem from "@/components/ui/sidebar-nav-item";
@@ -11,6 +11,7 @@ import type { AccessRole } from "@/types/database";
 
 const NAV_MAIN = [
   { href: "/training-coach",            icon: LayoutDashboard, label: "Calls",      exact: true  },
+  { href: "/training-coach/analytics",  icon: BarChart2,       label: "Analytics",  exact: false },
   { href: "/training-coach/agents",     icon: Bot,             label: "AI Agents",  exact: false },
   { href: "/training-coach/my-numbers", icon: Phone,           label: "My Numbers", exact: false },
 ];

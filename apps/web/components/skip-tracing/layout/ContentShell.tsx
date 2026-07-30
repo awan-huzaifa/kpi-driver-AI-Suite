@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMotionValue } from "framer-motion";
 import { usePathname } from "next/navigation";

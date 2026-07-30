@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
@@ -81,7 +81,7 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
       }
 
       if (data.url) {
-        // No saved card or 3DS required â€” open Stripe Checkout
+        // No saved card or 3DS required — open Stripe Checkout
         window.open(data.url, '_blank', 'noopener,noreferrer')
       } else if (data.success && data.newBalance !== undefined) {
         // One-click success
@@ -299,7 +299,7 @@ function AutoTopUpCard({ topUpOptions, autoTopup }: { topUpOptions: TopUpOption[
         </button>
       </div>
 
-      {/* Body â€” only when enabled */}
+      {/* Body — only when enabled */}
       {enabled && (
         <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Amount selector */}
@@ -450,7 +450,7 @@ function PaymentMethodsCard() {
         <div>
           <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>Payment Methods</p>
           <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, margin: '2px 0 0' }}>
-            Default Card Is Charged Instantly On Top-Up â€” No Redirect Needed
+            Default Card Is Charged Instantly On Top-Up
           </p>
         </div>
         {!adding && (
@@ -495,7 +495,7 @@ function PaymentMethodsCard() {
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 500, color: C.text, margin: 0, textTransform: 'capitalize' }}>
-                    {m.card?.brand} â€¢â€¢â€¢â€¢ {m.card?.last4}
+                    {m.card?.brand} •••• {m.card?.last4}
                   </p>
                   <p style={{ fontSize: 11, color: C.dimText, margin: '2px 0 0' }}>
                     Expires {String(m.card?.exp_month).padStart(2, '0')}/{m.card?.exp_year}
@@ -641,7 +641,7 @@ function AppSpendCard({ appSpend, access }: { appSpend: AppSpendRow[]; access: A
                     {runs > 0 ? `${runs} Run${runs !== 1 ? 's' : ''}` : 'No Usage Yet'}
                     {s && (s.total_input_tokens > 0 || s.total_output_tokens > 0) && (
                       <span style={{ marginLeft: 8, color: C.dimText }}>
-                        Â· {s.total_input_tokens.toLocaleString()} In / {s.total_output_tokens.toLocaleString()} Out Tokens
+                        · {s.total_input_tokens.toLocaleString()} In / {s.total_output_tokens.toLocaleString()} Out Tokens
                       </span>
                     )}
                   </p>

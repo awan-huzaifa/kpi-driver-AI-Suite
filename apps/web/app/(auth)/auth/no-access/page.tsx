@@ -47,7 +47,7 @@ export default async function NoAccessPage() {
             color: '#307DC0', fontSize: 13, fontWeight: 600, textDecoration: 'none',
           }}
         >
-          Back to Login
+          Back To Login
         </Link>
       </div>
     </div>

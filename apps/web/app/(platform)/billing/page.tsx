@@ -36,8 +36,7 @@ export default async function BillingPage() {
     supabase
       .from('ai_usage_logs')
       .select('id, app, entity_id, entity_type, input_tokens, output_tokens, cost_usd, model, created_at, cost_breakdown')
-      .order('created_at', { ascending: false })
-      .limit(500),
+      .order('created_at', { ascending: false }),
   ])
 
   // Fetch addresses for deal-type usage logs

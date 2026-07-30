@@ -558,7 +558,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
-              {["Date", "Contact / Record", "Phone", "Lead Source", "Fields", ...(accessRole !== "user" ? ["Cost"] : []), "CRM"].map((h, i) => (
+              {["Date", "Contact", "Phone", "Lead Source", "Fields", ...(accessRole !== "user" ? ["Cost"] : []), "CRM"].map((h, i) => (
                 <th key={h} style={{
                   padding: "11px 16px", textAlign: "center",
                   fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",

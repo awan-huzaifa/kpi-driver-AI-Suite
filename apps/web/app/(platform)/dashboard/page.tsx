@@ -4,7 +4,9 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import type { PlanId } from '@kpidriver/auth/types'
 import DashboardClient from './dashboard-client'
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ no_access?: string }> }) {
+  const params = await searchParams
+  const noAccess = params.no_access === '1'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -79,6 +81,7 @@ export default async function DashboardPage() {
 
   return (
     <DashboardClient
+      noAccess={noAccess}
       user={{ email: user.email!, fullName: profile?.full_name ?? null }}
       planId={isActive ? planId : null}
       accessRole={profile?.access_role ?? 'user'}

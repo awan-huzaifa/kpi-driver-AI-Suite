@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { C } from '@/components/platform/brand'
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select'
 import { ExportModal, type ColDef } from '@/components/ui/export-modal'
+import DateRangePicker, { periodBounds, type DatePeriod } from '@/components/ui/date-range-picker'
 
 interface CostBreakdown {
   property_api_1?: number
@@ -63,18 +64,6 @@ function entityLink(row: UsageLogRow): string {
   return '#'
 }
 
-const PERIODS = [
-  { value: 'today',     label: 'Today' },
-  { value: 'week',      label: 'Last 7 Days' },
-  { value: 'month',     label: 'Last 30 Days' },
-  { value: 'sixMonths', label: 'Last 6 Months' },
-  { value: 'year',      label: 'Last Year' },
-  { value: 'all',       label: 'All Time' },
-  { value: 'custom',    label: 'Custom Range' },
-] as const
-
-type Period = typeof PERIODS[number]['value']
-
 const APP_FILTER_OPTIONS = [
   { value: 'all',            label: 'All Apps' },
   { value: 'underwriting',   label: 'AI Deal Underwriter' },
@@ -86,23 +75,6 @@ const APP_FILTER_OPTIONS = [
 
 type AppFilter = 'all' | UsageLogRow['app']
 
-function periodStart(period: Exclude<Period, 'custom'>): Date {
-  const now = new Date()
-  const d = new Date(now)
-  switch (period) {
-    case 'today':     d.setHours(0, 0, 0, 0); return d
-    case 'week':      d.setDate(now.getDate() - 7);    return d
-    case 'month':     d.setMonth(now.getMonth() - 1);  return d
-    case 'sixMonths': d.setMonth(now.getMonth() - 6);  return d
-    case 'year':      d.setFullYear(now.getFullYear() - 1); return d
-    case 'all':       return new Date(0)
-  }
-}
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10)
-}
-
 function fmtCost(n: number) {
   return '$' + n.toFixed(4)
 }
@@ -112,19 +84,6 @@ function fmtDate(iso: string) {
 }
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-}
-
-const DATE_INPUT_STYLE: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: `1px solid ${C.border}`,
-  borderRadius: 8,
-  padding: '8px 12px',
-  fontSize: 13,
-  color: C.text,
-  colorScheme: 'dark',
-  outline: 'none',
-  cursor: 'pointer',
-  width: '100%',
 }
 
 function getPageWindow(current: number, total: number): (number | '...')[] {
@@ -150,13 +109,14 @@ function FilterLabel({ children }: { children: React.ReactNode }) {
 const PAGE_SIZE = 15
 
 export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers = {} }: { rows?: UsageLogRow[]; dealAddresses?: Record<string, string>; dealRunNumbers?: Record<string, number> }) {
-  const [period, setPeriod]           = useState<Period>('month')
+  const [period, setPeriod]           = useState<DatePeriod>('30d')
   const [appFilter, setAppFilter]     = useState<AppFilter>('all')
-  const [customFrom, setCustomFrom]   = useState<string>(todayStr())
-  const [customTo,   setCustomTo]     = useState<string>(todayStr())
+  const [customFrom, setCustomFrom]   = useState<string>('')
+  const [customTo,   setCustomTo]     = useState<string>('')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [page,        setPage]         = useState(1)
   const [exportOpen,  setExportOpen]   = useState(false)
+  const [exportApps,  setExportApps]   = useState<string[]>([])
 
   const exportDefaultCols: ColDef<UsageLogRow>[] = [
     { label: 'Date',          getValue: r => fmtDate(r.created_at) },
@@ -185,15 +145,11 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
   }
 
   const filtered = useMemo(() => {
+    const { from, to } = periodBounds(period, customFrom, customTo)
     return rows.filter((r) => {
       const date = new Date(r.created_at)
-      if (period === 'custom') {
-        const from = new Date(customFrom + 'T00:00:00')
-        const to   = new Date(customTo   + 'T23:59:59')
-        if (date < from || date > to) return false
-      } else {
-        if (date < periodStart(period)) return false
-      }
+      if (from && date < from) return false
+      if (to   && date > to)   return false
       if (appFilter !== 'all' && r.app !== appFilter) return false
       return true
     })
@@ -211,10 +167,10 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
       <div style={{
         background: C.card, border: `1px solid ${C.border}`, borderRadius: 12,
         padding: '16px 20px',
-        display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap',
+        display: 'flex', alignItems: 'flex-start', gap: 16,
       }}>
         {/* App filter */}
-        <div style={{ flex: '1 1 160px', minWidth: 140 }}>
+        <div style={{ width: 200, flexShrink: 0 }}>
           <FilterLabel>App</FilterLabel>
           <Select value={appFilter} onValueChange={(v) => { setAppFilter(v as AppFilter); setPage(1) }}>
             <SelectTrigger className="w-full" />
@@ -227,47 +183,20 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
         </div>
 
         {/* Divider */}
-        <div style={{ width: 1, height: 36, background: C.border, alignSelf: 'flex-end', marginBottom: 1 }} />
+        <div style={{ width: 1, height: 36, background: C.border, marginTop: 22, flexShrink: 0 }} />
 
-        {/* Period filter */}
-        <div style={{ flex: '1 1 160px', minWidth: 140 }}>
+        {/* Period filter — expands downward when Custom is active */}
+        <div style={{ flex: 1 }}>
           <FilterLabel>Period</FilterLabel>
-          <Select value={period} onValueChange={(v) => { setPeriod(v as Period); setPage(1) }}>
-            <SelectTrigger className="w-full" />
-            <SelectContent>
-              {PERIODS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <DateRangePicker
+            period={period}
+            customFrom={customFrom}
+            customTo={customTo}
+            onPeriod={(p) => { setPeriod(p); setPage(1) }}
+            onCustomFrom={(v) => { setCustomFrom(v); setPage(1) }}
+            onCustomTo={(v) => { setCustomTo(v); setPage(1) }}
+          />
         </div>
-
-        {/* Custom date range — slides in when Custom Range is selected */}
-        {period === 'custom' && (
-          <>
-            <div style={{ width: 1, height: 36, background: C.border, alignSelf: 'flex-end', marginBottom: 1 }} />
-            <div style={{ flex: '1 1 130px', minWidth: 120 }}>
-              <FilterLabel>From</FilterLabel>
-              <input
-                type="date"
-                value={customFrom}
-                max={customTo}
-                onChange={(e) => { setCustomFrom(e.target.value); setPage(1) }}
-                style={DATE_INPUT_STYLE}
-              />
-            </div>
-            <div style={{ flex: '1 1 130px', minWidth: 120 }}>
-              <FilterLabel>To</FilterLabel>
-              <input
-                type="date"
-                value={customTo}
-                min={customFrom}
-                onChange={(e) => { setCustomTo(e.target.value); setPage(1) }}
-                style={DATE_INPUT_STYLE}
-              />
-            </div>
-          </>
-        )}
       </div>
 
       {/* Table */}
@@ -501,11 +430,47 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
 
       {exportOpen && (
         <ExportModal
-          onClose={() => setExportOpen(false)}
-          data={rows as unknown as Record<string, unknown>[]}
+          onClose={() => { setExportOpen(false); setExportApps([]) }}
+          data={(exportApps.length === 0 ? rows : rows.filter(r => exportApps.includes(r.app))) as unknown as Record<string, unknown>[]}
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
           filenamePrefix="billing-usage"
+          filterSlot={
+            <div>
+              <p style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>
+                App
+              </p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {APP_FILTER_OPTIONS.map(o => {
+                  const isAll    = o.value === 'all'
+                  const isActive = isAll ? exportApps.length === 0 : exportApps.includes(o.value)
+                  function handleClick() {
+                    if (isAll) { setExportApps([]); return }
+                    setExportApps(prev =>
+                      prev.includes(o.value)
+                        ? prev.filter(v => v !== o.value)
+                        : [...prev, o.value]
+                    )
+                  }
+                  return (
+                    <button
+                      key={o.value}
+                      onClick={handleClick}
+                      style={{
+                        padding: '5px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                        cursor: 'pointer', border: 'none', transition: 'all 0.12s',
+                        background: isActive ? 'rgba(48,125,192,0.15)' : 'rgba(255,255,255,0.04)',
+                        color:      isActive ? '#307DC0' : '#64748b',
+                        outline:    isActive ? '1px solid rgba(48,125,192,0.3)' : '1px solid rgba(255,255,255,0.06)',
+                      }}
+                    >
+                      {o.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          }
         />
       )}
     </div>

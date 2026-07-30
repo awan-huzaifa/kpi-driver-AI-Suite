@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -6,12 +6,12 @@ import { motion } from "framer-motion";
 import { Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import ParticlesBg from "@/components/ui/particles-bg";
 
 export default function SetPasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm,  setConfirm]  = useState("");
+  const [agreed,   setAgreed]   = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const [loading,  setLoading]  = useState(false);
   const [ready,    setReady]    = useState(false);
@@ -40,6 +40,7 @@ export default function SetPasswordPage() {
     e.preventDefault();
     if (password !== confirm) { setError("Passwords do not match."); return; }
     if (password.length < 8)  { setError("Password must be at least 8 characters."); return; }
+    if (!agreed) { setError("Please agree to the Terms & Conditions and Privacy Policy to continue."); return; }
 
     setLoading(true);
     setError(null);
@@ -64,26 +65,32 @@ export default function SetPasswordPage() {
 
   return (
     <div style={{ height: "100dvh", display: "flex", overflow: "hidden", background: "#0d1b2e" }}>
-      <ParticlesBg />
 
       <div style={{
         flex: 1, display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
-        padding: "32px 24px", zIndex: 10,
+        padding: "32px 24px 80px", zIndex: 10,
       }}>
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, ease: [0.25, 0.46, 0.45, 0.94] }}
-          style={{ width: "100%", maxWidth: 380 }}
+          style={{ width: "100%", maxWidth: 380, display: "flex", flexDirection: "column", alignItems: "center" }}
         >
           {/* Logo */}
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-            <Image src="/logo3.png" alt="KPI DRIVER" width={120} height={44} style={{ objectFit: "contain" }} priority />
-          </div>
+          <Image src="/logo3.png" alt="KPI DRIVER" width={210} height={77} style={{ objectFit: "contain" }} priority />
+
+          {/* Tagline */}
+          <p style={{ fontSize: 11, fontWeight: 600, margin: "8px 0 28px", lineHeight: 1.5, textAlign: "center" }}>
+            <span style={{ color: "#22c55e" }}>Built By </span>
+            <span style={{ color: "#64748b" }}>RE Investors</span>
+            <span style={{ color: "#22c55e" }}> For </span>
+            <span style={{ color: "#64748b" }}>RE Investors</span>
+          </p>
 
           {/* Card */}
           <div style={{
+            width: "100%",
             background:           "linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
             backdropFilter:       "blur(52px) saturate(180%) brightness(1.08)",
             WebkitBackdropFilter: "blur(52px) saturate(180%) brightness(1.08)",
@@ -92,7 +99,7 @@ export default function SetPasswordPage() {
             padding:              "36px 32px",
             boxShadow:            "inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 48px rgba(0,0,0,0.3)",
           }}>
-            {/* Icon */}
+            {/* Lock icon */}
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 20 }}>
               <div style={{
                 width: 52, height: 52, borderRadius: 16, flexShrink: 0,
@@ -105,10 +112,10 @@ export default function SetPasswordPage() {
             </div>
 
             <h2 style={{ fontSize: 22, fontWeight: 700, color: "#ffffff", marginBottom: 4, textAlign: "center" }}>
-              Set your password
+              Set Your Password
             </h2>
             <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 28, textAlign: "center" }}>
-              Choose a password to complete your account setup
+              Choose A Password To Complete Your Account Setup
             </p>
 
             <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -149,6 +156,22 @@ export default function SetPasswordPage() {
                   />
                 </div>
               </div>
+
+              {/* Terms & Conditions checkbox */}
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={(e) => setAgreed(e.target.checked)}
+                  style={{ marginTop: 2, accentColor: "#307DC0", width: 14, height: 14, flexShrink: 0, cursor: "pointer" }}
+                />
+                <span style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
+                  I Agree To The{' '}
+                  <a href="#" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Terms & Conditions</a>
+                  {' '}And{' '}
+                  <a href="#" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>
+                </span>
+              </label>
 
               {/* Error */}
               {error && (
@@ -192,12 +215,43 @@ export default function SetPasswordPage() {
               </motion.button>
             </form>
           </div>
-
-          <p style={{ textAlign: "center", fontSize: 10, fontWeight: 600, color: "#475569", marginTop: 16 }}>
-            Built By RE Investors, For RE Investors
-          </p>
         </motion.div>
       </div>
+
+      {/* Footer — same as login page */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7, duration: 0.5 }}
+        style={{
+          position: "absolute", bottom: 16, left: 0, right: 0,
+          display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+          zIndex: 20,
+        }}
+      >
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#475569" }}>
+          KPI DRIVER · Built By RE Investors For RE Investors
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <a
+            href="#"
+            style={{ fontSize: 11, fontWeight: 600, color: "#475569", textDecoration: "none" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#94a3b8")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#475569")}
+          >
+            Terms & Conditions
+          </a>
+          <span style={{ color: "#2d3f52", fontSize: 11 }}>·</span>
+          <a
+            href="#"
+            style={{ fontSize: 11, fontWeight: 600, color: "#475569", textDecoration: "none" }}
+            onMouseEnter={e => (e.currentTarget.style.color = "#94a3b8")}
+            onMouseLeave={e => (e.currentTarget.style.color = "#475569")}
+          >
+            Privacy Policy
+          </a>
+        </div>
+      </motion.div>
     </div>
   );
 }

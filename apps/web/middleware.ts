@@ -67,8 +67,11 @@ export async function middleware(request: NextRequest) {
     }
     const hasFlag = flagMap[gated.flag] === true
 
-    if (!isAdmin && !hasFlag) {
-      return NextResponse.redirect(new URL('/dashboard', request.url))
+    if (!hasFlag) {
+      if (isAdmin) {
+        return NextResponse.redirect('https://link.kpidriver.com/widget/form/vUL1Mt66ystym8CfIXHM')
+      }
+      return NextResponse.redirect(new URL('/dashboard?no_access=1', request.url))
     }
   }
 
