@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, X, ChevronDown, Phone, Mail, MapPin, Shield, AlertTriangle, CheckCircle, User, Download } from "lucide-react";
+import { Search, X, ChevronDown, Phone, Mail, MapPin, Shield, AlertTriangle, CheckCircle, User, Download, ExternalLink } from "lucide-react";
 import { C } from "@/components/platform/brand";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
@@ -173,14 +173,10 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             }}>
               {FLOW_LABELS[displayType]}
             </span>
-            {log.flow_type === "dnc" ? (
+            {log.flow_type === "dnc" && (
               log.is_clean
                 ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>âœ“ Clean â€” Safe to Contact</span>
                 : <span style={{ fontSize: 13, fontWeight: 700, color: C.red }}>âš  Flagged â€” Do Not Call</span>
-            ) : (
-              log.hit
-                ? <span style={{ fontSize: 13, fontWeight: 700, color: C.green }}>âœ“ Hit â€” {log.persons_count} Person{log.persons_count !== 1 ? "s" : ""} Found</span>
-                : <span style={{ fontSize: 13, fontWeight: 700, color: C.dimText }}>âœ— Miss â€” No Results</span>
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -730,21 +726,21 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                           <span style={{ fontSize: 12, color: "#334155" }}>â€”</span>
                         )}
                       </td>
-                      <td style={{ padding: "11px 14px", textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ padding: "11px 14px", textAlign: "center" }}>
                         {log.crm_link ? (
                           <a
                             href={log.crm_link}
                             target="_blank"
                             rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
                             style={{
                               display: "inline-flex", alignItems: "center", gap: 4,
-                              fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 6,
-                              color: C.blue, background: "rgba(48,125,192,0.1)",
-                              border: "1px solid rgba(48,125,192,0.25)", textDecoration: "none",
-                              whiteSpace: "nowrap",
+                              fontSize: 11, fontWeight: 600, color: "#307DC0",
+                              textDecoration: "none", padding: "4px 8px", borderRadius: 7,
+                              background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
                             }}
                           >
-                            Open ↗
+                            <ExternalLink size={11} /> CRM
                           </a>
                         ) : (
                           <span style={{ fontSize: 12, color: "#334155" }}>—</span>

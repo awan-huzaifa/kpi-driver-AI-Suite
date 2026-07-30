@@ -35,6 +35,7 @@ interface NoteTakerPayload {
   contact_Phone?: string | null;  // contact's phone number from GHL webhook
   agent_phone?:   string | null;  // agent's phone (To if inbound, From if outbound)
   crm_link?:      string | null;  // URL to the contact in GHL/CRM
+  customFields?:  { key: string; value: unknown }[];
 }
 
 export async function POST(req: NextRequest) {
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { location_id, call_direction, to, from, summary, normal_summary, input_tokens, output_tokens, duration_sec, agent_name, call_id, lead_source, contact_Phone, agent_phone, crm_link } = body;
+  const { location_id, call_direction, to, from, summary, normal_summary, input_tokens, output_tokens, duration_sec, agent_name, call_id, lead_source, contact_Phone, agent_phone, crm_link, customFields } = body;
 
   if (!location_id) {
     return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
@@ -115,6 +116,7 @@ export async function POST(req: NextRequest) {
       contact_phone:   contact_Phone ?? null,
       agent_phone:     agent_phone   ?? null,
       crm_link:        crm_link      ?? null,
+      custom_fields:   customFields  ?? [],
       input_tokens:    inTokens,
       output_tokens:   outTokens,
       cost_usd:        baseCostUsd,

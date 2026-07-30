@@ -24,6 +24,7 @@ interface NoteCall {
   agent_name:      string | null;
   lead_source:     string | null;
   crm_link:        string | null;
+  custom_fields:   { key: string; value: unknown }[];
   ai_summary:      string | null;
   normal_summary:  string | null;
   input_tokens:    number;
@@ -155,7 +156,7 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
                     padding: "6px 12px", borderRadius: 9,
                   }}
                 >
-                  <ExternalLink size={12} /> CRM LINK
+                  <ExternalLink size={12} /> CRM
                 </a>
               )}
               <button
@@ -231,7 +232,7 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
 
           {/* Normal Summary */}
           {call.normal_summary && (
-            <div>
+            <div style={{ marginBottom: call.custom_fields?.length ? 20 : 0 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
                 Call Summary
               </p>
@@ -242,6 +243,37 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
                 <p style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
                   {call.normal_summary}
                 </p>
+              </div>
+            </div>
+          )}
+
+          {/* Custom Fields */}
+          {call.custom_fields?.length > 0 && (
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>
+                CRM Fields
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                {call.custom_fields.map((f, i) => {
+                  const displayVal = Array.isArray(f.value)
+                    ? (f.value as unknown[]).join(", ")
+                    : String(f.value ?? "—");
+                  const label = f.key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                  return (
+                    <div key={i} style={{
+                      display: "grid", gridTemplateColumns: "200px 1fr",
+                      gap: 12, padding: "8px 12px", borderRadius: 8,
+                      background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                    }}>
+                      <p style={{ fontSize: 11, fontWeight: 700, color: C.dimText, margin: 0, textTransform: "capitalize" }}>
+                        {label}
+                      </p>
+                      <p style={{ fontSize: 12, fontWeight: 500, color: C.bodyText, margin: 0, wordBreak: "break-word" }}>
+                        {displayVal}
+                      </p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -350,7 +382,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           </p>
         </div>
         <h1 style={{ fontSize: 28, fontWeight: 900, color: C.white, letterSpacing: "-0.02em", margin: 0 }}>
-          Call Logs
+          Notes
         </h1>
         <p style={{ fontSize: 13, color: C.bodyText, marginTop: 6 }}>
           All Call Notes. Click Any Row To View The Full Transcript.
@@ -489,7 +521,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "Tokens", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "CRM", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
@@ -546,8 +578,25 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
                   {c.contact_phone ?? "—"}
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, color: C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
-                  {(c.input_tokens + c.output_tokens).toLocaleString()}
+                <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                  {c.crm_link ? (
+                    <a
+                      href={c.crm_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        display: "inline-flex", alignItems: "center", gap: 4,
+                        fontSize: 11, fontWeight: 600, color: "#307DC0",
+                        textDecoration: "none", padding: "4px 8px", borderRadius: 7,
+                        background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
+                      }}
+                    >
+                      <ExternalLink size={11} /> CRM
+                    </a>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                  )}
                 </td>
                 {accessRole !== "user" && (
                   <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: "#FCAF17", whiteSpace: "nowrap", textAlign: "center" }}>

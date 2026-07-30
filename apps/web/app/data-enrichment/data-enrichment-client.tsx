@@ -242,28 +242,6 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
                   </div>
                 </div>
               )}
-              {log.crm_link && (
-                <a
-                  href={log.crm_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.25)",
-                    borderRadius: 10, padding: "8px 14px",
-                    textDecoration: "none", cursor: "pointer",
-                    transition: "background 0.15s",
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.18)"; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.08)"; }}
-                >
-                  <ExternalLink size={13} style={{ color: C.blue }} />
-                  <div>
-                    <p style={{ fontSize: 10, color: C.dimText, margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>CRM</p>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: C.blue, margin: 0 }}>Open In GHL</p>
-                  </div>
-                </a>
-              )}
               {accessRole !== "user" && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8,
@@ -275,6 +253,21 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
                     <p style={{ fontSize: 16, fontWeight: 800, color: "#FCAF17", margin: 0 }}>{fmtCost(log.cost_usd)}</p>
                   </div>
                 </div>
+              )}
+              {log.crm_link && (
+                <a
+                  href={log.crm_link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    fontSize: 11, fontWeight: 600, color: "#307DC0",
+                    textDecoration: "none", padding: "4px 16px", borderRadius: 7,
+                    background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
+                  }}
+                >
+                  <ExternalLink size={11} /> CRM
+                </a>
               )}
             </div>
           </div>
@@ -682,15 +675,12 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                         onClick={(e) => e.stopPropagation()}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 4,
-                          fontSize: 11, fontWeight: 700, color: C.blue,
-                          background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.2)",
-                          borderRadius: 6, padding: "3px 9px", textDecoration: "none",
-                          transition: "background 0.15s",
+                          fontSize: 11, fontWeight: 600, color: "#307DC0",
+                          textDecoration: "none", padding: "4px 8px", borderRadius: 7,
+                          background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
                         }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.18)"; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(48,125,192,0.08)"; }}
                       >
-                        GHL <ExternalLink size={10} />
+                        <ExternalLink size={11} /> CRM
                       </a>
                     ) : (
                       <span style={{ fontSize: 12, color: "#334155" }}>—</span>
