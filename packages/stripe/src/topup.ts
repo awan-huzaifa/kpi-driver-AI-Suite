@@ -48,8 +48,8 @@ export async function createTopUpCheckoutSession({
     cancel_url:  cancelUrl,
     metadata: { companyId, amount: String(option.amount) },
     payment_intent_data: {
-      metadata: { companyId },
-      ...(description ? { description } : {}),
+      description: description ?? undefined,
+      metadata: { companyId, amount: String(option.amount), description: description ?? '' },
     },
   })
 }
@@ -74,8 +74,8 @@ export async function chargeWithSavedMethod(
     payment_method: paymentMethodId,
     confirm: true,
     off_session: true,
-    metadata: { companyId },
-    ...(description ? { description } : {}),
+    description: description ?? undefined,
+    metadata: { companyId, description: description ?? '' },
   })
 
   if (intent.status !== 'succeeded') {

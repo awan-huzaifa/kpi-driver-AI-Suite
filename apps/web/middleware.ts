@@ -55,19 +55,20 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    // Admins and super_admins always pass
-    const isAdmin = userRow?.access_role === 'admin' || userRow?.access_role === 'super_admin'
+    const isSuperAdmin = userRow?.access_role === 'super_admin'
+    const isAdmin      = userRow?.access_role === 'admin'
     const flagMap: Record<string, boolean | undefined> = {
-      app_underwriting:   userRow?.app_underwriting,
-      app_sales_coach:    userRow?.app_sales_coach,
-      app_training_coach: userRow?.app_training_coach,
+      app_underwriting:    userRow?.app_underwriting,
+      app_sales_coach:     userRow?.app_sales_coach,
+      app_training_coach:  userRow?.app_training_coach,
       app_note_taker:      userRow?.app_note_taker,
       app_data_enrichment: userRow?.app_data_enrichment,
       app_skip_tracing:    userRow?.app_skip_tracing,
     }
     const hasFlag = flagMap[gated.flag] === true
 
-    if (!hasFlag) {
+    // super_admin always passes regardless of flags
+    if (!isSuperAdmin && !hasFlag) {
       if (isAdmin) {
         return NextResponse.redirect('https://link.kpidriver.com/widget/form/vUL1Mt66ystym8CfIXHM')
       }
