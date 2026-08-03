@@ -36,7 +36,15 @@ export default function LoginForm() {
     setError(null)
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
+    if (error) {
+      if (error.message.toLowerCase().includes('ban') || error.message.toLowerCase().includes('deactivated')) {
+        router.push('/auth/no-access?reason=deactivated')
+        return
+      }
+      setError(error.message)
+      setLoading(false)
+      return
+    }
     router.push(next)
     router.refresh()
   }
@@ -322,9 +330,9 @@ export default function LoginForm() {
 
           <p style={{ fontSize: 11, color: "#64748b", textAlign: "center", marginTop: 16, lineHeight: 1.6 }}>
             By Signing In You Agree To Our{' '}
-            <a href="#" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Terms & Conditions</a>
+            <a href="/terms-and-conditions" target="_blank" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Terms & Conditions</a>
             {' '}And{' '}
-            <a href="#" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>
+            <a href="/privacy_policy" target="_blank" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>
           </p>
 
         </motion.div>
@@ -345,14 +353,14 @@ export default function LoginForm() {
           KPI DRIVER · Built By RE Investors For RE Investors
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
+          <a href="/terms-and-conditions" target="_blank" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
             onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
           >
             Terms & Conditions
           </a>
           <span style={{ color: '#2d3f52', fontSize: 11 }}>·</span>
-          <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
+          <a href="/privacy_policy" target="_blank" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
             onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
           >

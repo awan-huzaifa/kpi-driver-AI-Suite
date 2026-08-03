@@ -223,7 +223,11 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
             setAvatarUrl((profile as any).avatar_url)
             localStorage.setItem('kpi-avatar-url', (profile as any).avatar_url)
           }
-          if (!profile?.company_id) return
+          if (!profile?.company_id) {
+            setCompanyLogoUrl(null)
+            localStorage.removeItem('kpi-company-logo')
+            return
+          }
           supabase
             .from('companies')
             .select('logo_url')
@@ -280,11 +284,11 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
           <img
             src={companyLogoUrl}
             alt="Company logo"
-            style={{ maxWidth: 160, maxHeight: 44, objectFit: 'contain' }}
+            style={{ maxWidth: 210, maxHeight: 82, objectFit: 'contain' }}
           />
         ) : (
           <>
-            <Image src="/logo3.png" alt="KPI DRIVER" width={80} height={36} style={{ objectFit: 'contain' }} priority />
+            <Image src="/logo3.png" alt="KPI DRIVER" width={210} height={82} style={{ objectFit: 'contain' }} priority />
             <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5, textAlign: 'center' }}>
               <span style={{ color: C.green }}>Built By </span>
               <span style={{ color: C.dimText }}>RE Investors</span>

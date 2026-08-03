@@ -15,14 +15,26 @@ export async function GET(request: Request) {
   // PKCE flow (newer Supabase default — also used by Google OAuth)
   if (code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error && data.user) {
+
+    // Banned users get rejected by Supabase at exchange time
+    if (error) {
+      return NextResponse.redirect(`${origin}/auth/no-access?reason=deactivated`)
+    }
+
+    if (data.user) {
       // Use admin client to bypass RLS and get the actual users row
       const admin = createAdminClient()
       const { data: profile } = await admin
         .from('users')
-        .select('id, company_id, access_role')
+        .select('id, company_id, access_role, is_active')
         .eq('id', data.user.id)
         .maybeSingle()
+
+      // Deactivated user — sign out and redirect to error screen
+      if (profile && profile.is_active === false) {
+        await supabase.auth.signOut()
+        return NextResponse.redirect(`${origin}/auth/no-access?reason=deactivated`)
+      }
 
       // A properly invited user always has a company_id OR is super_admin.
       // The DB trigger auto-creates a users row for any new auth user (including

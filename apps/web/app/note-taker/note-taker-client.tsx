@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   NotebookPen, PhoneIncoming, PhoneOutgoing, Phone,
-  X, ChevronDown, Search, Coins, ExternalLink,
+  X, ChevronDown, Search, Coins, ExternalLink, Copy, Check,
 } from "lucide-react";
 import { C } from "@/components/platform/brand";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
@@ -27,6 +27,7 @@ interface NoteCall {
   custom_fields:   { key: string; value: unknown }[];
   ai_summary:      string | null;
   normal_summary:  string | null;
+  transcript:      string | null;
   input_tokens:    number;
   output_tokens:   number;
   cost_usd:        number;
@@ -70,6 +71,32 @@ function DirectionIcon({ dir }: { dir: string | null }) {
   return <Phone size={13} style={{ color: C.dimText }} />;
 }
 
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  function copy() {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+  return (
+    <button
+      onClick={copy}
+      title="Copy"
+      style={{
+        background: "none", border: "none", cursor: "pointer", padding: "2px 4px",
+        color: copied ? C.green : C.dimText, flexShrink: 0, opacity: 0.7,
+        transition: "color 0.2s, opacity 0.2s",
+        display: "flex", alignItems: "center",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+      onMouseLeave={(e) => (e.currentTarget.style.opacity = copied ? "1" : "0.7")}
+    >
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+    </button>
+  );
+}
+
 function DirectionBadge({ dir }: { dir: string | null }) {
   const cfg = dir === "inbound"
     ? { label: "Inbound",  color: C.green, bg: "rgba(67,183,73,0.12)",   border: "rgba(67,183,73,0.25)"   }
@@ -94,6 +121,7 @@ function DirectionBadge({ dir }: { dir: string | null }) {
 /* ── Detail Modal ─────────────────────────────────────────────────── */
 
 function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: () => void; accessRole: AccessRole }) {
+  const [showTranscript, setShowTranscript] = useState(false);
   return (
     <AnimatePresence>
       <motion.div
@@ -260,22 +288,76 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
                     : String(f.value ?? "—");
                   const label = f.key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
                   return (
-                    <div key={i} style={{
-                      display: "grid", gridTemplateColumns: "200px 1fr",
-                      gap: 12, padding: "8px 12px", borderRadius: 8,
-                      background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
-                    }}>
-                      <p style={{ fontSize: 11, fontWeight: 700, color: C.dimText, margin: 0, textTransform: "capitalize" }}>
-                        {label}
-                      </p>
-                      <p style={{ fontSize: 12, fontWeight: 500, color: C.bodyText, margin: 0, wordBreak: "break-word" }}>
-                        {displayVal}
-                      </p>
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex", alignItems: "flex-start",
+                        background: i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent",
+                        borderRadius: 8, padding: "10px 12px",
+                        border: "1px solid transparent",
+                        transition: "border-color 0.15s, background 0.15s",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(48,125,192,0.12)"; (e.currentTarget as HTMLDivElement).style.background = "rgba(48,125,192,0.04)"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.borderColor = "transparent"; (e.currentTarget as HTMLDivElement).style.background = i % 2 === 0 ? "rgba(255,255,255,0.02)" : "transparent"; }}
+                    >
+                      <div style={{ width: "36%", flexShrink: 0, paddingRight: 16 }}>
+                        <span style={{
+                          fontSize: 12, fontWeight: 600, color: C.blue,
+                          background: "rgba(48,125,192,0.08)", borderRadius: 5,
+                          padding: "2px 8px", display: "inline-block",
+                        }}>
+                          {label}
+                        </span>
+                      </div>
+                      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", gap: 6, minWidth: 0 }}>
+                        <span style={{ fontSize: 12, fontWeight: 500, color: C.bodyText, wordBreak: "break-word", flex: 1 }}>
+                          {displayVal}
+                        </span>
+                        {displayVal !== "—" && <CopyButton value={displayVal} />}
+                      </div>
                     </div>
                   );
                 })}
               </div>
             </div>
+          )}
+
+          {/* Transcript */}
+          {call.transcript && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.52 }}
+              style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+              <button
+                onClick={() => setShowTranscript(v => !v)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: 11, fontWeight: 700, color: "#475569",
+                  textTransform: "uppercase", letterSpacing: "0.08em",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
+              >
+                <ChevronDown size={13} style={{ transform: showTranscript ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+                Transcript
+              </button>
+              {showTranscript && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <div style={{
+                    marginTop: 10, padding: "14px 16px", borderRadius: 12,
+                    fontSize: 12, color: "#64748b", lineHeight: 1.8, whiteSpace: "pre-wrap",
+                    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
+                    maxHeight: 280, overflowY: "auto",
+                  }}>
+                    {call.transcript}
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
           )}
         </motion.div>
       </motion.div>
@@ -521,7 +603,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "CRM", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "Fields", "CRM", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
@@ -533,7 +615,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ padding: "56px 16px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
+                <td colSpan={10} style={{ padding: "56px 16px", textAlign: "center", color: C.dimText, fontSize: 13 }}>
                   No Call Logs Yet{period !== "all" ? " For This Period" : ""}.
                 </td>
               </tr>
@@ -577,6 +659,11 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 </td>
                 <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
                   {c.contact_phone ?? "—"}
+                </td>
+                <td style={{ padding: "12px 16px", textAlign: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: C.blue }}>
+                    {c.custom_fields?.length ?? 0}
+                  </span>
                 </td>
                 <td style={{ padding: "12px 16px", textAlign: "center" }}>
                   {c.crm_link ? (

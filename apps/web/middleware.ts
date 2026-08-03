@@ -10,6 +10,8 @@ const PUBLIC_PATHS = [
   '/auth/set-password',
   '/auth/forgot-password',
   '/auth/no-access',
+  '/privacy_policy',
+  '/terms-and-conditions',
   '/api/stripe/webhook',
   '/api/calls/ingest',
   '/api/training-coach/ingest',

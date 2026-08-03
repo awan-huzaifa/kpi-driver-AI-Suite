@@ -157,8 +157,31 @@ export async function removeUser(userId: string) {
     query = query.eq("company_id", caller.company_id!);
   }
 
-  const { error } = await query;
+  const [{ error }, { error: banErr }] = await Promise.all([
+    query,
+    admin.auth.admin.updateUserById(userId, { ban_duration: "87600h" }),
+  ]);
   if (error) throw new Error(error.message);
+  if (banErr) throw new Error(banErr.message);
+
+  revalidatePath("/admin/users");
+}
+
+export async function reactivateUser(userId: string) {
+  const caller = await getCallerProfile();
+  const admin = createAdminClient();
+
+  let query = admin.from("users").update({ is_active: true }).eq("id", userId);
+  if (caller.access_role === "admin") {
+    query = query.eq("company_id", caller.company_id!);
+  }
+
+  const [{ error }, { error: unbanErr }] = await Promise.all([
+    query,
+    admin.auth.admin.updateUserById(userId, { ban_duration: "none" }),
+  ]);
+  if (error) throw new Error(error.message);
+  if (unbanErr) throw new Error(unbanErr.message);
 
   revalidatePath("/admin/users");
 }

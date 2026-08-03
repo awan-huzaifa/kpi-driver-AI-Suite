@@ -1,11 +1,17 @@
 import Link from 'next/link'
 import { createClient } from '@kpidriver/auth/server'
-import { redirect } from 'next/navigation'
 
-export default async function NoAccessPage() {
-  // Sign them out immediately so they don't linger as an authenticated-but-blocked user
+export default async function NoAccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reason?: string }>
+}) {
+  const { reason } = await searchParams
+
   const supabase = await createClient()
   await supabase.auth.signOut()
+
+  const isDeactivated = reason === 'deactivated'
 
   return (
     <div style={{
@@ -34,8 +40,17 @@ export default async function NoAccessPage() {
           Access Not Granted
         </h1>
         <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 28 }}>
-          Your Google Account Isn&apos;t Linked To A KPI DRIVER Invite.<br />
-          Contact Your Admin To Get Access.
+          {isDeactivated ? (
+            <>
+              Your Email Is Not Linked To An Active KPI DRIVER AI SUITE Account.<br />
+              Contact Your Admin To Get Access.
+            </>
+          ) : (
+            <>
+              Your Google Account Isn&apos;t Linked To An Active KPI DRIVER AI SUITE Credential.<br />
+              Contact Your Admin To Get Access.
+            </>
+          )}
         </p>
 
         <Link

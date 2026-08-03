@@ -167,9 +167,9 @@ export default function SetPasswordPage() {
                 />
                 <span style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5 }}>
                   I Agree To The{' '}
-                  <a href="#" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Terms & Conditions</a>
+                  <a href="/terms-and-conditions" target="_blank" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Terms & Conditions</a>
                   {' '}And{' '}
-                  <a href="#" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>
+                  <a href="/privacy_policy" target="_blank" style={{ color: "#307DC0", fontWeight: 600, textDecoration: "none" }}>Privacy Policy</a>
                 </span>
               </label>
 

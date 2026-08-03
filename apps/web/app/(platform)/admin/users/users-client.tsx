@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { UserPlus, Pencil, UserX, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search, Camera } from "lucide-react";
+import { UserPlus, Pencil, UserX, UserCheck, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search, Camera } from "lucide-react";
 import PlatformShell, { type Access } from "@/components/platform/PlatformShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
-import { inviteUser, updateUser, removeUser, updateUserAvatar } from "@/app/actions/admin/users";
+import { inviteUser, updateUser, removeUser, reactivateUser, updateUserAvatar } from "@/app/actions/admin/users";
 import type { PlanId } from "@kpidriver/auth/types";
 import type { AccessRole, AgentType } from "@/types/database";
 import { C } from "@/components/platform/brand";
@@ -143,8 +143,10 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
   const [editErr, setEditErr]         = useState<string | null>(null);
   const [editLoad, setEditLoad]       = useState(false);
 
-  const [removeTarget, setRemoveTarget] = useState<UserRow | null>(null);
-  const [removeLoad, setRemoveLoad]     = useState(false);
+  const [removeTarget, setRemoveTarget]       = useState<UserRow | null>(null);
+  const [removeLoad, setRemoveLoad]           = useState(false);
+  const [reactivateTarget, setReactivateTarget] = useState<UserRow | null>(null);
+  const [reactivateLoad, setReactivateLoad]     = useState(false);
 
   const [editAvatarUrl, setEditAvatarUrl]   = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -234,6 +236,14 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
     try { await removeUser(removeTarget.id); setRemoveTarget(null); }
     catch { /* future toast */ }
     finally { setRemoveLoad(false); }
+  }
+
+  async function handleReactivate() {
+    if (!reactivateTarget) return;
+    setReactivateLoad(true);
+    try { await reactivateUser(reactivateTarget.id); setReactivateTarget(null); }
+    catch { /* future toast */ }
+    finally { setReactivateLoad(false); }
   }
 
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
@@ -398,7 +408,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                         >
                           <Pencil size={13} />
                         </button>
-                        {u.is_active && (
+                        {u.is_active ? (
                           <button
                             onClick={() => setRemoveTarget(u)}
                             title="Deactivate"
@@ -407,6 +417,16 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                             onMouseLeave={(e) => (e.currentTarget.style.color = "#8b9cb0")}
                           >
                             <UserX size={13} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setReactivateTarget(u)}
+                            title="Reactivate"
+                            style={{ padding: 6, borderRadius: 6, background: "none", border: "none", cursor: "pointer", color: "#8b9cb0" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = C.green)}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = "#8b9cb0")}
+                          >
+                            <UserCheck size={13} />
                           </button>
                         )}
                       </div>
@@ -641,11 +661,23 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       <AlertDialog open={!!removeTarget} onOpenChange={(o) => !o && setRemoveTarget(null)}>
         <AlertDialogContent
           title="Deactivate Member?"
-          description={`${removeTarget?.full_name ?? removeTarget?.email} Will Lose Access Immediately. You Can Reactivate Them Later By Editing Their Profile.`}
+          description={`${removeTarget?.full_name ?? removeTarget?.email} Will Lose Access Immediately. You Can Reactivate Them Later.`}
           confirmLabel="Deactivate"
           confirmVariant="destructive"
           onConfirm={handleRemove}
           loading={removeLoad}
+        />
+      </AlertDialog>
+
+      {/* ── Reactivate Confirm ── */}
+      <AlertDialog open={!!reactivateTarget} onOpenChange={(o) => !o && setReactivateTarget(null)}>
+        <AlertDialogContent
+          title="Reactivate Member?"
+          description={`${reactivateTarget?.full_name ?? reactivateTarget?.email} Will Regain Full Access Immediately.`}
+          confirmLabel="Reactivate"
+          confirmVariant="primary"
+          onConfirm={handleReactivate}
+          loading={reactivateLoad}
         />
       </AlertDialog>
     </PlatformShell>
