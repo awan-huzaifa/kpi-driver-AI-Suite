@@ -504,15 +504,17 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
           <h1 className="text-xl font-bold gradient-text">Training Calls</h1>
           <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{calls.length} Calls Total</p>
         </div>
-        <DateRangePicker
-          period={period}
-          customFrom={customFrom}
-          customTo={customTo}
-          onPeriod={setPeriod}
-          onCustomFrom={setCustomFrom}
-          onCustomTo={setCustomTo}
-          activeColor="#307DC0"
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <DateRangePicker
+            period={period}
+            customFrom={customFrom}
+            customTo={customTo}
+            onPeriod={setPeriod}
+            onCustomFrom={setCustomFrom}
+            onCustomTo={setCustomTo}
+            activeColor="#307DC0"
+          />
+        </div>
       </div>
 
       {/* Filters */}
@@ -711,7 +713,7 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
           data={calls as unknown as Record<string, unknown>[]}
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
-          filenamePrefix="training-calls"
+          filenamePrefix="Training-Calls"
           onServerExport={(cols, fromDate, toDate) => {
             const params = new URLSearchParams();
             if (fromDate) params.set("from", fromDate);

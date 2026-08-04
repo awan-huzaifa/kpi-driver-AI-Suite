@@ -64,6 +64,7 @@ export async function chargeWithSavedMethod(
   amountCents: number,
   companyId: string,
   description?: string,
+  receiptEmail?: string,
 ): Promise<Stripe.PaymentIntent> {
   const stripe = getStripe()
 
@@ -75,6 +76,7 @@ export async function chargeWithSavedMethod(
     confirm: true,
     off_session: true,
     description: description ?? undefined,
+    receipt_email: receiptEmail ?? undefined,
     metadata: { companyId, description: description ?? '' },
   })
 

@@ -143,7 +143,14 @@ export function ExportModal<T extends Record<string, unknown>>({
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement("a");
     a.href     = url;
-    a.download = `${filenamePrefix}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const dateTag = fromDate && toDate
+      ? `${fromDate}_to_${toDate}`
+      : fromDate
+        ? `from-${fromDate}`
+        : toDate
+          ? `to-${toDate}`
+          : "all";
+    a.download = `${filenamePrefix}-${dateTag}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     onClose();

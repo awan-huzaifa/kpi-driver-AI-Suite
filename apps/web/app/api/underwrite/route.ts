@@ -477,8 +477,17 @@ export async function POST(request: NextRequest) {
     // ── USAGE SUMMARY ────────────────────────────────────────────────────────
     const INPUT_COST_PER_TOKEN  = 5  / 1_000_000; // claude-opus-4-7: $5/M input tokens
     const OUTPUT_COST_PER_TOKEN = 25 / 1_000_000; // claude-opus-4-7: $25/M output tokens
-    const RENTCAST_COST_USD     = 0.074;           // $74/mo / 1,000 requests
-    const AXESSO_COST_USD       = 0.020;           // €15 / 10,000 calls, ~12 calls/deal ≈ $0.018 → $0.020
+
+    // Fetch configurable API costs from billing_config (global underwriting row)
+    const apiCostDb = createAdminClient();
+    const { data: apiCostRow } = await apiCostDb
+      .from("billing_config")
+      .select("rentcast_cost_usd, axesso_cost_usd")
+      .eq("app", "underwriting")
+      .is("company_id", null)
+      .single();
+    const RENTCAST_COST_USD = Number(apiCostRow?.rentcast_cost_usd ?? 0.074);
+    const AXESSO_COST_USD   = Number(apiCostRow?.axesso_cost_usd   ?? 0.020);
     const totalInput  = call1Tokens.inputTokens  + (call2Tokens?.inputTokens  ?? 0) + (call3Tokens?.inputTokens  ?? 0) + call4Tokens.inputTokens;
     const totalOutput = call1Tokens.outputTokens + (call2Tokens?.outputTokens ?? 0) + (call3Tokens?.outputTokens ?? 0) + call4Tokens.outputTokens;
     const claudeCostUsd     = totalInput * INPUT_COST_PER_TOKEN + totalOutput * OUTPUT_COST_PER_TOKEN;

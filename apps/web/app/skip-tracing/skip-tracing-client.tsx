@@ -139,8 +139,8 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
       style={{
         position: "fixed", inset: 0, zIndex: 100,
         background: "rgba(9,21,35,0.85)", backdropFilter: "blur(6px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 24,
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        padding: "80px 24px 24px", overflowY: "auto",
       }}
       onClick={onClose}
     >
@@ -155,7 +155,7 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
           border: `1px solid rgba(255,255,255,0.08)`,
           borderRadius: 20,
           width: "100%", maxWidth: 680,
-          maxHeight: "90vh", overflowY: "auto",
+          maxHeight: "calc(100vh - 110px)", overflowY: "auto",
         }}
       >
         {/* Header */}
@@ -226,21 +226,6 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             {log.lead_source && (
               <MetaItem label="Lead Source" value={log.lead_source} />
             )}
-            {log.crm_link && (
-              <div style={{
-                background: "rgba(255,255,255,0.025)", borderRadius: 10,
-                padding: "10px 14px", border: "1px solid rgba(255,255,255,0.05)",
-              }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: C.dimText, margin: "0 0 4px", letterSpacing: "0.06em", textTransform: "uppercase" }}>CRM Link</p>
-                <a href={log.crm_link} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: 13, fontWeight: 600, color: C.blue, wordBreak: "break-all", textDecoration: "none" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-                  onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-                >
-                  {log.crm_link}
-                </a>
-              </div>
-            )}
             {log.flow_type === "apn" && (
               <>
                 {log.parcel_id && <MetaItem label="Parcel ID"  value={log.parcel_id} mono />}
@@ -261,7 +246,6 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
                     value={[log.address, log.city, log.state, log.zip].filter(Boolean).join(", ")}
                   />
                 )}
-                <MetaItem label="Lookup Type" value={log.find_owner ? "Owner Lookup" : "Person Lookup"} />
               </>
             )}
           </div>
@@ -821,7 +805,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
           data={logs as unknown as Record<string, unknown>[]}
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
-          filenamePrefix="skip-tracing"
+          filenamePrefix="Skip-Tracing"
           onServerExport={(cols, fromDate, toDate) => {
             const params = new URLSearchParams();
             if (fromDate) params.set("from",      fromDate);

@@ -26,7 +26,7 @@ export default async function CompanySettingsPage() {
   const { data: company } = profile?.company_id
     ? await supabase
         .from("companies")
-        .select("id, name, ghl_sub_account_id, wallet_balance, created_at, logo_url")
+        .select("id, name, ghl_sub_account_id, wallet_balance, created_at, logo_url, timezone")
         .eq("id", profile.company_id)
         .single()
     : { data: null };
@@ -60,6 +60,7 @@ export default async function CompanySettingsPage() {
         created_at:         company.created_at,
         member_count:       memberCount ?? 0,
         logo_url:           (company as any).logo_url ?? null,
+        timezone:           (company as any).timezone ?? "America/New_York",
       } : null}
     />
   );

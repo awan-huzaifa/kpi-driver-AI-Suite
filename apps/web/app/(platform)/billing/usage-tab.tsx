@@ -18,9 +18,9 @@ interface CostBreakdown {
 
 export interface UsageLogRow {
   id:              string
-  app:             'underwriting' | 'sales_coach' | 'training_coach' | 'note_taker' | 'data_enrichment'
+  app:             'underwriting' | 'sales_coach' | 'training_coach' | 'note_taker' | 'data_enrichment' | 'skip_tracing'
   entity_id:       string
-  entity_type:     'deal' | 'live_call' | 'training_call' | 'note_taker_call' | 'data_enrichment_log'
+  entity_type:     'deal' | 'live_call' | 'training_call' | 'note_taker_call' | 'data_enrichment_log' | 'skip_tracing_log'
   input_tokens:    number
   output_tokens:   number
   cost_usd:        number
@@ -37,6 +37,7 @@ const APP_LABELS: Record<UsageLogRow['app'], string> = {
   training_coach:  'AI Training Coach',
   note_taker:      'AI Note Taker',
   data_enrichment: 'AI Data Enrichment',
+  skip_tracing:    'AI Skiptracing',
 }
 
 const BREAKDOWN_LABELS: Record<keyof CostBreakdown, string> = {
@@ -44,7 +45,7 @@ const BREAKDOWN_LABELS: Record<keyof CostBreakdown, string> = {
   property_api_2: 'Property API 2',
   ai:             'AI Analysis',
   transcription:  'Transcription',
-  voice_agent:    'AI Voice',
+  voice_agent:    'AI Training Coach',
 }
 
 const ENTITY_LABELS: Record<UsageLogRow['entity_type'], string> = {
@@ -53,6 +54,7 @@ const ENTITY_LABELS: Record<UsageLogRow['entity_type'], string> = {
   training_call:       'Training Call Score',
   note_taker_call:     'Note Taker Call',
   data_enrichment_log: 'Data Enrichment',
+  skip_tracing_log:    'Skip Trace',
 }
 
 function entityLink(row: UsageLogRow): string {
@@ -71,6 +73,7 @@ const APP_FILTER_OPTIONS = [
   { value: 'training_coach', label: 'AI Training Coach' },
   { value: 'note_taker',      label: 'AI Note Taker' },
   { value: 'data_enrichment', label: 'AI Data Enrichment' },
+  { value: 'skip_tracing',    label: 'AI Skiptracing' },
 ] as const
 
 type AppFilter = 'all' | UsageLogRow['app']
@@ -287,19 +290,21 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
                         </div>
                       </td>
                       <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center' }}>{ENTITY_LABELS[r.entity_type]}</td>
-                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{r.input_tokens.toLocaleString()}</td>
-                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{r.output_tokens.toLocaleString()}</td>
+                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{r.entity_type === 'skip_tracing_log' ? <span style={{ color: C.dimText }}>—</span> : r.input_tokens.toLocaleString()}</td>
+                      <td style={{ padding: '12px', fontSize: 13, color: C.bodyText, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{r.entity_type === 'skip_tracing_log' ? <span style={{ color: C.dimText }}>—</span> : r.output_tokens.toLocaleString()}</td>
                       <td style={{ padding: '12px', fontSize: 13, fontWeight: 700, color: C.green, textAlign: 'center', fontVariantNumeric: 'tabular-nums' }}>{fmtCost(r.cost_usd)}</td>
                       <td style={{ padding: '12px 22px', textAlign: 'center' }}>
-                        <Link
-                          href={entityLink(r)}
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ color: C.dimText, display: 'inline-flex', alignItems: 'center', transition: 'color 0.15s' }}
-                          onMouseEnter={(e) => (e.currentTarget.style.color = C.blue)}
-                          onMouseLeave={(e) => (e.currentTarget.style.color = C.dimText)}
-                        >
-                          <ExternalLink size={14} />
-                        </Link>
+                        {r.entity_type !== 'skip_tracing_log' && (
+                          <Link
+                            href={entityLink(r)}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ color: C.dimText, display: 'inline-flex', alignItems: 'center', transition: 'color 0.15s' }}
+                            onMouseEnter={(e) => (e.currentTarget.style.color = C.blue)}
+                            onMouseLeave={(e) => (e.currentTarget.style.color = C.dimText)}
+                          >
+                            <ExternalLink size={14} />
+                          </Link>
+                        )}
                       </td>
                     </tr>
                     {hasBreakdown && isExpanded && (
@@ -434,7 +439,7 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
           data={(exportApps.length === 0 ? rows : rows.filter(r => exportApps.includes(r.app))) as unknown as Record<string, unknown>[]}
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
-          filenamePrefix="billing-usage"
+          filenamePrefix="Billing-Usage"
           filterSlot={
             <div>
               <p style={{ fontSize: 10, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>

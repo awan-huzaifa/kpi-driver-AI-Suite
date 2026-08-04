@@ -1014,7 +1014,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
           data={calls as unknown as Record<string, unknown>[]}
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
-          filenamePrefix="live-calls"
+          filenamePrefix="Call-Logs"
           onServerExport={(cols, fromDate, toDate) => {
             const params = new URLSearchParams();
             if (fromDate) params.set("from", fromDate);

@@ -10,6 +10,7 @@ const PUBLIC_PATHS = [
   '/auth/set-password',
   '/auth/forgot-password',
   '/auth/no-access',
+  '/auth/unlock-app',
   '/privacy_policy',
   '/terms-and-conditions',
   '/api/stripe/webhook',
@@ -72,7 +73,7 @@ export async function middleware(request: NextRequest) {
     // super_admin always passes regardless of flags
     if (!isSuperAdmin && !hasFlag) {
       if (isAdmin) {
-        return NextResponse.redirect('https://link.kpidriver.com/widget/form/vUL1Mt66ystym8CfIXHM')
+        return NextResponse.redirect(new URL('/auth/unlock-app', request.url))
       }
       return NextResponse.redirect(new URL('/dashboard?no_access=1', request.url))
     }

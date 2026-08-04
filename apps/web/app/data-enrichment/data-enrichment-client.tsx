@@ -742,7 +742,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
           data={logs as unknown as Record<string, unknown>[]}
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
-          filenamePrefix="data-enrichment"
+          filenamePrefix="Data-Enrichment"
           onServerExport={(cols, fromDate, toDate) => {
             const params = new URLSearchParams();
             if (fromDate) params.set("from",      fromDate);

@@ -5,6 +5,7 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend,
 } from "recharts";
+import { Download } from "lucide-react";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
@@ -320,6 +321,33 @@ export default function TrainingAnalyticsClient({ calls, companies, accessRole, 
             onCustomTo={setCustomTo}
             activeColor="#307DC0"
           />
+
+          {(accessRole === "admin" || accessRole === "super_admin") && (
+            <button
+              onClick={() => {
+                const p = new URLSearchParams();
+                p.set("period", period);
+                if (customFrom)          p.set("from",      customFrom);
+                if (customTo)            p.set("to",        customTo);
+                if (duration  !== "all") p.set("duration",  duration);
+                if (scorable  !== "all") p.set("scorable",  scorable);
+                if (agentIds.length > 0) p.set("agentIds",  agentIds.join(","));
+                if (aiAgents.length > 0) p.set("aiAgent",   aiAgents.join(","));
+                if (companyId !== "all") p.set("companyId", companyId);
+                window.open(`/tc-analytics?${p.toString()}`, "_blank");
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "7px 14px", borderRadius: 9,
+                background: "rgba(48,125,192,0.08)", border: "1px solid rgba(48,125,192,0.2)",
+                color: "#307DC0", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                transition: "background 0.15s",
+              }}
+            >
+              <Download size={13} />
+              Export PDF
+            </button>
+          )}
         </div>
       </div>
 

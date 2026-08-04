@@ -134,7 +134,7 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
           position: "fixed", inset: 0, zIndex: 50,
           background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
           display: "flex", alignItems: "flex-start", justifyContent: "center",
-          padding: "80px 24px 24px",
+          padding: "80px 24px 60px", overflowY: "auto",
         }}
       >
         <motion.div
@@ -145,7 +145,7 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
           transition={{ duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] }}
           onClick={(e) => e.stopPropagation()}
           style={{
-            width: "100%", maxWidth: 680, maxHeight: "90vh", overflowY: "auto",
+            width: "100%", maxWidth: 680, maxHeight: "calc(100vh - 110px)", overflowY: "auto",
             background: "#0f1f30",
             border: "1px solid rgba(255,255,255,0.1)",
             borderRadius: 20,
@@ -740,7 +740,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
           data={calls as unknown as Record<string, unknown>[]}
           defaultCols={exportDefaultCols as unknown as ColDef<Record<string, unknown>>[]}
           extraCols={exportExtraCols as unknown as ColDef<Record<string, unknown>>[]}
-          filenamePrefix="note-taker-calls"
+          filenamePrefix="Note-Logs"
           onServerExport={(cols, fromDate, toDate) => {
             const params = new URLSearchParams();
             if (fromDate) params.set("from", fromDate);

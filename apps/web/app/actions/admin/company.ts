@@ -21,7 +21,7 @@ async function getCallerProfile() {
   return profile as { access_role: AccessRole; company_id: string | null };
 }
 
-export async function updateCompany(data: { name: string; ghl_sub_account_id: string }) {
+export async function updateCompany(data: { name: string; ghl_sub_account_id: string; timezone?: string }) {
   const caller = await getCallerProfile();
   if (!caller.company_id) throw new Error("Your account is not assigned to a company.");
 
@@ -31,6 +31,7 @@ export async function updateCompany(data: { name: string; ghl_sub_account_id: st
     .update({
       name:               data.name.trim(),
       ghl_sub_account_id: data.ghl_sub_account_id.trim() || null,
+      ...(data.timezone ? { timezone: data.timezone } : {}),
     })
     .eq("id", caller.company_id);
 

@@ -46,6 +46,7 @@ export async function POST(request: Request) {
         option.amount * 100,
         companyId,
         description,
+        user.email!,
       )
       console.log('[topup] one-click charge succeeded — intent.id:', intent.id, 'description on intent:', intent.description)
 

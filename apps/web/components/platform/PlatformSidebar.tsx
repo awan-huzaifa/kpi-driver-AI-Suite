@@ -328,7 +328,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
 
       <div style={{ flex: 1 }} />
 
-      {/* Super Admin */}
+      {/* Super Admin section */}
       {isSuperAdmin && (
         <div style={{ borderTop: `1px solid ${C.border}`, padding: '10px 10px 6px', flexShrink: 0 }}>
           <p style={{
@@ -338,77 +338,81 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
           }}>Super Admin</p>
           <NavLink href="/super-admin/companies"      icon={ShieldCheck}       label="Companies"      />
           <NavLink href="/super-admin/billing-config" icon={SlidersHorizontal} label="Billing Config" />
+          <NavLink href="/admin/users"                icon={Users}             label="Users"          />
+          <NavLink href="/settings/account"           icon={Settings}          label="Account Settings" />
         </div>
       )}
 
-      {/* Workspace */}
-      <div style={{ borderTop: `1px solid ${C.border}`, padding: '10px 10px 6px', flexShrink: 0 }}>
-        <p style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
-          color: C.dimText, textTransform: 'uppercase',
-          padding: '0 8px', marginBottom: 4,
-        }}>Workspace</p>
+      {/* Workspace — non-super-admin only */}
+      {!isSuperAdmin && (
+        <div style={{ borderTop: `1px solid ${C.border}`, padding: '10px 10px 6px', flexShrink: 0 }}>
+          <p style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.1em',
+            color: C.dimText, textTransform: 'uppercase',
+            padding: '0 8px', marginBottom: 4,
+          }}>Workspace</p>
 
-        {/* Settings accordion */}
-        <div>
-          <button
-            onClick={() => setSettingsOpen((v) => !v)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              width: '100%', padding: '8px 8px', borderRadius: 6,
-              background: settingsOpen ? C.activeBg : 'transparent',
-              border: 'none', cursor: 'pointer',
-            }}
-          >
-            <Settings size={15} style={{ flexShrink: 0, color: settingsOpen ? C.blue : C.dimText }} />
-            <span style={{ fontSize: 13, fontWeight: settingsOpen ? 600 : 500, flex: 1, textAlign: 'left', color: settingsOpen ? C.white : C.mutedText }}>
-              Settings
-            </span>
-            <ChevronDown size={12} style={{
-              color: C.dimText, flexShrink: 0,
-              transform: settingsOpen ? 'rotate(180deg)' : 'none',
-              transition: 'transform 0.2s',
-            }} />
-          </button>
+          {/* Settings accordion */}
+          <div>
+            <button
+              onClick={() => setSettingsOpen((v) => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                width: '100%', padding: '8px 8px', borderRadius: 6,
+                background: settingsOpen ? C.activeBg : 'transparent',
+                border: 'none', cursor: 'pointer',
+              }}
+            >
+              <Settings size={15} style={{ flexShrink: 0, color: settingsOpen ? C.blue : C.dimText }} />
+              <span style={{ fontSize: 13, fontWeight: settingsOpen ? 600 : 500, flex: 1, textAlign: 'left', color: settingsOpen ? C.white : C.mutedText }}>
+                Settings
+              </span>
+              <ChevronDown size={12} style={{
+                color: C.dimText, flexShrink: 0,
+                transform: settingsOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.2s',
+              }} />
+            </button>
 
-          <AnimatePresence>
-            {settingsOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.18 }}
-                style={{ overflow: 'hidden' }}
-              >
-                {SETTINGS_SUB.filter((s) => s.id !== 'company' || isAdmin).map((s) => (
-                  <Link
-                    key={s.id} href={s.href}
-                    style={{
-                      display: 'flex', alignItems: 'center',
-                      padding: '6px 8px 6px 32px',
-                      fontSize: 12, fontWeight: 500, color: C.mutedText,
-                      textDecoration: 'none', borderRadius: 6,
-                    }}
-                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = C.white)}
-                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = C.mutedText)}
-                  >
-                    <span style={{ width: 4, height: 4, borderRadius: '50%', background: C.blue, marginRight: 8, flexShrink: 0 }} />
-                    {s.label}
-                  </Link>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <AnimatePresence>
+              {settingsOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  {SETTINGS_SUB.filter((s) => s.id !== 'company' || isAdmin).map((s) => (
+                    <Link
+                      key={s.id} href={s.href}
+                      style={{
+                        display: 'flex', alignItems: 'center',
+                        padding: '6px 8px 6px 32px',
+                        fontSize: 12, fontWeight: 500, color: C.mutedText,
+                        textDecoration: 'none', borderRadius: 6,
+                      }}
+                      onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = C.white)}
+                      onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = C.mutedText)}
+                    >
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: C.blue, marginRight: 8, flexShrink: 0 }} />
+                      {s.label}
+                    </Link>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {BOTTOM_NAV.filter((item) => {
+            if (item.id === 'users')   return isAdmin
+            if (item.id === 'billing') return isAdmin
+            return true
+          }).map((item) => (
+            <NavLink key={item.id} href={item.href} icon={item.icon} label={item.label} exact />
+          ))}
         </div>
-
-        {BOTTOM_NAV.filter((item) => {
-          if (item.id === 'users')   return isAdmin
-          if (item.id === 'billing') return isAdmin && !isSuperAdmin
-          return true
-        }).map((item) => (
-          <NavLink key={item.id} href={item.href} icon={item.icon} label={item.label} exact />
-        ))}
-      </div>
+      )}
 
       {/* User card */}
       <div style={{

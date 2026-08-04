@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { UserPlus, Pencil, UserX, UserCheck, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search, Camera } from "lucide-react";
 import PlatformShell, { type Access } from "@/components/platform/PlatformShell";
 import { Button } from "@/components/ui/button";
@@ -126,6 +126,131 @@ function AppCheckbox({ checked, onChange, icon: Icon, label }: {
       <Icon size={14} style={{ color: checked ? C.blue : "#6b7a8a", flexShrink: 0 }} />
       <span style={{ fontSize: 13, fontWeight: 500, color: checked ? "#e2e8f0" : "#6b7a8a" }}>{label}</span>
     </button>
+  );
+}
+
+function CompanySearchDropdown({
+  companies,
+  value,
+  onChange,
+}: {
+  companies: Company[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen]     = useState(false);
+  const [query, setQuery]   = useState("");
+  const ref                 = useRef<HTMLDivElement>(null);
+  const inputRef            = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 50);
+  }, [open]);
+
+  const filtered = query.trim()
+    ? companies.filter(c => c.name.toLowerCase().includes(query.toLowerCase()))
+    : companies;
+
+  const selectedName = value ? (companies.find(c => c.id === value)?.name ?? "All Companies") : "All Companies";
+
+  return (
+    <div ref={ref} style={{ position: "relative", minWidth: 220 }}>
+      {/* Trigger */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "9px 12px", borderRadius: 12, cursor: "pointer",
+          background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+          color: "#f1f5f9", fontSize: 14, fontWeight: 500,
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{selectedName}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 8 }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {/* Dropdown */}
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 100,
+          background: "#0F2032", border: "1px solid rgba(48,125,192,0.15)",
+          borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.5)", overflow: "hidden",
+        }}>
+          {/* Search input */}
+          <div style={{ padding: "10px 10px 6px" }}>
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search companies…"
+              style={{
+                width: "100%", padding: "7px 10px", borderRadius: 8,
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                color: "#f1f5f9", fontSize: 13, outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
+          {/* Options */}
+          <div style={{ maxHeight: 220, overflowY: "auto", padding: "4px 6px 8px" }}>
+            {/* All Companies option */}
+            <button
+              onClick={() => { onChange(""); setOpen(false); setQuery(""); }}
+              style={{
+                width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 8,
+                background: value === "" ? "rgba(48,125,192,0.15)" : "transparent",
+                color: value === "" ? "#f1f5f9" : "#94a3b8",
+                fontSize: 13, fontWeight: value === "" ? 700 : 500, cursor: "pointer",
+                border: "none", display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}
+            >
+              All Companies
+              {value === "" && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#307DC0" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </button>
+
+            {filtered.length === 0 && (
+              <p style={{ fontSize: 13, color: "#475569", textAlign: "center", padding: "12px 0", margin: 0 }}>No results</p>
+            )}
+
+            {filtered.map(c => (
+              <button
+                key={c.id}
+                onClick={() => { onChange(c.id); setOpen(false); setQuery(""); }}
+                style={{
+                  width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 8,
+                  background: value === c.id ? "rgba(48,125,192,0.15)" : "transparent",
+                  color: value === c.id ? "#f1f5f9" : "#94a3b8",
+                  fontSize: 13, fontWeight: value === c.id ? 700 : 500, cursor: "pointer",
+                  border: "none", display: "flex", alignItems: "center", justifyContent: "space-between",
+                }}
+              >
+                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                {value === c.id && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#307DC0" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: 6 }}>
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -273,33 +398,11 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
             <span style={{ fontSize: 12, fontWeight: 600, color: "#475569", whiteSpace: "nowrap" }}>
               Filter By Company:
             </span>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              <button
-                onClick={() => setSelectedCompany("")}
-                style={{
-                  padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                  background: selectedCompany === "" ? C.blue : "rgba(255,255,255,0.04)",
-                  color: selectedCompany === "" ? "#fff" : "#8b9cb0",
-                  border: `1px solid ${selectedCompany === "" ? C.blue : "rgba(255,255,255,0.1)"}`,
-                }}
-              >
-                All Companies
-              </button>
-              {companies.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCompany(c.id)}
-                  style={{
-                    padding: "5px 12px", borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                    background: selectedCompany === c.id ? C.blue : "rgba(255,255,255,0.04)",
-                    color: selectedCompany === c.id ? "#fff" : "#8b9cb0",
-                    border: `1px solid ${selectedCompany === c.id ? C.blue : "rgba(255,255,255,0.1)"}`,
-                  }}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
+            <CompanySearchDropdown
+              companies={companies}
+              value={selectedCompany}
+              onChange={setSelectedCompany}
+            />
           </div>
         )}
 

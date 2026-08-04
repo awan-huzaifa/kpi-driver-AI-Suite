@@ -5,15 +5,17 @@ import { Loader2, Save, CheckCircle2, RotateCcw, Globe, Building2 } from 'lucide
 import type { PlanId } from '@kpidriver/auth/types'
 import PlatformShell, { type Access } from '@/components/platform/PlatformShell'
 import { C } from '@/components/platform/brand'
-import { updateBillingMultiplier, clearCompanyMultiplier } from '@/app/actions/super-admin/billing-config'
+import { updateBillingMultiplier, clearCompanyMultiplier, updateApiCosts } from '@/app/actions/super-admin/billing-config'
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select'
 
 interface ConfigRow {
-  id:         string
-  app:        string
-  multiplier: number
-  company_id: string | null
-  updated_at: string
+  id:                 string
+  app:                string
+  multiplier:         number
+  company_id:         string | null
+  updated_at:         string
+  rentcast_cost_usd:  number | null
+  axesso_cost_usd:    number | null
 }
 
 interface Props {
@@ -57,12 +59,43 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
       })
     )
 
+  const globalUwRow = config.find(r => r.company_id === null && r.app === 'underwriting')
+
   const [values, setValues] = useState<Record<string, string>>(getInitialValues(null))
   const [saving,  setSaving]  = useState<string | null>(null)
   const [saved,   setSaved]   = useState<string | null>(null)
   const [resetting, setResetting] = useState<string | null>(null)
   const [errors,  setErrors]  = useState<Record<string, string>>({})
   const [, startTransition] = useTransition()
+
+  // API cost fields (underwriting only, global row)
+  const [rentcastCost, setRentcastCost] = useState(String(globalUwRow?.rentcast_cost_usd ?? 0.074))
+  const [axessoCost,   setAxessoCost]   = useState(String(globalUwRow?.axesso_cost_usd   ?? 0.020))
+  const [savingApi,    setSavingApi]    = useState(false)
+  const [savedApi,     setSavedApi]     = useState(false)
+  const [apiError,     setApiError]     = useState('')
+
+  function handleSaveApiCosts() {
+    const rc = parseFloat(rentcastCost)
+    const ax = parseFloat(axessoCost)
+    if (isNaN(rc) || rc < 0 || isNaN(ax) || ax < 0) {
+      setApiError('Costs must be non-negative numbers')
+      return
+    }
+    setApiError('')
+    setSavingApi(true)
+    startTransition(async () => {
+      try {
+        await updateApiCosts(rc, ax)
+        setSavedApi(true)
+        setTimeout(() => setSavedApi(false), 3000)
+      } catch (e) {
+        setApiError(e instanceof Error ? e.message : 'Failed to save')
+      } finally {
+        setSavingApi(false)
+      }
+    })
+  }
 
   function handleCompanyChange(cid: string) {
     setSelectedCompany(cid)
@@ -168,7 +201,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
           <Select value={selectedCompany} onValueChange={handleCompanyChange}>
             <SelectTrigger placeholder="Select Company" className="w-auto min-w-[200px] text-sm" />
             <SelectContent>
-              <SelectItem value="global">ðŸŒ Global Defaults</SelectItem>
+              <SelectItem value="global">Global Defaults</SelectItem>
               {companies.map(c => (
                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
@@ -188,7 +221,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
 
           return (
             <div key={app} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: '18px 22px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap', marginBottom: app === 'underwriting' && selectedCompany === 'global' ? 18 : 0 }}>
 
                 {/* Left: app info */}
                 <div style={{ flex: 1, minWidth: 200 }}>
@@ -213,7 +246,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <p style={{ fontSize: 12, color: C.dimText, margin: '0 0 3px' }}>{APP_DESC[app]}</p>
                   {companyId && !isOverride && (
                     <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>
-                      Global Default: <strong style={{ color: '#78ABD6' }}>{globalFallback}Ã—</strong>
+                      Global Default: <strong style={{ color: '#78ABD6' }}>{globalFallback}×</strong>
                     </p>
                   )}
                   {lastUpdated && (
@@ -295,6 +328,62 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                 </div>
 
               </div>
+
+              {/* API cost inputs — underwriting global only */}
+              {app === 'underwriting' && selectedCompany === 'global' && (
+                <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, color: C.dimText, margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    External API Cost Per Deal
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: C.bodyText, margin: '0 0 5px' }}>RentCast ($/deal)</p>
+                      <input
+                        type="number" step="0.001" min="0"
+                        value={rentcastCost}
+                        onChange={e => setRentcastCost(e.target.value)}
+                        style={{
+                          width: 110, padding: '8px 12px', borderRadius: 9,
+                          background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}`,
+                          color: C.white, fontSize: 14, fontWeight: 700, textAlign: 'center',
+                          outline: 'none', fontVariantNumeric: 'tabular-nums',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: 11, fontWeight: 600, color: C.bodyText, margin: '0 0 5px' }}>Axesso ($/deal)</p>
+                      <input
+                        type="number" step="0.001" min="0"
+                        value={axessoCost}
+                        onChange={e => setAxessoCost(e.target.value)}
+                        style={{
+                          width: 110, padding: '8px 12px', borderRadius: 9,
+                          background: 'rgba(255,255,255,0.05)', border: `1px solid ${C.border}`,
+                          color: C.white, fontSize: 14, fontWeight: 700, textAlign: 'center',
+                          outline: 'none', fontVariantNumeric: 'tabular-nums',
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={handleSaveApiCosts}
+                      disabled={savingApi}
+                      className="btn-primary"
+                      style={{ padding: '9px 16px', display: 'flex', alignItems: 'center', gap: 6, marginBottom: 1 }}
+                    >
+                      {savingApi ? <Loader2 size={13} className="animate-spin" /> : savedApi ? <CheckCircle2 size={13} /> : <Save size={13} />}
+                      {savedApi ? 'Saved' : 'Save API Costs'}
+                    </button>
+                  </div>
+                  {apiError && <p style={{ fontSize: 11, color: C.red, margin: '8px 0 0' }}>{apiError}</p>}
+                  <p style={{ fontSize: 11, color: C.dimText, margin: '8px 0 0' }}>
+                    Added to the Claude AI cost before the multiplier is applied. Combined external cost per deal ≈{' '}
+                    <strong style={{ color: C.white }}>
+                      ${((parseFloat(rentcastCost || '0') + parseFloat(axessoCost || '0'))).toFixed(4)}
+                    </strong>
+                  </p>
+                </div>
+              )}
+
             </div>
           )
         })}

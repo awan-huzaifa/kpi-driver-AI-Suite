@@ -22,7 +22,7 @@ export default async function BillingPage() {
   const companyId = profile?.company_id ?? null
   const admin = createAdminClient()
 
-  const [{ data: sub }, { data: companyRow }, { data: appSpend }, { data: usageLogs }] = await Promise.all([
+  const [{ data: sub }, { data: companyRow }, { data: appSpend }, { data: usageLogs }, { data: skipTracingTxns }] = await Promise.all([
     supabase.from('subscriptions').select('plan_id, status').eq('user_id', user.id).single(),
 
     companyId
@@ -37,6 +37,16 @@ export default async function BillingPage() {
       .from('ai_usage_logs')
       .select('id, app, entity_id, entity_type, input_tokens, output_tokens, cost_usd, model, created_at, cost_breakdown')
       .order('created_at', { ascending: false }),
+
+    companyId
+      ? admin
+          .from('company_wallet_transactions')
+          .select('id, amount_usd, description, created_at')
+          .eq('company_id', companyId)
+          .eq('app', 'skip_tracing')
+          .eq('type', 'deduction')
+          .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ])
 
   // Fetch addresses for deal-type usage logs
@@ -62,6 +72,23 @@ export default async function BillingPage() {
     logs.forEach((log, i) => { dealRunNumbers[log.id] = i })
   }
 
+  // Map skip tracing wallet deductions to UsageLogRow shape and merge
+  const skipTracingRows = (skipTracingTxns ?? []).map((t: { id: string; amount_usd: number; description: string; created_at: string }) => ({
+    id:           t.id,
+    app:          'skip_tracing' as const,
+    entity_id:    t.id,
+    entity_type:  'skip_tracing_log' as const,
+    input_tokens:  0,
+    output_tokens: 0,
+    cost_usd:     t.amount_usd,
+    model:        '—',
+    created_at:   t.created_at,
+    cost_breakdown: null,
+  }))
+
+  const allUsageLogs = [...(usageLogs ?? []), ...skipTracingRows]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
   const planId   = sub?.plan_id as PlanId | null
   const isActive = sub?.status === 'active' || sub?.status === 'trialing'
 
@@ -81,7 +108,7 @@ export default async function BillingPage() {
       balance={companyRow?.wallet_balance ?? 0}
       appSpend={appSpend ?? []}
       topUpOptions={TOP_UP_OPTIONS}
-      usageLogs={usageLogs ?? []}
+      usageLogs={allUsageLogs}
       dealAddresses={dealAddresses}
       dealRunNumbers={dealRunNumbers}
       autoTopup={{

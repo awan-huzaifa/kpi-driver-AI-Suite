@@ -27,7 +27,7 @@ export default async function BillingConfigPage() {
 
   const admin = createAdminClient();
   const [{ data: config }, { data: companies }] = await Promise.all([
-    admin.from("billing_config").select("id, app, multiplier, company_id, updated_at").order("app"),
+    admin.from("billing_config").select("id, app, multiplier, company_id, updated_at, rentcast_cost_usd, axesso_cost_usd").order("app"),
     admin.from("companies").select("id, name").order("name"),
   ]);
 

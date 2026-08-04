@@ -66,6 +66,22 @@ export async function updateBillingMultiplier(
   revalidatePath("/super-admin/billing-config");
 }
 
+/** Update hardcoded API costs for underwriting (global row only). */
+export async function updateApiCosts(rentcastCostUsd: number, axessoCostUsd: number) {
+  await requireSuperAdmin();
+  if (rentcastCostUsd < 0 || axessoCostUsd < 0) throw new Error("Costs cannot be negative");
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("billing_config")
+    .update({ rentcast_cost_usd: rentcastCostUsd, axesso_cost_usd: axessoCostUsd, updated_at: new Date().toISOString() })
+    .eq("app", "underwriting")
+    .is("company_id", null);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/super-admin/billing-config");
+}
+
 /** Remove a company-specific override so that company falls back to the global default. */
 export async function clearCompanyMultiplier(app: string, companyId: string) {
   await requireSuperAdmin();

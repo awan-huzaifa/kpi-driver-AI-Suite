@@ -96,7 +96,7 @@ export const APP_REGISTRY: AppEntry[] = [
     features: ['Focus on Closing Deals, Leave the Notes on Us', 'Transcription & AI Summaries', 'Too Lazy To Fill Fields? No Problem!'],
     href: '/note-taker', icon: NotebookPen, accessKey: 'noteTaker', accentRgb: '48,125,192',
     subNav: [
-      { href: '/note-taker', label: 'Note Logs', icon: LayoutDashboard, exact: true },
+      { href: '/note-taker', label: 'Note Taker Logs', icon: LayoutDashboard, exact: true },
     ],
   },
   {

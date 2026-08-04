@@ -7,11 +7,31 @@ import PlatformShell, { type Access } from "@/components/platform/PlatformShell"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { updateCompany } from "@/app/actions/admin/company";
 import LogoUpload from "./logo-upload";
 import type { PlanId } from "@kpidriver/auth/types";
 import type { AccessRole } from "@/types/database";
 import { C } from "@/components/platform/brand";
+
+const COMMON_TIMEZONES = [
+  { label: "Eastern Time (ET)",       value: "America/New_York" },
+  { label: "Central Time (CT)",       value: "America/Chicago" },
+  { label: "Mountain Time (MT)",      value: "America/Denver" },
+  { label: "Pacific Time (PT)",       value: "America/Los_Angeles" },
+  { label: "Alaska Time (AKT)",       value: "America/Anchorage" },
+  { label: "Hawaii Time (HT)",        value: "Pacific/Honolulu" },
+  { label: "Atlantic Time (AST)",     value: "America/Halifax" },
+  { label: "UTC",                     value: "UTC" },
+  { label: "London (GMT/BST)",        value: "Europe/London" },
+  { label: "Central Europe (CET)",    value: "Europe/Berlin" },
+  { label: "Eastern Europe (EET)",    value: "Europe/Athens" },
+  { label: "Dubai (GST)",             value: "Asia/Dubai" },
+  { label: "India (IST)",             value: "Asia/Kolkata" },
+  { label: "Singapore/Manila (SGT)",  value: "Asia/Singapore" },
+  { label: "Tokyo (JST)",             value: "Asia/Tokyo" },
+  { label: "Sydney (AEST)",           value: "Australia/Sydney" },
+];
 
 interface Company {
   id:                 string;
@@ -21,6 +41,7 @@ interface Company {
   created_at:         string;
   member_count:       number;
   logo_url:           string | null;
+  timezone:           string;
 }
 
 interface Props {
@@ -34,6 +55,7 @@ interface Props {
 export default function CompanySettingsClient({ currentUser, planId, access, accessRole, company }: Props) {
   const [name, setName]   = useState(company?.name ?? "");
   const [ghlId, setGhlId] = useState(company?.ghl_sub_account_id ?? "");
+  const [timezone, setTimezone] = useState(company?.timezone ?? "America/New_York");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
   const [err, setErr]       = useState<string | null>(null);
@@ -42,7 +64,7 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
     if (!name.trim()) { setErr("Company Name Is Required."); return; }
     setSaving(true); setSaved(false); setErr(null);
     try {
-      await updateCompany({ name, ghl_sub_account_id: ghlId });
+      await updateCompany({ name, ghl_sub_account_id: ghlId, timezone });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
@@ -112,6 +134,28 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
               />
               <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, marginTop: 6 }}>
                 Found In Your GoHighLevel Sub-Account URL. Used To Route Incoming Calls To This Company.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="company-tz">Report Timezone</Label>
+              <div style={{ marginTop: 6 }}>
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger
+                    placeholder="Select timezone"
+                    className="w-auto"
+                  />
+                  <SelectContent>
+                    {COMMON_TIMEZONES.map(tz => (
+                      <SelectItem key={tz.value} value={tz.value}>
+                        {tz.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, marginTop: 6 }}>
+                Automated email reports are sent at 8 AM in this timezone.
               </p>
             </div>
 
