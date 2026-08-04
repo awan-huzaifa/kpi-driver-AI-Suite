@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { recordConsent } from "@/app/actions/auth/consent";
 
 export default function SetPasswordPage() {
   const router = useRouter();
@@ -52,6 +53,8 @@ export default function SetPasswordPage() {
       setLoading(false);
       return;
     }
+
+    void recordConsent();
 
     router.push("/dashboard");
     router.refresh();
