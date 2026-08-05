@@ -50,6 +50,7 @@ export async function GET(request: Request) {
         await admin.auth.admin.deleteUser(data.user.id)
         return NextResponse.redirect(`${origin}/auth/no-access`)
       }
+      void admin.from('users').update({ last_signin_consent_at: new Date().toISOString() }).eq('id', data.user.id)
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

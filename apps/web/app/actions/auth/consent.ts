@@ -16,3 +16,11 @@ export async function recordConsent() {
 
   if (error) throw new Error(error.message);
 }
+
+export async function recordSigninConsent(userId: string) {
+  const admin = createAdminClient();
+  await admin
+    .from("users")
+    .update({ last_signin_consent_at: new Date().toISOString() })
+    .eq("id", userId);
+}

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@kpidriver/auth/server'
+import ParticlesBg from '@/components/ui/particles-bg'
 
 export default async function NoAccessPage({
   searchParams,
@@ -18,11 +19,15 @@ export default async function NoAccessPage({
       minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: '#0d1b2e', padding: 24,
     }}>
+      <ParticlesBg />
       <div style={{
         width: '100%', maxWidth: 400, textAlign: 'center',
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: 20, padding: '40px 32px',
+        background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
+        backdropFilter: 'blur(52px) saturate(180%) brightness(1.08)',
+        WebkitBackdropFilter: 'blur(52px) saturate(180%) brightness(1.08)',
+        border: '1px solid rgba(255,255,255,0.18)',
+        borderRadius: 24, padding: '40px 32px',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 48px rgba(0,0,0,0.3)',
       }}>
         {/* Lock icon */}
         <div style={{
@@ -42,12 +47,12 @@ export default async function NoAccessPage({
         <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 28 }}>
           {isDeactivated ? (
             <>
-              Your Email Is Not Linked To An Active KPI DRIVER AI SUITE Account.<br />
+              Your Email Is Not Linked To An Active KPI DRIVER Account.<br />
               Contact Your Admin To Get Access.
             </>
           ) : (
             <>
-              Your Google Account Isn&apos;t Linked To An Active KPI DRIVER AI SUITE Credential.<br />
+              Your Google Account Isn&apos;t Linked To An Active KPI DRIVER Credential.<br />
               Contact Your Admin To Get Access.
             </>
           )}

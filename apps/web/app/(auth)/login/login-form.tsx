@@ -11,6 +11,7 @@ import {
 import Image from 'next/image'
 import Link from 'next/link'
 import ParticlesBg from '@/components/ui/particles-bg'
+import { recordSigninConsent } from '@/app/actions/auth/consent'
 
 const STATS = [
   { value: '5,000+',   label: 'Deals Underwritten'  },
@@ -35,7 +36,7 @@ export default function LoginForm() {
     setLoading(true)
     setError(null)
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       if (error.message.toLowerCase().includes('ban') || error.message.toLowerCase().includes('deactivated')) {
         router.push('/auth/no-access?reason=deactivated')
@@ -45,6 +46,7 @@ export default function LoginForm() {
       setLoading(false)
       return
     }
+    if (data.user) void recordSigninConsent(data.user.id)
     router.push(next)
     router.refresh()
   }

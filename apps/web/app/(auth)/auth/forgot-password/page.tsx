@@ -6,6 +6,7 @@ import { Mail, ArrowRight, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 
 import Image from 'next/image'
 import Link from 'next/link'
 import { requestPasswordReset } from '@/app/actions/auth/reset-password'
+import ParticlesBg from '@/components/ui/particles-bg'
 
 export default function ForgotPasswordPage() {
   const [email,     setEmail]     = useState('')
@@ -32,7 +33,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden', background: '#0d1b2e' }}>
-
+      <ParticlesBg />
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',

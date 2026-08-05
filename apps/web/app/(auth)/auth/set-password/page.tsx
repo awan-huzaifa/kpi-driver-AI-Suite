@@ -7,6 +7,7 @@ import { Lock, ArrowRight, Loader2, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { recordConsent } from "@/app/actions/auth/consent";
+import ParticlesBg from "@/components/ui/particles-bg";
 
 export default function SetPasswordPage() {
   const router = useRouter();
@@ -62,13 +63,14 @@ export default function SetPasswordPage() {
 
   if (!ready) return (
     <div style={{ display: "flex", minHeight: "100dvh", alignItems: "center", justifyContent: "center", background: "#0d1b2e" }}>
-      <Loader2 size={24} style={{ color: "#307DC0", animation: "spin 1s linear infinite" }} />
+      <ParticlesBg />
+      <Loader2 size={24} style={{ color: "#307DC0", animation: "spin 1s linear infinite", position: "relative", zIndex: 10 }} />
     </div>
   );
 
   return (
     <div style={{ height: "100dvh", display: "flex", overflow: "hidden", background: "#0d1b2e" }}>
-
+      <ParticlesBg />
       <div style={{
         flex: 1, display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
