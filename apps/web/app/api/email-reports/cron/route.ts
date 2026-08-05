@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { resend, FROM_EMAIL } from "@/lib/email/client";
+import { getResend, FROM_EMAIL } from "@/lib/email/client";
 import { getLocalHour, getLocalDate, getDueReportTypes, getPeriodBounds, REPORT_LABELS } from "@/lib/email/periods";
 import { scTeamTemplate, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
 
@@ -66,7 +66,7 @@ export async function GET(req: Request) {
             const email = emailMap.get(u.id);
             if (!email) continue;
             try {
-              await resend.emails.send({
+              await getResend().emails.send({
                 from:    FROM_EMAIL,
                 to:      email,
                 subject: `Sales Coach Team Report — ${period.label}`,
@@ -86,7 +86,7 @@ export async function GET(req: Request) {
             const email = emailMap.get(u.id);
             if (!email) continue;
             try {
-              await resend.emails.send({
+              await getResend().emails.send({
                 from:    FROM_EMAIL,
                 to:      email,
                 subject: `Your Sales Coach Report — ${period.label}`,
@@ -115,7 +115,7 @@ export async function GET(req: Request) {
             const email = emailMap.get(u.id);
             if (!email) continue;
             try {
-              await resend.emails.send({
+              await getResend().emails.send({
                 from:    FROM_EMAIL,
                 to:      email,
                 subject: `Training Coach Team Report — ${period.label}`,
@@ -134,7 +134,7 @@ export async function GET(req: Request) {
             const email = emailMap.get(u.id);
             if (!email) continue;
             try {
-              await resend.emails.send({
+              await getResend().emails.send({
                 from:    FROM_EMAIL,
                 to:      email,
                 subject: `Your Training Report — ${period.label}`,
@@ -169,7 +169,7 @@ export async function GET(req: Request) {
           const email = emailMap.get(u.id);
           if (!email) continue;
           try {
-            await resend.emails.send({
+            await getResend().emails.send({
               from:    FROM_EMAIL,
               to:      email,
               subject: `Deal Underwriting Team Report — ${period.label}`,
@@ -195,7 +195,7 @@ export async function GET(req: Request) {
           const email = emailMap.get(userId);
           if (!email) continue;
           try {
-            await resend.emails.send({
+            await getResend().emails.send({
               from:    FROM_EMAIL,
               to:      email,
               subject: `Deal Underwriting Report — ${period.label}`,
