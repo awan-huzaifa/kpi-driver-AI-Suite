@@ -97,7 +97,7 @@ export default function LoginForm() {
         >
           <Image src="/logo3.png" alt="KPI DRIVER" width={300} height={110} style={{ objectFit: 'contain' }} priority />
           <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
-            <span style={{ color: '#64748b' }}>KPI DRIVER AI SUITE &nbsp;·&nbsp; </span>
+            <span style={{ color: '#64748b' }}>KPI DRIVER &nbsp;·&nbsp; </span>
             <span style={{ color: '#22c55e' }}>Built By </span>
             <span style={{ color: '#64748b' }}>RE Investors</span>
             <span style={{ color: '#22c55e' }}> For </span>
@@ -120,7 +120,7 @@ export default function LoginForm() {
             marginBottom: 14,
             letterSpacing: '-0.02em',
           }}>
-            KPI DRIVER AI SUITE<br />
+            Your Complete AI Suite<br />
             <span style={{
               background: 'linear-gradient(135deg,#22c55e 0%,#4ade80 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
@@ -351,7 +351,7 @@ export default function LoginForm() {
         }}
       >
         <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
-          KPI DRIVER AI SUITE · Built By RE Investors For RE Investors
+          KPI DRIVER · Built By RE Investors For RE Investors
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="/terms-and-conditions" target="_blank" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
