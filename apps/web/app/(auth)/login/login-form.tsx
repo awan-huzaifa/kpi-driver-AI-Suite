@@ -119,7 +119,7 @@ export default function LoginForm() {
             marginBottom: 14,
             letterSpacing: '-0.02em',
           }}>
-            Your Complete AI Suite<br />
+            KPI DRIVER AI SUITE<br />
             <span style={{
               background: 'linear-gradient(135deg,#22c55e 0%,#4ade80 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
