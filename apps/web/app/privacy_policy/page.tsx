@@ -105,7 +105,7 @@ export default function PrivacyPolicyPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 12, textDecoration: 'none' }}>
-          <Image src="/logo3.png" alt="KPI DRIVER" width={120} height={40} style={{ objectFit: 'contain' }} />
+          <Image src="/logo3.png" alt="KPI DRIVER AI SUITE" width={120} height={40} style={{ objectFit: 'contain' }} />
         </Link>
         <nav style={{ display: 'flex', gap: 24 }}>
           <Link href="/terms-and-conditions" style={{ fontSize: 13, fontWeight: 500, color: C.muted, textDecoration: 'none' }}>Terms &amp; Conditions</Link>
@@ -137,21 +137,22 @@ export default function PrivacyPolicyPage() {
 
           {/* Title block */}
           <div style={{ marginBottom: 40 }}>
-            <h1 style={{ fontSize: 32, fontWeight: 800, color: C.white, marginBottom: 8 }}>Privacy Policy</h1>
+            <h1 style={{ fontSize: 32, fontWeight: 800, color: C.white, marginBottom: 4 }}>Privacy Policy</h1>
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.blue, marginBottom: 8 }}>KPI DRIVER AI SUITE AI SUITE</p>
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' as const }}>
               <span style={{ fontSize: 13, color: C.muted }}><B>Company:</B> KPI DRIVER, LLC</span>
               <span style={{ fontSize: 13, color: C.muted }}><B>Version:</B> 3.0</span>
               <span style={{ fontSize: 13, color: C.muted }}><B>Last updated:</B> July 30, 2026</span>
               <span style={{ fontSize: 13, color: C.muted }}><B>Effective date:</B> August 1, 2026</span>
             </div>
-            <p style={{ fontSize: 13, color: C.dim, marginTop: 8, fontStyle: 'italic' }}>Applies to kpidriver.com, kpidriver.ai, and the KPI DRIVER platform.</p>
+            <p style={{ fontSize: 13, color: C.dim, marginTop: 8, fontStyle: 'italic' }}>Applies to kpidriver.com, kpidriver.ai, and the KPI DRIVER AI SUITE platform.</p>
           </div>
 
           <Divider />
 
           {/* Section 1 */}
           <H2 id="s1">1. Introduction</H2>
-          <P>This Privacy Policy explains how <B>KPI DRIVER, LLC</B> ("KPI DRIVER," "we," "us," "our") collects, uses, discloses and protects information in connection with our websites and the KPI DRIVER platform (together, the "Platform").</P>
+          <P>This Privacy Policy explains how <B>KPI DRIVER, LLC</B> ("KPI DRIVER AI SUITE," "we," "us," "our") collects, uses, discloses and protects information in connection with our websites and the KPI DRIVER AI SUITE platform (together, the "Platform").</P>
           <P>The Platform is a customer relationship management and business automation system for real estate investing businesses, combined with a suite of artificial intelligence applications:</P>
           <Table>
             <thead>
@@ -333,7 +334,7 @@ export default function PrivacyPolicyPage() {
           <H3>8.1 What the AI Agent Does</H3>
           <P>The AI Agent converses with people by telephone using an artificial voice, and by text message. Outside a customer's configured business hours, it answers inbound calls only and does not place outbound calls. It replies to inbound text messages and may follow up with a lead during business hours where no human has responded.</P>
           <H3>8.2 If You Received a Call or Text from an AI Agent</H3>
-          <P><B>The business that contacted you decided to contact you and supplied your telephone number.</B> KPI DRIVER provides the software. That business is responsible for having the legal right to contact you.</P>
+          <P><B>The business that contacted you decided to contact you and supplied your telephone number.</B> KPI DRIVER AI SUITE provides the software. That business is responsible for having the legal right to contact you.</P>
           <P><B>To stop being contacted:</B> reply STOP to any text message, or tell the AI Agent during a call that you do not want to be contacted. Either is recorded as an opt-out and honored.</P>
           <P><B>If contact continues after you opted out</B>, or if you believe you were contacted unlawfully, email <B>info@kpidriver.com</B>. We will forward your request to the business and assist in resolving it.</P>
           <P><B>You are entitled to know you are speaking with an AI.</B> Our terms require customers to configure the Agent to disclose that it is an artificial intelligence system, and prohibit configuring it to claim to be human or to deny being an AI if asked.</P>
@@ -344,7 +345,7 @@ export default function PrivacyPolicyPage() {
           {/* Section 9 */}
           <H2 id="s9">9. Call Recording</H2>
           <P><B>Calls made and received through the Platform are recorded and transcribed, including calls answered by the AI Agent. Recording law applies regardless of who placed the call.</B> Florida is an all-party consent state under Fla. Stat. § 934.03.</P>
-          <P><B>Our customer is solely responsible</B> for obtaining all legally required consents, for delivering any required notice at the start of a call, and for configuring the Platform's recording settings consistently with its obligations. KPI DRIVER does not obtain consent and does not verify that it was obtained.</P>
+          <P><B>Our customer is solely responsible</B> for obtaining all legally required consents, for delivering any required notice at the start of a call, and for configuring the Platform's recording settings consistently with its obligations. KPI DRIVER AI SUITE does not obtain consent and does not verify that it was obtained.</P>
           <P>If you were on a recorded call and were not told, that is a matter between you and the business that recorded it. Contact them directly; we will assist them in responding to you as described in Section 16.6.</P>
           <Divider />
 
@@ -442,7 +443,7 @@ export default function PrivacyPolicyPage() {
             <LI><B>Least-privilege internal access</B>, granted only where operationally required</LI>
             <LI><B>Audit logging</B> of authentication events, administrative access and feature usage</LI>
           </UL>
-          <P><B>Certifications.</B> KPI DRIVER does not currently hold SOC 2, ISO 27001 or comparable independent certification. <B>No system is perfectly secure.</B> You are responsible for maintaining the confidentiality of your credentials and deactivating departing users promptly.</P>
+          <P><B>Certifications.</B> KPI DRIVER AI SUITE does not currently hold SOC 2, ISO 27001 or comparable independent certification. <B>No system is perfectly secure.</B> You are responsible for maintaining the confidentiality of your credentials and deactivating departing users promptly.</P>
           <Divider />
 
           {/* Section 15 */}
@@ -471,7 +472,7 @@ export default function PrivacyPolicyPage() {
           <H3>16.5 Authorized Agents</H3>
           <P>You may use an authorized agent. We may require proof of authorization and may require you to verify your identity directly.</P>
           <H3>16.6 If Your Information Is in a Customer's Account</H3>
-          <P><B>This is the most likely situation if you are a sales lead, a property owner, or someone an AI Agent spoke with.</B> In that case we hold your information as a service provider on behalf of a business, and that business — not KPI DRIVER — controls it.</P>
+          <P><B>This is the most likely situation if you are a sales lead, a property owner, or someone an AI Agent spoke with.</B> In that case we hold your information as a service provider on behalf of a business, and that business — not KPI DRIVER AI SUITE — controls it.</P>
           <P>If you contact us, we will forward your request to the relevant customer. <B>If we cannot reach the customer within 30 days</B> — including where their account is paused, dormant or abandoned — <B>we will act on your request ourselves so far as we are able.</B></P>
           <P><B>Opt-out requests are different.</B> If you tell us you do not want to be contacted, we record and forward that immediately and suppress the contact ourselves without waiting for the customer to respond.</P>
           <H3>16.7 Notice at Collection</H3>
@@ -485,7 +486,7 @@ export default function PrivacyPolicyPage() {
           {/* Section 17 */}
           <H2 id="s17">17. Florida Digital Bill of Rights</H2>
           <P>The Florida Digital Bill of Rights, Fla. Stat. § 501.701 et seq., imposes obligations on "controllers" exceeding <B>$1 billion in global gross annual revenue</B>.</P>
-          <P><B>KPI DRIVER does not meet that threshold, and the FDBR's controller obligations therefore do not apply to us.</B></P>
+          <P><B>KPI DRIVER AI SUITE does not meet that threshold, and the FDBR's controller obligations therefore do not apply to us.</B></P>
           <P>We have nonetheless drafted this policy to meet the substantive standards of the stricter state privacy laws, and we honor the rights in Section 16 for all United States residents regardless of whether a statute compels it.</P>
           <Divider />
 
