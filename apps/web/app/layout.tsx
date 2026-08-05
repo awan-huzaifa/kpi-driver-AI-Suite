@@ -6,7 +6,7 @@ import CustomCursor from '@/components/ui/custom-cursor'
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata: Metadata = {
-  title: 'KPI DRIVER',
+  title: 'KPI Driver AI Suite',
   description: 'AI-powered real estate tools',
 }
 
