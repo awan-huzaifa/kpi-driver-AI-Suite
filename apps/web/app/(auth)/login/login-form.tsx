@@ -97,6 +97,7 @@ export default function LoginForm() {
         >
           <Image src="/logo3.png" alt="KPI DRIVER" width={300} height={110} style={{ objectFit: 'contain' }} priority />
           <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+            <span style={{ color: '#64748b' }}>KPI DRIVER AI SUITE &nbsp;·&nbsp; </span>
             <span style={{ color: '#22c55e' }}>Built By </span>
             <span style={{ color: '#64748b' }}>RE Investors</span>
             <span style={{ color: '#22c55e' }}> For </span>
