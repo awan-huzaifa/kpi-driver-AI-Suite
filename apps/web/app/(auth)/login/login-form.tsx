@@ -350,7 +350,7 @@ export default function LoginForm() {
         }}
       >
         <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
-          KPI DRIVER · Built By RE Investors For RE Investors
+          KPI DRIVER AI SUITE · Built By RE Investors For RE Investors
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="/terms-and-conditions" target="_blank" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}
