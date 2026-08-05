@@ -138,7 +138,7 @@ export default function PrivacyPolicyPage() {
           {/* Title block */}
           <div style={{ marginBottom: 40 }}>
             <h1 style={{ fontSize: 32, fontWeight: 800, color: C.white, marginBottom: 4 }}>Privacy Policy</h1>
-            <p style={{ fontSize: 13, fontWeight: 600, color: C.blue, marginBottom: 8 }}>KPI DRIVER AI SUITE AI SUITE</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.blue, marginBottom: 8 }}>KPI DRIVER AI SUITE</p>
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' as const }}>
               <span style={{ fontSize: 13, color: C.muted }}><B>Company:</B> KPI DRIVER, LLC</span>
               <span style={{ fontSize: 13, color: C.muted }}><B>Version:</B> 3.0</span>
