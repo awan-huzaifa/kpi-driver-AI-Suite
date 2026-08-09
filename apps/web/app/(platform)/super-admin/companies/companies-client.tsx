@@ -6,12 +6,44 @@ import type { PlanId } from '@kpidriver/auth/types'
 import PlatformShell, { type Access } from '@/components/platform/PlatformShell'
 import { C } from '@/components/platform/brand'
 import { createCompany, updateCompanyAdmin, deleteCompany } from '@/app/actions/super-admin/companies'
+import { SelectInline } from '@/components/ui/select'
+
+// Common IANA timezones grouped by region
+const TIMEZONES = [
+  { label: 'US / Canada', options: [
+    { value: 'America/New_York',    label: 'Eastern Time (ET)' },
+    { value: 'America/Chicago',     label: 'Central Time (CT)' },
+    { value: 'America/Denver',      label: 'Mountain Time (MT)' },
+    { value: 'America/Phoenix',     label: 'Arizona (no DST)' },
+    { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+    { value: 'America/Anchorage',   label: 'Alaska (AKT)' },
+    { value: 'Pacific/Honolulu',    label: 'Hawaii (HST)' },
+  ]},
+  { label: 'Europe', options: [
+    { value: 'Europe/London',    label: 'London (GMT/BST)' },
+    { value: 'Europe/Paris',     label: 'Paris / Berlin (CET)' },
+    { value: 'Europe/Helsinki',  label: 'Helsinki / Athens (EET)' },
+    { value: 'Europe/Moscow',    label: 'Moscow (MSK)' },
+  ]},
+  { label: 'Asia / Pacific', options: [
+    { value: 'Asia/Dubai',      label: 'Dubai (GST)' },
+    { value: 'Asia/Karachi',    label: 'Karachi / Islamabad (PKT)' },
+    { value: 'Asia/Kolkata',    label: 'India (IST)' },
+    { value: 'Asia/Dhaka',      label: 'Dhaka (BST)' },
+    { value: 'Asia/Bangkok',    label: 'Bangkok / Jakarta (ICT)' },
+    { value: 'Asia/Singapore',  label: 'Singapore / KL (SGT)' },
+    { value: 'Asia/Tokyo',      label: 'Tokyo (JST)' },
+    { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
+    { value: 'Pacific/Auckland', label: 'Auckland (NZST)' },
+  ]},
+]
 
 interface Company {
   id:                  string
   name:                string
   ghl_sub_account_id:  string | null
   stripe_customer_id:  string | null
+  timezone:            string
   wallet_balance:      number
   created_at:          string
   user_count:          number
@@ -28,9 +60,10 @@ interface FormState {
   name:               string
   ghl_sub_account_id: string
   stripe_customer_id: string
+  timezone:           string
 }
 
-const EMPTY_FORM: FormState = { name: '', ghl_sub_account_id: '', stripe_customer_id: '' }
+const EMPTY_FORM: FormState = { name: '', ghl_sub_account_id: '', stripe_customer_id: '', timezone: 'America/New_York' }
 
 export default function CompaniesClient({ companies: initial, currentUser, planId, access }: Props) {
   const [companies, setCompanies] = useState(initial)
@@ -51,6 +84,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
       name:               c.name,
       ghl_sub_account_id: c.ghl_sub_account_id ?? '',
       stripe_customer_id: c.stripe_customer_id ?? '',
+      timezone:           c.timezone ?? 'America/New_York',
     })
     setError(null)
     setModal(c)
@@ -84,7 +118,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
           await updateCompanyAdmin(modal.id, form)
           setCompanies((prev) => prev.map((c) =>
             c.id === modal.id
-              ? { ...c, name: form.name, ghl_sub_account_id: form.ghl_sub_account_id || null, stripe_customer_id: form.stripe_customer_id || null }
+              ? { ...c, name: form.name, ghl_sub_account_id: form.ghl_sub_account_id || null, stripe_customer_id: form.stripe_customer_id || null, timezone: form.timezone || 'America/New_York' }
               : c
           ))
         }
@@ -151,7 +185,10 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                       <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(48,125,192,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         <Building2 size={14} style={{ color: C.blue }} />
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{c.name}</span>
+                      <div>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{c.name}</span>
+                        <p style={{ fontSize: 10, color: C.dimText, margin: '2px 0 0', fontVariantNumeric: 'tabular-nums' }}>{c.timezone ?? 'America/New_York'}</p>
+                      </div>
                     </div>
                   </td>
                   <td style={{ padding: '14px 12px' }}>
@@ -235,6 +272,17 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                 mono
                 hint="Paste The Existing Stripe Customer ID From GHL. One-Click Top-Up Will Use This Customer's Saved Card."
               />
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.dimText, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6 }}>
+                  Timezone
+                </label>
+                <SelectInline
+                  value={form.timezone}
+                  onValueChange={(v) => setForm((f) => ({ ...f, timezone: v }))}
+                  placeholder="Select timezone"
+                  groups={TIMEZONES}
+                />
+              </div>
             </div>
 
             {error && <p style={{ color: C.red, fontSize: 12, margin: '16px 0 0' }}>{error}</p>}

@@ -76,21 +76,24 @@ export async function POST(req: NextRequest) {
   const creditsDeducted = (body.credits_deducted as number)  ?? 0;
   const personsCount    = (body.persons_count    as number)  ?? 0;
 
-  // Fetch billing config — prefer company-specific override, fall back to global default
+  // Fetch per-flow charged prices — prefer company override, fall back to global
   const { data: cfgRows } = await admin
     .from("billing_config")
-    .select("multiplier, credit_cost_usd, company_id")
+    .select("st_charged_normal_usd, st_charged_advanced_usd, st_charged_apn_usd, st_charged_dnc_usd, company_id")
     .eq("app", "skip_tracing")
     .or(`company_id.eq.${company.id},company_id.is.null`);
+  const pr = (cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null)) as Record<string, unknown> | null;
+  // Normal = skiptrace without findOwner; Advanced = skiptrace with findOwner (address_skiptrace)
+  const isAdvanced = flowType === "skiptrace" && findOwner;
+  const chargedUsdPerHit =
+    flowType === "apn"  ? Number(pr?.st_charged_apn_usd      ?? 0.10) :
+    flowType === "dnc"  ? Number(pr?.st_charged_dnc_usd      ?? 0.02) :
+    isAdvanced          ? Number(pr?.st_charged_advanced_usd ?? 0.04) :
+                          Number(pr?.st_charged_normal_usd   ?? 0.02);
 
-  const companyCfg    = cfgRows?.find(r => r.company_id === company.id);
-  const globalCfg     = cfgRows?.find(r => r.company_id === null);
-  const activeCfg     = companyCfg ?? globalCfg;
-  const creditCostUsd = Number((activeCfg as Record<string, unknown>)?.credit_cost_usd ?? 0.02);
-  const multiplier    = Number(activeCfg?.multiplier ?? 3.0);
-  // DNC + skiptrace: flat $0.10 base cost. APN: credits × credit_cost_usd
-  const baseCostUsd   = (flowType === "dnc" || flowType === "skiptrace") ? 0.10 : creditsDeducted * creditCostUsd;
-  const deductionUsd  = baseCostUsd * multiplier;
+  const deductionUsd = chargedUsdPerHit;  // per hit, not per credit — one webhook = one hit
+
+  console.log(`[skip-tracing:billing] flow=${flowType} advanced=${isAdvanced} charged=$${chargedUsdPerHit.toFixed(5)}/hit total=$${deductionUsd.toFixed(5)}`);
 
   // Wallet pre-check only when credits will be deducted
   if (creditsDeducted > 0 && (company.wallet_balance ?? 0) <= 0) {

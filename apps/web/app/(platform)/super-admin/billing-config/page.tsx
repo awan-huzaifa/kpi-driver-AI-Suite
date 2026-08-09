@@ -27,7 +27,7 @@ export default async function BillingConfigPage() {
 
   const admin = createAdminClient();
   const [{ data: config }, { data: companies }] = await Promise.all([
-    admin.from("billing_config").select("id, app, multiplier, company_id, updated_at, rentcast_cost_usd, axesso_cost_usd").order("app"),
+    admin.from("billing_config").select("id, app, multiplier, company_id, updated_at, rentcast_cost_usd, axesso_cost_usd, rentcast_charged_usd, axesso_charged_usd, claude_input_charged_per_m, claude_output_charged_per_m, assistable_charged_per_min, credit_cost_usd, st_charged_normal_usd, st_charged_advanced_usd, st_charged_apn_usd, st_charged_dnc_usd, nt_whisper_charged_per_min, nt_gpt_input_charged_per_m, nt_gpt_output_charged_per_m, de_charged_per_call_usd").order("app"),
     admin.from("companies").select("id, name").order("name"),
   ]);
 

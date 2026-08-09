@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 
-export const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? 'reports@kpidriver.ai'
+export const FROM_EMAIL         = process.env.RESEND_FROM_EMAIL         ?? 'reports@kpidriver.ai'
+export const BILLING_FROM_EMAIL = process.env.RESEND_BILLING_FROM_EMAIL ?? 'billing@kpidriver.ai'
 
 let _resend: Resend | null = null
 export function getResend(): Resend {

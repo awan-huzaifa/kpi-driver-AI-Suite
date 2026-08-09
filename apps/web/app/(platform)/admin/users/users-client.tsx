@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { UserPlus, Pencil, UserX, UserCheck, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search, Camera } from "lucide-react";
+import { UserPlus, Pencil, UserX, UserCheck, Check, Mic, Building2, GraduationCap, NotebookPen, Database, Search, Camera, KeyRound, Eye, EyeOff, Bell, FileText, CreditCard, Lock } from "lucide-react";
 import PlatformShell, { type Access } from "@/components/platform/PlatformShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,27 +9,32 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent } from "@/components/ui/alert-dialog";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
-import { inviteUser, updateUser, removeUser, reactivateUser, updateUserAvatar } from "@/app/actions/admin/users";
+import { inviteUser, updateUser, removeUser, reactivateUser, updateUserAvatar, changeUserPassword } from "@/app/actions/admin/users";
+import { setSuperAdminNotifications } from "@/app/actions/admin/notifications";
 import type { PlanId } from "@kpidriver/auth/types";
 import type { AccessRole, AgentType } from "@/types/database";
 import { C } from "@/components/platform/brand";
 
 interface UserRow {
-  id:                 string;
-  full_name:          string | null;
-  email:              string | null;
-  access_role:        AccessRole;
-  agent_type:         AgentType;
-  company_id:         string | null;
-  avatar_url:         string | null;
-  app_underwriting:   boolean;
-  app_sales_coach:    boolean;
-  app_training_coach: boolean;
-  app_note_taker:      boolean;
-  app_data_enrichment: boolean;
-  app_skip_tracing:    boolean;
-  is_active:           boolean;
-  created_at:         string;
+  id:                   string;
+  full_name:            string | null;
+  email:                string | null;
+  access_role:          AccessRole;
+  agent_type:           AgentType;
+  company_id:           string | null;
+  avatar_url:           string | null;
+  app_underwriting:     boolean;
+  app_sales_coach:      boolean;
+  app_training_coach:   boolean;
+  app_note_taker:        boolean;
+  app_data_enrichment:   boolean;
+  app_skip_tracing:      boolean;
+  is_active:             boolean;
+  created_at:           string;
+  notify_reports:        boolean;
+  notify_billing:        boolean;
+  notify_reports_locked: boolean;
+  notify_billing_locked: boolean;
 }
 
 interface Company {
@@ -278,6 +283,21 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
   const [avatarErr, setAvatarErr]           = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [pwTarget,  setPwTarget]  = useState<UserRow | null>(null);
+  const [pwNew,     setPwNew]     = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwShow,    setPwShow]    = useState(false);
+  const [pwErr,     setPwErr]     = useState<string | null>(null);
+  const [pwLoad,    setPwLoad]    = useState(false);
+  const [pwDone,    setPwDone]    = useState(false);
+
+  // Notification prefs state (for super admin edit of another user's prefs)
+  const [editNotifReports, setEditNotifReports] = useState(true);
+  const [editNotifBilling, setEditNotifBilling] = useState(false);
+  const [notifLoad, setNotifLoad] = useState(false);
+  const [notifDone, setNotifDone] = useState(false);
+  const [notifErr,  setNotifErr]  = useState<string | null>(null);
+
   function openEdit(u: UserRow) {
     setEditTarget(u);
     setEditAvatarUrl(u.avatar_url);
@@ -295,6 +315,10 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       app_skip_tracing:    u.app_skip_tracing,
       company_id:          u.company_id ?? "",
     });
+    setEditNotifReports(u.notify_reports ?? true);
+    setEditNotifBilling(u.notify_billing ?? false);
+    setNotifErr(null);
+    setNotifDone(false);
     setEditErr(null);
   }
 
@@ -369,6 +393,40 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
     try { await reactivateUser(reactivateTarget.id); setReactivateTarget(null); }
     catch { /* future toast */ }
     finally { setReactivateLoad(false); }
+  }
+
+  async function handleSaveNotifications() {
+    if (!editTarget) return;
+    setNotifLoad(true); setNotifErr(null); setNotifDone(false);
+    try {
+      await setSuperAdminNotifications(editTarget.id, {
+        notify_reports: editNotifReports,
+        notify_billing: editNotifBilling,
+      });
+      setNotifDone(true);
+      setTimeout(() => setNotifDone(false), 2000);
+    } catch (e) {
+      setNotifErr(e instanceof Error ? e.message : "Failed to update notifications.");
+    } finally {
+      setNotifLoad(false);
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!pwTarget) return;
+    if (!pwNew) { setPwErr("Please enter a new password."); return; }
+    if (pwNew.length < 8) { setPwErr("Password must be at least 8 characters."); return; }
+    if (pwNew !== pwConfirm) { setPwErr("Passwords do not match."); return; }
+    setPwLoad(true); setPwErr(null);
+    try {
+      await changeUserPassword(pwTarget.id, pwNew);
+      setPwDone(true);
+      setTimeout(() => { setPwTarget(null); setPwNew(""); setPwConfirm(""); setPwShow(false); setPwDone(false); }, 1500);
+    } catch (e) {
+      setPwErr(e instanceof Error ? e.message : "Failed to change password.");
+    } finally {
+      setPwLoad(false);
+    }
   }
 
   const companyMap = Object.fromEntries(companies.map((c) => [c.id, c.name]));
@@ -510,6 +568,15 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                           onMouseLeave={(e) => (e.currentTarget.style.color = "#8b9cb0")}
                         >
                           <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={() => { setPwTarget(u); setPwNew(""); setPwConfirm(""); setPwShow(false); setPwErr(null); setPwDone(false); }}
+                          title="Change Password"
+                          style={{ padding: 6, borderRadius: 6, background: "none", border: "none", cursor: "pointer", color: "#8b9cb0" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.color = "#FCAF17")}
+                          onMouseLeave={(e) => (e.currentTarget.style.color = "#8b9cb0")}
+                        >
+                          <KeyRound size={13} />
                         </button>
                         {u.is_active ? (
                           <button
@@ -745,6 +812,102 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
               </div>
             </div>
 
+            {/* Notification controls — super admin editing a company admin only */}
+            {isSuperAdmin && editTarget && editTarget.access_role === "admin" && (
+              <div style={{
+                paddingTop: 16, borderTop: "1px solid rgba(255,255,255,0.06)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                  <Bell size={14} style={{ color: C.blue }} />
+                  <Label style={{ margin: 0, color: C.white }}>Notification Settings</Label>
+                  {editTarget.notify_reports_locked && <Lock size={11} style={{ color: "#FCAF17" }} />}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {/* Report emails */}
+                  <button
+                    type="button"
+                    onClick={() => setEditNotifReports(v => !v)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 12px", borderRadius: 10,
+                      background: editNotifReports ? "rgba(48,125,192,0.1)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${editNotifReports ? "rgba(48,125,192,0.3)" : "rgba(255,255,255,0.07)"}`,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                      background: editNotifReports ? C.blue : "transparent",
+                      border: `1.5px solid ${editNotifReports ? C.blue : "#4a5a6a"}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {editNotifReports && <Check size={11} color="#fff" strokeWidth={3} />}
+                    </div>
+                    <FileText size={13} style={{ color: editNotifReports ? C.blue : "#6b7a8a", flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 500, color: editNotifReports ? "#e2e8f0" : "#6b7a8a", flex: 1, textAlign: "left" }}>
+                      Report Emails
+                    </span>
+                    {!editNotifReports && (
+                      <span style={{ fontSize: 10, color: "#FCAF17", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                        <Lock size={9} /> Admin locked out
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Billing emails */}
+                  <button
+                    type="button"
+                    onClick={() => setEditNotifBilling(v => !v)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "10px 12px", borderRadius: 10,
+                      background: editNotifBilling ? "rgba(48,125,192,0.1)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${editNotifBilling ? "rgba(48,125,192,0.3)" : "rgba(255,255,255,0.07)"}`,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div style={{
+                      width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+                      background: editNotifBilling ? C.blue : "transparent",
+                      border: `1.5px solid ${editNotifBilling ? C.blue : "#4a5a6a"}`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {editNotifBilling && <Check size={11} color="#fff" strokeWidth={3} />}
+                    </div>
+                    <CreditCard size={13} style={{ color: editNotifBilling ? C.blue : "#6b7a8a", flexShrink: 0 }} />
+                    <span style={{ fontSize: 13, fontWeight: 500, color: editNotifBilling ? "#e2e8f0" : "#6b7a8a", flex: 1, textAlign: "left" }}>
+                      Billing Notifications
+                    </span>
+                    {!editNotifBilling && (
+                      <span style={{ fontSize: 10, color: "#FCAF17", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
+                        <Lock size={9} /> Admin locked out
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={handleSaveNotifications}
+                    disabled={notifLoad}
+                    style={{
+                      fontSize: 12, fontWeight: 600, padding: "6px 14px", borderRadius: 8,
+                      background: "rgba(48,125,192,0.12)", border: "1px solid rgba(48,125,192,0.25)",
+                      color: C.blue, cursor: notifLoad ? "default" : "pointer",
+                    }}
+                  >
+                    {notifLoad ? "Saving…" : "Save Notification Prefs"}
+                  </button>
+                  {notifDone && <span style={{ fontSize: 12, fontWeight: 600, color: C.green }}>Saved</span>}
+                  {notifErr  && <span style={{ fontSize: 12, fontWeight: 600, color: "#ED1F24" }}>{notifErr}</span>}
+                </div>
+                <p style={{ fontSize: 11, color: C.dimText, margin: "6px 0 0" }}>
+                  Turning off a setting here locks it — the admin cannot re-enable it themselves.
+                </p>
+              </div>
+            )}
+
             {editErr && (
               <p className="text-xs px-3 py-2 rounded-lg" style={{ color: "#ED1F24", background: "rgba(237,31,36,0.08)" }}>
                 {editErr}
@@ -783,6 +946,62 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
           loading={reactivateLoad}
         />
       </AlertDialog>
+
+      {/* ── Change Password Modal ── */}
+      <Dialog open={!!pwTarget} onOpenChange={(o) => { if (!o) { setPwTarget(null); setPwNew(""); setPwConfirm(""); setPwShow(false); setPwErr(null); setPwDone(false); } }}>
+        <DialogContent
+          title="Change Password"
+          description={`Set a new password for ${pwTarget?.full_name ?? pwTarget?.email ?? "this user"}.`}
+        >
+          <div className="space-y-4">
+            <div>
+              <Label>New Password</Label>
+              <div style={{ position: "relative" }}>
+                <Input
+                  type={pwShow ? "text" : "password"}
+                  placeholder="Min. 8 characters"
+                  value={pwNew}
+                  onChange={(e) => setPwNew(e.target.value)}
+                  style={{ paddingRight: 36 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPwShow(s => !s)}
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#475569", padding: 0 }}
+                >
+                  {pwShow ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <Label>Confirm Password</Label>
+              <Input
+                type={pwShow ? "text" : "password"}
+                placeholder="Repeat new password"
+                value={pwConfirm}
+                onChange={(e) => setPwConfirm(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleChangePassword()}
+              />
+            </div>
+            {pwErr && (
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ color: "#ED1F24", background: "rgba(237,31,36,0.08)" }}>
+                {pwErr}
+              </p>
+            )}
+            {pwDone && (
+              <p className="text-xs px-3 py-2 rounded-lg" style={{ color: "#43B749", background: "rgba(67,183,73,0.08)" }}>
+                Password changed successfully.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="secondary" size="sm" onClick={() => setPwTarget(null)}>Cancel</Button>
+            <Button size="sm" onClick={handleChangePassword} disabled={pwLoad || pwDone}>
+              {pwLoad ? "Saving…" : pwDone ? "Done" : "Change Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PlatformShell>
   );
 }

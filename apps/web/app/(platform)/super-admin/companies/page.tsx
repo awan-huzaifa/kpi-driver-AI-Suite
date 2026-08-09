@@ -30,7 +30,7 @@ export default async function SuperAdminCompaniesPage() {
   const [{ data: companies }, { data: userCounts }] = await Promise.all([
     admin
       .from("companies")
-      .select("id, name, ghl_sub_account_id, stripe_customer_id, wallet_balance, created_at")
+      .select("id, name, ghl_sub_account_id, stripe_customer_id, timezone, wallet_balance, created_at")
       .order("created_at", { ascending: false }),
     admin
       .from("users")

@@ -179,19 +179,36 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
                   </div>
                 </div>
               </div>
-              <button
-                onClick={onClose}
-                style={{
-                  width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
-                  cursor: "pointer", color: C.dimText, display: "flex", alignItems: "center", justifyContent: "center",
-                  transition: "background 0.15s, color 0.15s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = C.white; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = C.dimText; }}
-              >
-                <X size={14} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                {log.crm_link && (
+                  <a
+                    href={log.crm_link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex", alignItems: "center", gap: 6,
+                      fontSize: 11, fontWeight: 600, color: "#307DC0",
+                      textDecoration: "none", padding: "4px 12px", borderRadius: 7,
+                      background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
+                    }}
+                  >
+                    <ExternalLink size={12} /> CRM
+                  </a>
+                )}
+                <button
+                  onClick={onClose}
+                  style={{
+                    width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                    background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
+                    cursor: "pointer", color: C.dimText, display: "flex", alignItems: "center", justifyContent: "center",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.1)"; e.currentTarget.style.color = C.white; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; e.currentTarget.style.color = C.dimText; }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
             </div>
 
             {/* Stats strip */}
@@ -253,21 +270,6 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
                     <p style={{ fontSize: 16, fontWeight: 800, color: "#FCAF17", margin: 0 }}>{fmtCost(log.cost_usd)}</p>
                   </div>
                 </div>
-              )}
-              {log.crm_link && (
-                <a
-                  href={log.crm_link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    fontSize: 11, fontWeight: 600, color: "#307DC0",
-                    textDecoration: "none", padding: "4px 16px", borderRadius: 7,
-                    background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)",
-                  }}
-                >
-                  <ExternalLink size={11} /> CRM
-                </a>
               )}
             </div>
           </div>

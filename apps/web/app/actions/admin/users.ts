@@ -185,3 +185,19 @@ export async function reactivateUser(userId: string) {
 
   revalidatePath("/admin/users");
 }
+
+export async function changeUserPassword(userId: string, newPassword: string) {
+  if (!newPassword || newPassword.length < 8) throw new Error("Password must be at least 8 characters.");
+
+  const caller = await getCallerProfile();
+  const admin = createAdminClient();
+
+  // For admin (not super_admin), verify the target user belongs to their company
+  if (caller.access_role === "admin") {
+    const { data: target } = await admin.from("users").select("company_id").eq("id", userId).single();
+    if (!target || target.company_id !== caller.company_id) throw new Error("Forbidden");
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, { password: newPassword });
+  if (error) throw new Error(error.message);
+}

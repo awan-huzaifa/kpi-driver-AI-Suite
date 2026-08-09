@@ -8,6 +8,7 @@ const PUBLIC_PATHS = [
   '/auth/confirm',
   '/auth/invite-callback',
   '/auth/set-password',
+  '/auth/reset-password',
   '/auth/forgot-password',
   '/auth/no-access',
   '/auth/unlock-app',
@@ -19,6 +20,7 @@ const PUBLIC_PATHS = [
   '/api/note-taker/ingest',
   '/api/data-enrichment/ingest',
   '/api/skip-tracing/ingest',
+  '/api/email-reports/cron',
 ]
 
 // Map URL path prefixes → per-user app flag column names

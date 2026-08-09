@@ -76,19 +76,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Insufficient wallet balance" }, { status: 402 });
   }
 
-  // Axesso cost — €15 / 10,000 calls ≈ $0.0016 per call
-  const AXESSO_COST_USD = 0.0016;
-
-  // Fetch billing multiplier — prefer company-specific override, fall back to global
+  // Fetch charged price per call — prefer company override, fall back to global
   const { data: cfgRows } = await admin
     .from("billing_config")
-    .select("multiplier, company_id")
+    .select("de_charged_per_call_usd, company_id")
     .eq("app", "data_enrichment")
     .or(`company_id.eq.${company.id},company_id.is.null`);
-  const companyCfg   = cfgRows?.find(r => r.company_id === company.id);
-  const globalCfg    = cfgRows?.find(r => r.company_id === null);
-  const multiplier   = Number(companyCfg?.multiplier ?? globalCfg?.multiplier ?? 3.0);
-  const deductionUsd = AXESSO_COST_USD * multiplier;
+  const pricingRow = (cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null)) as Record<string, unknown> | null;
+
+  const deductionUsd = Number(pricingRow?.de_charged_per_call_usd ?? 0.0016);
+
+  console.log(`[data-enrichment:billing] charged=$${deductionUsd.toFixed(6)}/call`);
 
   // Insert — idempotent on external_id
   const { data: log, error: insertErr } = await admin

@@ -202,6 +202,10 @@ export async function POST(request: NextRequest) {
   // Track deal ID so the catch block can mark it failed
   let dealId: string | null = null;
 
+  // Per-API call counters — incremented at each actual call site
+  let axessoCalls  = 0;
+  let rentcastCalls = 0;
+
   try {
     // ── STEP 1: Create new deal OR reset existing deal for re-run ───────────
     if (rerunDealId) {
@@ -267,6 +271,7 @@ export async function POST(request: NextRequest) {
 
     // ── STEP 2: Axesso — searchProperty (subject property details) ──────────
     const property = await searchProperty(address);
+    axessoCalls++;
     if (!property.zpid || !property.address) {
       throw new Error("Property not found — please enter a valid property address.");
     }
@@ -291,6 +296,7 @@ export async function POST(request: NextRequest) {
     let rentcastComps: NormalizedComp[] = [];
     try {
       const rentcastResult = await searchComps(address, 5);
+      rentcastCalls++;
       rentcastAvm = rentcastResult.avm;
       rentcastComps = rentcastResult.comps;
       console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -311,6 +317,7 @@ export async function POST(request: NextRequest) {
     } else if (rentcastComps.length > 0) {
       // ── STEP 4: Resolve comp photos via Axesso (address → zpid → photos), in parallel ─
       const photosByComp = await Promise.all(rentcastComps.map((c) => fetchPhotosByAddress(c.address)));
+      axessoCalls += rentcastComps.length;
       normalizedComps = rentcastComps.map((c, i) => ({ ...c, photos: photosByComp[i] }));
       console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       console.log(`[STEP 4] PHOTOS RESOLVED for ${normalizedComps.length} RentCast comps via Axesso`,
@@ -320,6 +327,10 @@ export async function POST(request: NextRequest) {
     }
 
     // ── STEP 5: Resolve manual comps ─────────────────────────────────────────
+    // Count manual comps that will call Axesso (those missing salePrice or sqft)
+    axessoCalls += manualCompsInput.filter(
+      c => !(c.salePrice != null && c.sqft != null && c.sqft > 0)
+    ).length;
     const resolvedManualComps: NormalizedComp[] = manualCompsInput.length > 0
       ? await Promise.all(manualCompsInput.map(resolveManualComp))
       : [];
@@ -475,30 +486,42 @@ export async function POST(request: NextRequest) {
     console.log("  Full report:", JSON.stringify(report, null, 2));
 
     // ── USAGE SUMMARY ────────────────────────────────────────────────────────
-    const INPUT_COST_PER_TOKEN  = 5  / 1_000_000; // claude-opus-4-7: $5/M input tokens
-    const OUTPUT_COST_PER_TOKEN = 25 / 1_000_000; // claude-opus-4-7: $25/M output tokens
+    // Actual Anthropic rate card — for reference logging only
+    const INPUT_COST_PER_TOKEN  = 5  / 1_000_000; // claude-opus: $5/M input tokens
+    const OUTPUT_COST_PER_TOKEN = 25 / 1_000_000; // claude-opus: $25/M output tokens
 
-    // Fetch configurable API costs from billing_config (global underwriting row)
+    // Fetch per-API charged prices — prefer company override, fall back to global
     const apiCostDb = createAdminClient();
-    const { data: apiCostRow } = await apiCostDb
+    const { data: uwCfgRows } = await apiCostDb
       .from("billing_config")
-      .select("rentcast_cost_usd, axesso_cost_usd")
+      .select("rentcast_cost_usd, axesso_cost_usd, rentcast_charged_usd, axesso_charged_usd, claude_input_charged_per_m, claude_output_charged_per_m, company_id")
       .eq("app", "underwriting")
-      .is("company_id", null)
-      .single();
-    const RENTCAST_COST_USD = Number(apiCostRow?.rentcast_cost_usd ?? 0.074);
-    const AXESSO_COST_USD   = Number(apiCostRow?.axesso_cost_usd   ?? 0.020);
+      .or(`company_id.eq.${companyId},company_id.is.null`);
+    const pricingRow = uwCfgRows?.find(r => r.company_id === companyId) ?? uwCfgRows?.find(r => r.company_id === null);
+
+    const RENTCAST_COST_USD = Number(pricingRow?.rentcast_cost_usd ?? 0.074);
+    const AXESSO_COST_USD   = Number(pricingRow?.axesso_cost_usd   ?? 0.020);
+    // Charged prices — what gets deducted from the company wallet
+    const chargedRentcast    = Number(pricingRow?.rentcast_charged_usd        ?? RENTCAST_COST_USD);
+    const chargedAxesso      = Number(pricingRow?.axesso_charged_usd           ?? AXESSO_COST_USD);
+    const chargedInputPerM   = Number(pricingRow?.claude_input_charged_per_m  ?? 5.0);
+    const chargedOutputPerM  = Number(pricingRow?.claude_output_charged_per_m ?? 25.0);
+
     const totalInput  = call1Tokens.inputTokens  + (call2Tokens?.inputTokens  ?? 0) + (call3Tokens?.inputTokens  ?? 0) + call4Tokens.inputTokens;
     const totalOutput = call1Tokens.outputTokens + (call2Tokens?.outputTokens ?? 0) + (call3Tokens?.outputTokens ?? 0) + call4Tokens.outputTokens;
-    const claudeCostUsd     = totalInput * INPUT_COST_PER_TOKEN + totalOutput * OUTPUT_COST_PER_TOKEN;
-    const estimatedCostUsd  = claudeCostUsd + RENTCAST_COST_USD + AXESSO_COST_USD;
+    const claudeActualCostUsd  = totalInput * INPUT_COST_PER_TOKEN + totalOutput * OUTPUT_COST_PER_TOKEN;
+    const claudeChargedUsd     = (totalInput / 1_000_000) * chargedInputPerM + (totalOutput / 1_000_000) * chargedOutputPerM;
+    const rentcastChargedTotal = rentcastCalls * chargedRentcast;
+    const axessoChargedTotal   = axessoCalls   * chargedAxesso;
+    const deductionUsd         = claudeChargedUsd + rentcastChargedTotal + axessoChargedTotal;
+
     const usageSummary = {
       call1_condition: call1Tokens,
       call2_comps:     call2Tokens ?? { inputTokens: 0, outputTokens: 0, skipped: true as const },
       call3_arv:       call3Tokens ?? { inputTokens: 0, outputTokens: 0, skipped: true as const },
       call4_report:    call4Tokens,
       total:           { inputTokens: totalInput, outputTokens: totalOutput },
-      estimatedCostUsd,
+      estimatedCostUsd: deductionUsd,
     };
     console.log("\n" + "=".repeat(60));
     console.log("USAGE SUMMARY — ALL CLAUDE CALLS THIS RUN");
@@ -509,10 +532,11 @@ export async function POST(request: NextRequest) {
     console.log(`  Call 4 (report):    in=${call4Tokens.inputTokens.toLocaleString()}  out=${call4Tokens.outputTokens.toLocaleString()}`);
     console.log("-".repeat(60));
     console.log(`  TOTAL:              in=${totalInput.toLocaleString()}  out=${totalOutput.toLocaleString()}`);
-    console.log(`  CLAUDE COST:        $${claudeCostUsd.toFixed(4)} USD`);
-    console.log(`  RENTCAST:           $${RENTCAST_COST_USD.toFixed(4)} USD`);
-    console.log(`  AXESSO:             $${AXESSO_COST_USD.toFixed(4)} USD`);
-    console.log(`  TOTAL RAW COST:     $${estimatedCostUsd.toFixed(4)} USD`);
+    console.log(`  CLAUDE ACTUAL:      $${claudeActualCostUsd.toFixed(4)} USD  (Anthropic rate)`);
+    console.log(`  CLAUDE CHARGED:     $${claudeChargedUsd.toFixed(4)} USD  ($${chargedInputPerM}/1M in · $${chargedOutputPerM}/1M out)`);
+    console.log(`  RENTCAST:           ${rentcastCalls} call(s) × $${chargedRentcast.toFixed(4)} = $${rentcastChargedTotal.toFixed(4)} USD`);
+    console.log(`  AXESSO:             ${axessoCalls} call(s) × $${chargedAxesso.toFixed(4)} = $${axessoChargedTotal.toFixed(4)} USD`);
+    console.log(`  TOTAL DEDUCTION:    $${deductionUsd.toFixed(4)} USD`);
     console.log("=".repeat(60) + "\n");
 
     // ── STEP 13: Save completed report to underwriting_reports ──────────────
@@ -578,15 +602,6 @@ export async function POST(request: NextRequest) {
     // ── STEP 15: Log aggregated AI usage + deduct from company wallet ────────
     if (companyId && dealId) {
       const adminDb = createAdminClient();
-      const { data: cfgRows } = await adminDb
-        .from("billing_config")
-        .select("multiplier, company_id")
-        .eq("app", "underwriting")
-        .or(`company_id.eq.${companyId},company_id.is.null`);
-      const companyCfg   = cfgRows?.find(r => r.company_id === companyId);
-      const globalCfg    = cfgRows?.find(r => r.company_id === null);
-      const multiplier   = Number(companyCfg?.multiplier ?? globalCfg?.multiplier ?? 3.0);
-      const deductionUsd = estimatedCostUsd * multiplier;
 
       void logUsage({
         company_id:    companyId,
@@ -598,9 +613,9 @@ export async function POST(request: NextRequest) {
         cost_usd:      deductionUsd,
         model:         "claude-opus-4-7",
         cost_breakdown: {
-          property_api_1: parseFloat((AXESSO_COST_USD   * multiplier).toFixed(6)),
-          property_api_2: parseFloat((RENTCAST_COST_USD * multiplier).toFixed(6)),
-          ai:             parseFloat((claudeCostUsd      * multiplier).toFixed(6)),
+          property_api_1: parseFloat(axessoChargedTotal.toFixed(6)),
+          property_api_2: parseFloat(rentcastChargedTotal.toFixed(6)),
+          ai:             parseFloat(claudeChargedUsd.toFixed(6)),
         },
       });
 

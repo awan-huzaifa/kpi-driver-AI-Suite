@@ -240,20 +240,21 @@ export async function POST(req: NextRequest) {
   console.log("[ingest] success — call_id:", call.id);
   console.log("[ingest] ────────────────────────────────────────────────");
 
-  const aiCostUsd    = result._usage.costUsd;
-  const totalRawCost = aiCostUsd;
-
-  if (isScorable && totalRawCost > 0 && user.company_id) {
-    // Fetch billing multiplier
+  if (isScorable && user.company_id) {
+    // Fetch per-token charged prices — prefer company override, fall back to global
     const { data: cfgRows } = await admin
       .from("billing_config")
-      .select("multiplier, company_id")
+      .select("claude_input_charged_per_m, claude_output_charged_per_m, company_id")
       .eq("app", "sales_coach")
-      .or(`company_id.eq.${company.id},company_id.is.null`);
-    const companyCfg   = cfgRows?.find(r => r.company_id === company.id);
-    const globalCfg    = cfgRows?.find(r => r.company_id === null);
-    const multiplier   = Number(companyCfg?.multiplier ?? globalCfg?.multiplier ?? 3.0);
-    const deductionUsd = totalRawCost * multiplier;
+      .or(`company_id.eq.${user.company_id},company_id.is.null`);
+    const pricingRow = cfgRows?.find(r => r.company_id === user.company_id) ?? cfgRows?.find(r => r.company_id === null);
+
+    const chargedInputPerM  = Number(pricingRow?.claude_input_charged_per_m  ?? 3.0);
+    const chargedOutputPerM = Number(pricingRow?.claude_output_charged_per_m ?? 15.0);
+    const deductionUsd = (result._usage.inputTokens  / 1_000_000) * chargedInputPerM
+                       + (result._usage.outputTokens / 1_000_000) * chargedOutputPerM;
+
+    console.log(`[ingest:billing] in=${result._usage.inputTokens} out=${result._usage.outputTokens} charged=$${deductionUsd.toFixed(5)} (${chargedInputPerM}/1M in · ${chargedOutputPerM}/1M out)`);
 
     void logUsage({
       company_id:    user.company_id,
@@ -265,18 +266,20 @@ export async function POST(req: NextRequest) {
       cost_usd:      deductionUsd,
       model:         result._usage.model,
       cost_breakdown: {
-        ai: parseFloat((aiCostUsd * multiplier).toFixed(6)),
+        ai: parseFloat(deductionUsd.toFixed(6)),
       },
     });
 
-    const { data: newBalance, error: deductErr } = await admin.rpc("deduct_wallet_balance", {
-      p_company_id:  user.company_id,
-      p_amount_usd:  deductionUsd,
-      p_description: "Live call scored",
-      p_app:         "sales_coach",
-    });
-    if (deductErr) console.error("[calls:ingest] wallet deduction failed:", deductErr.message);
-    else void autoTopupIfNeeded(user.company_id, Number(newBalance));
+    if (deductionUsd > 0) {
+      const { data: newBalance, error: deductErr } = await admin.rpc("deduct_wallet_balance", {
+        p_company_id:  user.company_id,
+        p_amount_usd:  deductionUsd,
+        p_description: "Live call scored",
+        p_app:         "sales_coach",
+      });
+      if (deductErr) console.error("[calls:ingest] wallet deduction failed:", deductErr.message);
+      else void autoTopupIfNeeded(user.company_id, Number(newBalance));
+    }
   }
 
   return NextResponse.json(

@@ -140,7 +140,8 @@ export async function GET(req: NextRequest) {
   const lines  = filtered.map(r => selectedCols.map(c => escCSV(COL_MAP[c](r))).join(","));
   const csv    = "﻿" + [header, ...lines].join("\n");
 
-  const filename = `live-calls-${new Date().toISOString().slice(0, 10)}.csv`;
+  const dateTag = from && to ? `${from}_to_${to}` : from ? `from-${from}` : to ? `to-${to}` : "all";
+  const filename = `Call-Logs-${dateTag}.csv`;
   return new NextResponse(csv, {
     status: 200,
     headers: {

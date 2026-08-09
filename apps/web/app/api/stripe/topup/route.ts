@@ -4,6 +4,41 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { getCompanyStripeCustomer } from '@/lib/stripe/company-customer'
 import { createTopUpCheckoutSession, chargeWithSavedMethod, TOP_UP_OPTIONS } from '@kpidriver/stripe/topup'
 import { listPaymentMethods } from '@kpidriver/stripe/payment-methods'
+import { getResend, BILLING_FROM_EMAIL } from '@/lib/email/client'
+import { topupEmailTemplate } from '@/lib/email/templates'
+
+async function sendBillingEmails(admin: ReturnType<typeof createAdminClient>, companyId: string, companyName: string, amount: number, newBalance: number, appUrl: string) {
+  const { data: { users: authUsers } } = await admin.auth.admin.listUsers({ perPage: 1000 })
+  const emailMap = new Map(authUsers.map(u => [u.id, u.email ?? '']))
+
+  const { data: admins } = await admin
+    .from('users')
+    .select('id, notify_billing')
+    .eq('company_id', companyId)
+    .in('access_role', ['admin', 'super_admin'])
+    .eq('is_active', true)
+    .eq('notify_billing', true)
+
+  if (!admins?.length) return
+
+  const html = topupEmailTemplate(companyName, amount, newBalance, `${appUrl}/billing`)
+  const resend = getResend()
+
+  for (const u of admins) {
+    const email = emailMap.get(u.id)
+    if (!email) continue
+    try {
+      await resend.emails.send({
+        from:    BILLING_FROM_EMAIL,
+        to:      email,
+        subject: `Wallet Top-Up — $${amount.toFixed(2)} added to ${companyName}`,
+        html,
+      })
+    } catch (e) {
+      console.error('[topup] billing email failed:', e)
+    }
+  }
+}
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -56,6 +91,8 @@ export async function POST(request: Request) {
         p_description:             `Top-up $${option.amount}`,
         p_stripe_payment_intent:   intent.id,
       })
+
+      void sendBillingEmails(admin, companyId, companyName, option.amount, newBalance ?? 0, appUrl)
 
       return NextResponse.json({ success: true, newBalance: newBalance ?? 0, amount: option.amount })
     } catch {

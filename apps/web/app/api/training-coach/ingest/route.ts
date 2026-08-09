@@ -235,36 +235,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to save call" }, { status: 500 });
   }
 
-  const assistableCostUsd = ((call_time_seconds ?? 0) / 60) * 0.15;
-  const aiCostUsd         = result._usage.costUsd;
-  const totalRawCost      = aiCostUsd + assistableCostUsd;
+  // Fetch per-component charged prices — prefer company override, fall back to global
+  const { data: cfgRows } = await admin
+    .from("billing_config")
+    .select("assistable_charged_per_min, claude_input_charged_per_m, claude_output_charged_per_m, company_id")
+    .eq("app", "training_coach")
+    .or(`company_id.eq.${company.id},company_id.is.null`);
+  const pricingRow = cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null);
 
-  if (totalRawCost > 0) {
-    const { data: cfgRows } = await admin
-      .from("billing_config")
-      .select("multiplier, company_id")
-      .eq("app", "training_coach")
-      .or(`company_id.eq.${company.id},company_id.is.null`);
-    const companyCfg   = cfgRows?.find(r => r.company_id === company.id);
-    const globalCfg    = cfgRows?.find(r => r.company_id === null);
-    const multiplier   = Number(companyCfg?.multiplier ?? globalCfg?.multiplier ?? 3.0);
-    const deductionUsd = totalRawCost * multiplier;
+  const chargedAssistablePerMin = Number(pricingRow?.assistable_charged_per_min ?? 0.15);
+  const chargedInputPerM        = Number(pricingRow?.claude_input_charged_per_m  ?? 3.0);
+  const chargedOutputPerM       = Number(pricingRow?.claude_output_charged_per_m ?? 15.0);
 
-    void logUsage({
-      company_id:    company.id,
-      app:           "training_coach",
-      entity_id:     call.id,
-      entity_type:   "training_call",
-      input_tokens:  result._usage.inputTokens,
-      output_tokens: result._usage.outputTokens,
-      cost_usd:      deductionUsd,
-      model:         result._usage.model,
-      cost_breakdown: {
-        ai:          parseFloat((aiCostUsd         * multiplier).toFixed(6)),
-        voice_agent: parseFloat((assistableCostUsd * multiplier).toFixed(6)),
-      },
-    });
+  const callMinutes        = (call_time_seconds ?? 0) / 60;
+  const assistableCharged  = callMinutes * chargedAssistablePerMin;
+  const claudeCharged      = (result._usage.inputTokens  / 1_000_000) * chargedInputPerM
+                           + (result._usage.outputTokens / 1_000_000) * chargedOutputPerM;
+  const deductionUsd       = assistableCharged + claudeCharged;
 
+  console.log(`[training-coach:billing] mins=${callMinutes.toFixed(2)} assistable=$${assistableCharged.toFixed(5)} claude=$${claudeCharged.toFixed(5)} total=$${deductionUsd.toFixed(5)}`);
+
+  void logUsage({
+    company_id:    company.id,
+    app:           "training_coach",
+    entity_id:     call.id,
+    entity_type:   "training_call",
+    input_tokens:  result._usage.inputTokens,
+    output_tokens: result._usage.outputTokens,
+    cost_usd:      deductionUsd,
+    model:         result._usage.model,
+    cost_breakdown: {
+      ai:          parseFloat(claudeCharged.toFixed(6)),
+      voice_agent: parseFloat(assistableCharged.toFixed(6)),
+    },
+  });
+
+  if (deductionUsd > 0) {
     const { data: newBalance, error: deductErr } = await admin.rpc("deduct_wallet_balance", {
       p_company_id:  company.id,
       p_amount_usd:  deductionUsd,

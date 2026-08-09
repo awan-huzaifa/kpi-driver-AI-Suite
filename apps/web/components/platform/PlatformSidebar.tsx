@@ -29,8 +29,9 @@ const BOTTOM_NAV = [
 ]
 
 const SETTINGS_SUB = [
-  { id: 'account', label: 'Account Settings', href: '/settings/account' },
-  { id: 'company', label: 'Company Settings', href: '/settings/company' },
+  { id: 'account',        label: 'Account Settings',       href: '/settings/account'        },
+  { id: 'company',        label: 'Company Settings',        href: '/settings/company'        },
+  { id: 'notifications',  label: 'Notifications',           href: '/settings/notifications'  },
 ]
 
 const UNLOCK_FORM_URL = 'https://link.kpidriver.com/widget/form/vUL1Mt66ystym8CfIXHM'

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { createClient } from '@kpidriver/auth/server'
 import ParticlesBg from '@/components/ui/particles-bg'
 
@@ -15,60 +16,97 @@ export default async function NoAccessPage({
   const isDeactivated = reason === 'deactivated'
 
   return (
-    <div style={{
-      minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: '#0d1b2e', padding: 24,
-    }}>
+    <div style={{ height: '100dvh', display: 'flex', overflow: 'hidden', background: '#0d1b2e', position: 'relative' }}>
       <ParticlesBg />
       <div style={{
-        width: '100%', maxWidth: 400, textAlign: 'center',
-        background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
-        backdropFilter: 'blur(52px) saturate(180%) brightness(1.08)',
-        WebkitBackdropFilter: 'blur(52px) saturate(180%) brightness(1.08)',
-        border: '1px solid rgba(255,255,255,0.18)',
-        borderRadius: 24, padding: '40px 32px',
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 48px rgba(0,0,0,0.3)',
+        flex: 1, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        padding: '32px 24px 80px', zIndex: 10,
       }}>
-        {/* Lock icon */}
-        <div style={{
-          width: 56, height: 56, borderRadius: 16, margin: '0 auto 20px',
-          background: 'rgba(237,31,36,0.1)', border: '1px solid rgba(237,31,36,0.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ED1F24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
+        <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Logo */}
+          <Image src="/logo3.png" alt="KPI DRIVER" width={210} height={77} style={{ objectFit: 'contain' }} priority />
+
+          {/* Tagline */}
+          <p style={{ fontSize: 11, fontWeight: 600, margin: '8px 0 28px', lineHeight: 1.5, textAlign: 'center' }}>
+            <span style={{ color: '#22c55e' }}>Built By </span>
+            <span style={{ color: '#64748b' }}>RE Investors</span>
+            <span style={{ color: '#22c55e' }}> For </span>
+            <span style={{ color: '#64748b' }}>RE Investors</span>
+          </p>
+
+          {/* Card */}
+          <div style={{
+            width: '100%', textAlign: 'center',
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)',
+            backdropFilter: 'blur(52px) saturate(180%) brightness(1.08)',
+            WebkitBackdropFilter: 'blur(52px) saturate(180%) brightness(1.08)',
+            border: '1px solid rgba(255,255,255,0.18)',
+            borderRadius: 24, padding: '36px 32px',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2), 0 12px 48px rgba(0,0,0,0.3)',
+          }}>
+            {/* Lock icon */}
+            <div style={{
+              width: 56, height: 56, borderRadius: 16, margin: '0 auto 20px',
+              background: 'rgba(237,31,36,0.1)', border: '1px solid rgba(237,31,36,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ED1F24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9', marginBottom: 10 }}>
+              Access Not Granted
+            </h1>
+            <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 28 }}>
+              {isDeactivated ? (
+                <>
+                  Your Email Is Not Linked To An Active KPI DRIVER Account.<br />
+                  Contact Your Admin To Get Access.
+                </>
+              ) : (
+                <>
+                  Your Google Account Isn&apos;t Linked To An Active KPI DRIVER AI SUITE Credential.<br />
+                  Contact Your Admin To Get Access.
+                </>
+              )}
+            </p>
+
+            <Link
+              href="/login"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 24px', borderRadius: 12,
+                background: 'rgba(48,125,192,0.15)', border: '1px solid rgba(48,125,192,0.3)',
+                color: '#307DC0', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+              }}
+            >
+              Back To Login
+            </Link>
+          </div>
         </div>
+      </div>
 
-        <h1 style={{ fontSize: 20, fontWeight: 700, color: '#f1f5f9', marginBottom: 10 }}>
-          Access Not Granted
-        </h1>
-        <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.7, marginBottom: 28 }}>
-          {isDeactivated ? (
-            <>
-              Your Email Is Not Linked To An Active KPI DRIVER Account.<br />
-              Contact Your Admin To Get Access.
-            </>
-          ) : (
-            <>
-              Your Google Account Isn&apos;t Linked To An Active KPI DRIVER Credential.<br />
-              Contact Your Admin To Get Access.
-            </>
-          )}
-        </p>
-
-        <Link
-          href="/login"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '10px 24px', borderRadius: 12,
-            background: 'rgba(48,125,192,0.15)', border: '1px solid rgba(48,125,192,0.3)',
-            color: '#307DC0', fontSize: 13, fontWeight: 600, textDecoration: 'none',
-          }}
-        >
-          Back To Login
-        </Link>
+      {/* Footer */}
+      <div style={{
+        position: 'absolute', bottom: 16, left: 0, right: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+        zIndex: 20,
+      }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: '#475569' }}>
+          KPI DRIVER · Built By RE Investors For RE Investors
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}>
+            Terms & Conditions
+          </a>
+          <span style={{ color: '#2d3f52', fontSize: 11 }}>·</span>
+          <a href="#" style={{ fontSize: 11, fontWeight: 600, color: '#475569', textDecoration: 'none' }}>
+            Privacy Policy
+          </a>
+        </div>
       </div>
     </div>
   )

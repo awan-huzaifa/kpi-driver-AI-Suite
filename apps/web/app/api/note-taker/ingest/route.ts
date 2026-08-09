@@ -83,23 +83,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Insufficient wallet balance" }, { status: 402 });
   }
 
-  // Calculate cost from tokens + Whisper transcription
-  const inTokens       = Math.max(0, input_tokens  ?? 0);
-  const outTokens      = Math.max(0, output_tokens ?? 0);
-  const aiCostUsd      = (inTokens * INPUT_COST_PER_TOKEN) + (outTokens * OUTPUT_COST_PER_TOKEN);
-  const whisperCostUsd = ((duration_sec ?? 0) / 60) * 0.006;
-  const baseCostUsd    = aiCostUsd + whisperCostUsd;
-
-  // Fetch billing multiplier — prefer company-specific override, fall back to global
+  // Fetch per-component charged prices — prefer company override, fall back to global
   const { data: cfgRows } = await admin
     .from("billing_config")
-    .select("multiplier, company_id")
+    .select("nt_whisper_charged_per_min, nt_gpt_input_charged_per_m, nt_gpt_output_charged_per_m, company_id")
     .eq("app", "note_taker")
     .or(`company_id.eq.${company.id},company_id.is.null`);
-  const companyCfg   = cfgRows?.find(r => r.company_id === company.id);
-  const globalCfg    = cfgRows?.find(r => r.company_id === null);
-  const multiplier   = Number(companyCfg?.multiplier ?? globalCfg?.multiplier ?? 3.0);
-  const deductionUsd = baseCostUsd * multiplier;
+  const pricingRow = cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null);
+
+  const chargedWhisperPerMin  = Number(pricingRow?.nt_whisper_charged_per_min  ?? 0.006);
+  const chargedGptInputPerM   = Number(pricingRow?.nt_gpt_input_charged_per_m  ?? 0.75);
+  const chargedGptOutputPerM  = Number(pricingRow?.nt_gpt_output_charged_per_m ?? 4.50);
+
+  const inTokens       = Math.max(0, input_tokens  ?? 0);
+  const outTokens      = Math.max(0, output_tokens ?? 0);
+  const whisperCharged = ((duration_sec ?? 0) / 60) * chargedWhisperPerMin;
+  const gptCharged     = (inTokens  / 1_000_000) * chargedGptInputPerM
+                       + (outTokens / 1_000_000) * chargedGptOutputPerM;
+  const deductionUsd   = whisperCharged + gptCharged;
+
+  console.log(`[note-taker:billing] whisper=$${whisperCharged.toFixed(5)} gpt=$${gptCharged.toFixed(5)} total=$${deductionUsd.toFixed(5)}`);
 
   // Insert note_taker_call — idempotent on external_call_id
   const { data: call, error: insertErr } = await admin
@@ -121,7 +124,7 @@ export async function POST(req: NextRequest) {
       transcript:      transcript    ?? null,
       input_tokens:    inTokens,
       output_tokens:   outTokens,
-      cost_usd:        baseCostUsd,
+      cost_usd:        deductionUsd,
     })
     .select("id")
     .single();
@@ -134,7 +137,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to save note" }, { status: 500 });
   }
 
-  // Log usage (cost_usd is the multiplied amount — what's actually charged)
   if (deductionUsd > 0) {
     void logUsage({
       company_id:    company.id,
@@ -146,8 +148,8 @@ export async function POST(req: NextRequest) {
       cost_usd:      deductionUsd,
       model:         MODEL_NAME,
       cost_breakdown: {
-        ai:            parseFloat((aiCostUsd      * multiplier).toFixed(6)),
-        transcription: parseFloat((whisperCostUsd * multiplier).toFixed(6)),
+        ai:            parseFloat(gptCharged.toFixed(6)),
+        transcription: parseFloat(whisperCharged.toFixed(6)),
       },
     });
   }
@@ -164,6 +166,6 @@ export async function POST(req: NextRequest) {
     else void autoTopupIfNeeded(company.id, Number(newBalance));
   }
 
-  console.log(`[note-taker:ingest] saved call ${call.id}, cost $${baseCostUsd.toFixed(6)}`);
+  console.log(`[note-taker:ingest] saved call ${call.id}, charged $${deductionUsd.toFixed(6)}`);
   return NextResponse.json({ success: true, call_id: call.id }, { status: 200 });
 }

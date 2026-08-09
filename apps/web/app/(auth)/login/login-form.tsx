@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { createClient } from '@kpidriver/auth/client'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import {
   Mail, Lock, ArrowRight, AlertCircle,
   Eye, EyeOff,
@@ -27,7 +27,6 @@ export default function LoginForm() {
   const [loading,     setLoading]     = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  const router       = useRouter()
   const searchParams = useSearchParams()
   const next         = searchParams.get('next') ?? '/dashboard'
 
@@ -42,13 +41,26 @@ export default function LoginForm() {
         router.push('/auth/no-access?reason=deactivated')
         return
       }
-      setError(error.message)
+      const msg = error.message.toLowerCase()
+      if (msg.includes('invalid') || msg.includes('credential') || msg.includes('password') || msg.includes('not found')) {
+        setError('Invalid Login Credentials')
+      } else {
+        setError(error.message)
+      }
       setLoading(false)
       return
     }
-    if (data.user) void recordSigninConsent(data.user.id)
-    router.push(next)
-    router.refresh()
+    if (data.user) {
+      const { data: profile } = await supabase.from('users').select('is_active').eq('id', data.user.id).single()
+      if (profile && profile.is_active === false) {
+        await supabase.auth.signOut()
+        setError('In-Active Login Credentials - Contact Your Admin')
+        setLoading(false)
+        return
+      }
+        void recordSigninConsent(data.user.id)
+    }
+    window.location.href = next
   }
 
   async function handleGoogle() {
@@ -99,7 +111,6 @@ export default function LoginForm() {
         >
           <Image src="/logo3.png" alt="KPI DRIVER" width={300} height={110} style={{ objectFit: 'contain' }} priority />
           <p style={{ fontSize: 11, fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
-            <span style={{ color: '#64748b' }}>KPI DRIVER &nbsp;·&nbsp; </span>
             <span style={{ color: '#22c55e' }}>Built By </span>
             <span style={{ color: '#64748b' }}>RE Investors</span>
             <span style={{ color: '#22c55e' }}> For </span>
@@ -122,7 +133,7 @@ export default function LoginForm() {
             marginBottom: 14,
             letterSpacing: '-0.02em',
           }}>
-            Your Complete AI Suite<br />
+            KPI DRIVER AI SUITE<br />
             <span style={{
               background: 'linear-gradient(135deg,#22c55e 0%,#4ade80 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',

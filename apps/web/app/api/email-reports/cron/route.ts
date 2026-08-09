@@ -38,13 +38,17 @@ export async function GET(req: Request) {
     // All active users in this company
     const { data: users } = await admin
       .from("users")
-      .select("id, full_name, access_role, app_sales_coach, app_training_coach, app_underwriting")
+      .select("id, full_name, access_role, app_sales_coach, app_training_coach, app_underwriting, notify_reports")
       .eq("company_id", company.id)
       .eq("is_active", true);
 
     if (!users?.length) continue;
 
-    const admins = users.filter(u => u.access_role === "admin" || u.access_role === "super_admin");
+    // Only admins with report notifications enabled
+    const admins = users.filter(u =>
+      (u.access_role === "admin" || u.access_role === "super_admin") &&
+      (u.notify_reports !== false)
+    );
 
     for (const reportType of dueTypes) {
       const period      = getPeriodBounds(reportType, localDate);

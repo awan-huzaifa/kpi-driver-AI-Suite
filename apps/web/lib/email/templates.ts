@@ -33,11 +33,10 @@ function wrap(title: string, preheader: string, body: string): string {
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
   <!-- Header -->
-  <tr><td style="background:${NAVY};padding:24px 32px;border-radius:12px 12px 0 0;">
+  <tr><td style="background:${NAVY};padding:20px 32px;border-radius:12px 12px 0 0;">
     <table width="100%" cellpadding="0" cellspacing="0"><tr>
       <td>
-        <span style="font-size:20px;font-weight:900;color:#fff;letter-spacing:-0.02em;">KPI DRIVER</span>
-        <span style="font-size:11px;font-weight:700;color:${BLUE};margin-left:10px;vertical-align:middle;text-transform:uppercase;letter-spacing:0.08em;">AI Suite</span>
+        <img src="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://kpidriver.ai'}/logo3.png" alt="KPI DRIVER" width="160" height="59" style="display:block;max-width:160px;height:auto;border:0;" />
       </td>
     </tr></table>
   </td></tr>
@@ -387,6 +386,53 @@ export function tcRepTemplate(repName: string, companyName: string, period: Peri
   return wrap(
     `Your Training Report — ${period.label}`,
     `${calls.length} sessions · Avg score ${avgScore ?? 'N/A'} · ${period.label}`,
+    body,
+  )
+}
+
+// ── Billing: Wallet Top-Up ───────────────────────────────────────────────────
+
+export function topupEmailTemplate(
+  companyName: string,
+  amount: number,
+  newBalance: number,
+  billingUrl: string,
+): string {
+  const now = new Date().toLocaleString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+
+  const body = `
+    <h2 style="margin:0 0 4px;font-size:22px;font-weight:900;color:#1e293b;">Wallet Top-Up Successful</h2>
+    <p style="margin:0 0 24px;font-size:14px;color:#64748b;">${companyName}</p>
+
+    <div style="margin-bottom:24px;padding:20px 24px;background:#f0f7ff;border-left:4px solid ${BLUE};border-radius:0 8px 8px 0;">
+      <div style="font-size:12px;font-weight:700;color:${BLUE};text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;">Amount Added</div>
+      <div style="font-size:36px;font-weight:900;color:#1e293b;letter-spacing:-0.02em;">$${amount.toFixed(2)}</div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;">${now}</div>
+    </div>
+
+    ${statRow([
+      { label: 'Amount Topped Up', value: `$${amount.toFixed(2)}`, color: GREEN },
+      { label: 'New Wallet Balance', value: `$${newBalance.toFixed(2)}`, color: NAVY },
+    ])}
+
+    <div style="margin-top:24px;text-align:center;">
+      <a href="${billingUrl}" style="display:inline-block;padding:12px 28px;background:${BLUE};color:#ffffff;font-size:14px;font-weight:700;border-radius:8px;text-decoration:none;">
+        View Billing Dashboard →
+      </a>
+    </div>
+
+    <p style="margin:24px 0 0;font-size:12px;color:#94a3b8;text-align:center;">
+      This is an automated billing notification for ${companyName}.<br>
+      Manage your notification preferences in your account settings.
+    </p>
+  `
+
+  return wrap(
+    `Wallet Top-Up — $${amount.toFixed(2)} added`,
+    `$${amount.toFixed(2)} added to ${companyName} wallet. New balance: $${newBalance.toFixed(2)}`,
     body,
   )
 }

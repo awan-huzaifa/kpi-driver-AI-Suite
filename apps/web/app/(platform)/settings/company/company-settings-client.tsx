@@ -8,29 +8,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
+import { SelectInline } from "@/components/ui/select";
 import { updateCompany } from "@/app/actions/admin/company";
 import LogoUpload from "./logo-upload";
 import type { PlanId } from "@kpidriver/auth/types";
 import type { AccessRole } from "@/types/database";
 import { C } from "@/components/platform/brand";
 
-const COMMON_TIMEZONES = [
-  { label: "Eastern Time (ET)",       value: "America/New_York" },
-  { label: "Central Time (CT)",       value: "America/Chicago" },
-  { label: "Mountain Time (MT)",      value: "America/Denver" },
-  { label: "Pacific Time (PT)",       value: "America/Los_Angeles" },
-  { label: "Alaska Time (AKT)",       value: "America/Anchorage" },
-  { label: "Hawaii Time (HT)",        value: "Pacific/Honolulu" },
-  { label: "Atlantic Time (AST)",     value: "America/Halifax" },
-  { label: "UTC",                     value: "UTC" },
-  { label: "London (GMT/BST)",        value: "Europe/London" },
-  { label: "Central Europe (CET)",    value: "Europe/Berlin" },
-  { label: "Eastern Europe (EET)",    value: "Europe/Athens" },
-  { label: "Dubai (GST)",             value: "Asia/Dubai" },
-  { label: "India (IST)",             value: "Asia/Kolkata" },
-  { label: "Singapore/Manila (SGT)",  value: "Asia/Singapore" },
-  { label: "Tokyo (JST)",             value: "Asia/Tokyo" },
-  { label: "Sydney (AEST)",           value: "Australia/Sydney" },
+const TIMEZONE_GROUPS = [
+  { label: "US / Canada", options: [
+    { value: "America/New_York",    label: "Eastern Time (ET)" },
+    { value: "America/Chicago",     label: "Central Time (CT)" },
+    { value: "America/Denver",      label: "Mountain Time (MT)" },
+    { value: "America/Phoenix",     label: "Arizona (no DST)" },
+    { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
+    { value: "America/Anchorage",   label: "Alaska (AKT)" },
+    { value: "Pacific/Honolulu",    label: "Hawaii (HST)" },
+  ]},
+  { label: "Europe", options: [
+    { value: "Europe/London",   label: "London (GMT/BST)" },
+    { value: "Europe/Paris",    label: "Paris / Berlin (CET)" },
+    { value: "Europe/Helsinki", label: "Helsinki / Athens (EET)" },
+    { value: "Europe/Moscow",   label: "Moscow (MSK)" },
+  ]},
+  { label: "Asia / Pacific", options: [
+    { value: "Asia/Dubai",       label: "Dubai (GST)" },
+    { value: "Asia/Karachi",     label: "Karachi / Islamabad (PKT)" },
+    { value: "Asia/Kolkata",     label: "India (IST)" },
+    { value: "Asia/Dhaka",       label: "Dhaka (BST)" },
+    { value: "Asia/Bangkok",     label: "Bangkok / Jakarta (ICT)" },
+    { value: "Asia/Singapore",   label: "Singapore / KL (SGT)" },
+    { value: "Asia/Tokyo",       label: "Tokyo (JST)" },
+    { value: "Australia/Sydney", label: "Sydney (AEST)" },
+    { value: "Pacific/Auckland", label: "Auckland (NZST)" },
+  ]},
 ];
 
 interface Company {
@@ -140,19 +151,12 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
             <div>
               <Label htmlFor="company-tz">Report Timezone</Label>
               <div style={{ marginTop: 6 }}>
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger
-                    placeholder="Select timezone"
-                    className="w-auto"
-                  />
-                  <SelectContent>
-                    {COMMON_TIMEZONES.map(tz => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectInline
+                  value={timezone}
+                  onValueChange={setTimezone}
+                  placeholder="Select timezone"
+                  groups={TIMEZONE_GROUPS}
+                />
               </div>
               <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, marginTop: 6 }}>
                 Automated email reports are sent at 8 AM in this timezone.

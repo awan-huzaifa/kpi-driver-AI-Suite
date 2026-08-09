@@ -59,7 +59,7 @@ export async function GET(request: Request) {
   if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ type, token_hash: tokenHash })
     if (!error) {
-      const redirect = type === 'invite' ? '/auth/set-password' : next
+      const redirect = type === 'invite' ? '/auth/set-password' : type === 'recovery' ? '/auth/reset-password' : next
       return NextResponse.redirect(`${origin}${redirect}`)
     }
   }

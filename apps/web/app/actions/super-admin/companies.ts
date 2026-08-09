@@ -22,6 +22,7 @@ export async function createCompany(data: {
   name:                string;
   ghl_sub_account_id?: string;
   stripe_customer_id?: string;
+  timezone?:           string;
 }) {
   await requireSuperAdmin();
   const admin = createAdminClient();
@@ -30,6 +31,7 @@ export async function createCompany(data: {
     name:                data.name.trim(),
     ghl_sub_account_id: data.ghl_sub_account_id?.trim() || null,
     stripe_customer_id: data.stripe_customer_id?.trim() || null,
+    timezone:            data.timezone?.trim() || 'America/New_York',
   });
 
   if (error) throw new Error(error.message);
@@ -49,6 +51,7 @@ export async function updateCompanyAdmin(id: string, data: {
   name:                string;
   ghl_sub_account_id?: string;
   stripe_customer_id?: string;
+  timezone?:           string;
 }) {
   await requireSuperAdmin();
   const admin = createAdminClient();
@@ -57,6 +60,7 @@ export async function updateCompanyAdmin(id: string, data: {
     name:                data.name.trim(),
     ghl_sub_account_id: data.ghl_sub_account_id?.trim() || null,
     stripe_customer_id: data.stripe_customer_id?.trim() || null,
+    timezone:            data.timezone?.trim() || 'America/New_York',
   }).eq("id", id);
 
   if (error) throw new Error(error.message);
