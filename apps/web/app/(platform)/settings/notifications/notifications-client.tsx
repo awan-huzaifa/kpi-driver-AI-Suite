@@ -148,7 +148,7 @@ export default function NotificationsClient({
               Notification Preferences
             </h1>
             <p style={{ fontSize: 13, fontWeight: 500, color: C.dimText, margin: 0 }}>
-              Control which emails you receive from KPI Driver.
+              Control Which Emails You Receive From KPI Driver.
             </p>
           </div>
         </div>
@@ -158,7 +158,7 @@ export default function NotificationsClient({
             background: "rgba(67,183,73,0.08)", border: "1px solid rgba(67,183,73,0.15)",
             padding: "8px 14px", borderRadius: 8, display: "inline-block", marginTop: 8,
           }}>
-            Preferences saved.
+            Preferences Saved.
           </p>
         )}
       </div>
@@ -167,7 +167,7 @@ export default function NotificationsClient({
         <NotifToggle
           icon={FileText}
           title="Report Emails"
-          description="Receive periodic performance reports — Sales Coach, Training Coach, and Underwriting summaries sent at 8 AM in your company timezone."
+          description="Receive Periodic Performance Reports — Sales Coach, Training Coach, And Underwriting Summaries Sent At 8 AM In Your Company Timezone."
           enabled={reports}
           locked={notifyReportsLocked}
           onToggle={() => toggle("reports")}
@@ -176,7 +176,7 @@ export default function NotificationsClient({
         <NotifToggle
           icon={CreditCard}
           title="Billing Notifications"
-          description="Receive an email whenever your company wallet is topped up, including the amount added and your new balance."
+          description="Receive An Email Whenever Your Company Wallet Is Topped Up, Including The Amount Added And Your New Balance."
           enabled={billing}
           locked={notifyBillingLocked}
           onToggle={() => toggle("billing")}
@@ -189,7 +189,7 @@ export default function NotificationsClient({
           fontSize: 12, fontWeight: 500, color: C.dimText,
           marginTop: 20,
         }}>
-          Settings marked with <span style={{ color: "#FCAF17", fontWeight: 700 }}>Managed by Administrator</span> have been configured by your super admin and cannot be changed here. Contact your administrator to update them.
+          Settings Marked With <span style={{ color: "#FCAF17", fontWeight: 700 }}>Managed By Administrator</span> Have Been Configured By Your Super Admin And Cannot Be Changed Here. Contact Your Administrator To Update Them.
         </p>
       )}
     </PlatformShell>

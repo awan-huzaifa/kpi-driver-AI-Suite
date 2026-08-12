@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     .or(`company_id.eq.${company.id},company_id.is.null`);
   const pricingRow = (cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null)) as Record<string, unknown> | null;
 
-  const deductionUsd = Number(pricingRow?.de_charged_per_call_usd ?? 0.0016);
+  const deductionUsd = Number(pricingRow?.de_charged_per_call_usd ?? 0.0018);
 
   console.log(`[data-enrichment:billing] charged=$${deductionUsd.toFixed(6)}/call`);
 

@@ -219,9 +219,15 @@ export function scRepTemplate(repName: string, companyName: string, period: Peri
   const recent = [...scorable].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10)
 
   // Coaching actions from evaluations
-  const actions: string[] = []
+  const strengths: string[] = []
+  const actions:   string[] = []
   for (const c of scorable.slice(0, 5)) {
     const ev = (c as any).evaluation
+    if (ev?.strengths) {
+      for (const s of ev.strengths.slice(0, 2)) {
+        if (s && !strengths.includes(s)) strengths.push(s)
+      }
+    }
     if (ev?.coaching_actions) {
       for (const a of ev.coaching_actions.slice(0, 2)) {
         if (a.action && !actions.includes(a.action)) actions.push(a.action)
@@ -249,6 +255,13 @@ export function scRepTemplate(repName: string, companyName: string, period: Peri
         scoreChip(c.score),
         c.call_result ?? '—',
       ]))}
+    ` : ''}
+
+    ${strengths.length ? `
+      ${sectionTitle('What You Did Well', GREEN)}
+      <ul style="margin:0;padding-left:20px;">
+        ${strengths.map(s => `<li style="font-size:13px;color:#1e293b;margin-bottom:8px;line-height:1.5;">${s}</li>`).join('')}
+      </ul>
     ` : ''}
 
     ${actions.length ? `
@@ -344,8 +357,14 @@ export function tcRepTemplate(repName: string, companyName: string, period: Peri
   const avgScore = scorable.length ? Math.round(scorable.reduce((s, c) => s + c.score!, 0) / scorable.length) : null
   const recent   = [...scorable].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10)
 
-  const actions: string[] = []
+  const strengths: string[] = []
+  const actions:   string[] = []
   for (const c of scorable.slice(0, 5)) {
+    if (c.evaluation?.strengths) {
+      for (const s of c.evaluation.strengths.slice(0, 2)) {
+        if (s && !strengths.includes(s)) strengths.push(s)
+      }
+    }
     if (c.evaluation?.coaching_actions) {
       for (const a of c.evaluation.coaching_actions.slice(0, 2)) {
         if (a.action && !actions.includes(a.action)) actions.push(a.action)
@@ -373,6 +392,13 @@ export function tcRepTemplate(repName: string, companyName: string, period: Peri
         c.ai_agent?.agent_name ?? '—',
         scoreChip(c.score),
       ]))}
+    ` : ''}
+
+    ${strengths.length ? `
+      ${sectionTitle('What You Did Well', GREEN)}
+      <ul style="margin:0;padding-left:20px;">
+        ${strengths.map(s => `<li style="font-size:13px;color:#1e293b;margin-bottom:8px;line-height:1.5;">${s}</li>`).join('')}
+      </ul>
     ` : ''}
 
     ${actions.length ? `

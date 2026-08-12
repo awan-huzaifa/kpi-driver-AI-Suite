@@ -5,7 +5,7 @@ import { Loader2, Save, CheckCircle2, RotateCcw, Globe, Building2 } from 'lucide
 import type { PlanId } from '@kpidriver/auth/types'
 import PlatformShell, { type Access } from '@/components/platform/PlatformShell'
 import { C } from '@/components/platform/brand'
-import { updateBillingMultiplier, clearCompanyPricing, updateUnderwritingPricing, updateClaudeOnlyPricing, updateTrainingCoachPricing, updateSkipTracingPricing, updateNoteTakerPricing, updateDataEnrichmentPricing } from '@/app/actions/super-admin/billing-config'
+import { updateBillingMultiplier, clearCompanyPricing, updateUnderwritingPricing, updateClaudeOnlyPricing, updateTrainingCoachPricing, updateSkipTracingPricing, updateNoteTakerPricing, updateDataEnrichmentPricing, saveProviderRates } from '@/app/actions/super-admin/billing-config'
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select'
 
 interface ConfigRow {
@@ -18,14 +18,24 @@ interface ConfigRow {
   axesso_cost_usd:             number | null
   rentcast_charged_usd:        number | null
   axesso_charged_usd:          number | null
+  claude_input_cost_per_m?:    number | null
+  claude_output_cost_per_m?:   number | null
   claude_input_charged_per_m:  number | null
   claude_output_charged_per_m: number | null
+  assistable_cost_per_min?:    number | null
   assistable_charged_per_min?: number | null
   credit_cost_usd?:            number | null
+  st_normal_rate_usd?:         number | null
+  st_advanced_rate_usd?:       number | null
+  st_apn_rate_usd?:            number | null
+  st_dnc_rate_usd?:            number | null
   st_charged_normal_usd?:      number | null
   st_charged_advanced_usd?:    number | null
   st_charged_apn_usd?:         number | null
   st_charged_dnc_usd?:         number | null
+  nt_whisper_cost_per_min?:    number | null
+  nt_gpt_input_cost_per_m?:    number | null
+  nt_gpt_output_cost_per_m?:   number | null
   nt_whisper_charged_per_min?: number | null
   nt_gpt_input_charged_per_m?: number | null
   nt_gpt_output_charged_per_m?:number | null
@@ -102,31 +112,44 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   const [errors,    setErrors]    = useState<Record<string, string>>({})
   const [, startTransition] = useTransition()
 
-  // Underwriting per-API charged price state
-  const [rentcastCharged,    setRentcastCharged]    = useState(String(globalUwRow?.rentcast_charged_usd        ?? 0.074))
-  const [axessoCharged,      setAxessoCharged]      = useState(String(globalUwRow?.axesso_charged_usd           ?? 0.020))
-  const [claudeInputCharged, setClaudeInputCharged] = useState(String(globalUwRow?.claude_input_charged_per_m  ?? CLAUDE_INPUT_RATE))
-  const [claudeOutputCharged,setClaudeOutputCharged]= useState(String(globalUwRow?.claude_output_charged_per_m ?? CLAUDE_OUTPUT_RATE))
+  // Underwriting provider rates + charged prices
+  const [rentcastCost,        setRentcastCost]        = useState(String(globalUwRow?.rentcast_cost_usd           ?? 0.074))
+  const [axessoCost,          setAxessoCost]          = useState(String(globalUwRow?.axesso_cost_usd             ?? 0.0018))
+  const [uwClaudeInputCost,   setUwClaudeInputCost]   = useState(String(globalUwRow?.claude_input_cost_per_m     ?? CLAUDE_INPUT_RATE))
+  const [uwClaudeOutputCost,  setUwClaudeOutputCost]  = useState(String(globalUwRow?.claude_output_cost_per_m    ?? CLAUDE_OUTPUT_RATE))
+  const [rentcastCharged,     setRentcastCharged]     = useState(String(globalUwRow?.rentcast_charged_usd        ?? 0.074))
+  const [axessoCharged,       setAxessoCharged]       = useState(String(globalUwRow?.axesso_charged_usd          ?? 0.0018))
+  const [claudeInputCharged,  setClaudeInputCharged]  = useState(String(globalUwRow?.claude_input_charged_per_m  ?? CLAUDE_INPUT_RATE))
+  const [claudeOutputCharged, setClaudeOutputCharged] = useState(String(globalUwRow?.claude_output_charged_per_m ?? CLAUDE_OUTPUT_RATE))
   const [savingUw,   setSavingUw]   = useState(false)
   const [savedUw,    setSavedUw]    = useState(false)
   const [uwError,    setUwError]    = useState('')
 
-  // Sales Coach per-token charged price state
-  const [scInputCharged,  setScInputCharged]  = useState(String(globalScRow?.claude_input_charged_per_m  ?? SC_CLAUDE_INPUT_RATE))
-  const [scOutputCharged, setScOutputCharged] = useState(String(globalScRow?.claude_output_charged_per_m ?? SC_CLAUDE_OUTPUT_RATE))
+  // Sales Coach provider rates + charged prices
+  const [scClaudeInputCost,  setScClaudeInputCost]  = useState(String(globalScRow?.claude_input_cost_per_m     ?? SC_CLAUDE_INPUT_RATE))
+  const [scClaudeOutputCost, setScClaudeOutputCost] = useState(String(globalScRow?.claude_output_cost_per_m    ?? SC_CLAUDE_OUTPUT_RATE))
+  const [scInputCharged,     setScInputCharged]     = useState(String(globalScRow?.claude_input_charged_per_m  ?? SC_CLAUDE_INPUT_RATE))
+  const [scOutputCharged,    setScOutputCharged]    = useState(String(globalScRow?.claude_output_charged_per_m ?? SC_CLAUDE_OUTPUT_RATE))
   const [savingSc,  setSavingSc]  = useState(false)
   const [savedSc,   setSavedSc]   = useState(false)
   const [scError,   setScError]   = useState('')
 
-  // Training Coach per-component charged price state
-  const [tcAssistableCharged, setTcAssistableCharged] = useState(String(globalTcRow?.assistable_charged_per_min ?? 0.15))
-  const [tcInputCharged,      setTcInputCharged]      = useState(String(globalTcRow?.claude_input_charged_per_m  ?? SC_CLAUDE_INPUT_RATE))
-  const [tcOutputCharged,     setTcOutputCharged]     = useState(String(globalTcRow?.claude_output_charged_per_m ?? SC_CLAUDE_OUTPUT_RATE))
+  // Training Coach provider rates + charged prices
+  const [tcAssistableCost,    setTcAssistableCost]    = useState(String(globalTcRow?.assistable_cost_per_min      ?? 0.07))
+  const [tcClaudeInputCost,   setTcClaudeInputCost]   = useState(String(globalTcRow?.claude_input_cost_per_m      ?? SC_CLAUDE_INPUT_RATE))
+  const [tcClaudeOutputCost,  setTcClaudeOutputCost]  = useState(String(globalTcRow?.claude_output_cost_per_m     ?? SC_CLAUDE_OUTPUT_RATE))
+  const [tcAssistableCharged, setTcAssistableCharged] = useState(String(globalTcRow?.assistable_charged_per_min   ?? 0.07))
+  const [tcInputCharged,      setTcInputCharged]      = useState(String(globalTcRow?.claude_input_charged_per_m   ?? SC_CLAUDE_INPUT_RATE))
+  const [tcOutputCharged,     setTcOutputCharged]     = useState(String(globalTcRow?.claude_output_charged_per_m  ?? SC_CLAUDE_OUTPUT_RATE))
   const [savingTc,  setSavingTc]  = useState(false)
   const [savedTc,   setSavedTc]   = useState(false)
   const [tcError,   setTcError]   = useState('')
 
-  // Skip Tracing per-flow-type charged price state
+  // Skip Tracing provider rates + charged prices
+  const [stNormalRate,      setStNormalRate]      = useState(String(globalStRow?.st_normal_rate_usd      ?? 0.02))
+  const [stAdvancedRate,    setStAdvancedRate]    = useState(String(globalStRow?.st_advanced_rate_usd    ?? 0.04))
+  const [stApnRate,         setStApnRate]         = useState(String(globalStRow?.st_apn_rate_usd         ?? 0.10))
+  const [stDncRate,         setStDncRate]         = useState(String(globalStRow?.st_dnc_rate_usd         ?? 0.02))
   const [stNormalCharged,   setStNormalCharged]   = useState(String(globalStRow?.st_charged_normal_usd   ?? 0.02))
   const [stAdvancedCharged, setStAdvancedCharged] = useState(String(globalStRow?.st_charged_advanced_usd ?? 0.04))
   const [stApnCharged,      setStApnCharged]      = useState(String(globalStRow?.st_charged_apn_usd      ?? 0.10))
@@ -135,7 +158,10 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   const [savedSt,   setSavedSt]   = useState(false)
   const [stError,   setStError]   = useState('')
 
-  // Note Taker per-component charged price state
+  // Note Taker provider rates + charged prices
+  const [ntWhisperCost,       setNtWhisperCost]       = useState(String(globalNtRow?.nt_whisper_cost_per_min  ?? 0.006))
+  const [ntGptInputCost,      setNtGptInputCost]      = useState(String(globalNtRow?.nt_gpt_input_cost_per_m  ?? 0.75))
+  const [ntGptOutputCost,     setNtGptOutputCost]     = useState(String(globalNtRow?.nt_gpt_output_cost_per_m ?? 4.50))
   const [ntWhisperCharged,    setNtWhisperCharged]    = useState(String(globalNtRow?.nt_whisper_charged_per_min  ?? 0.006))
   const [ntGptInputCharged,   setNtGptInputCharged]   = useState(String(globalNtRow?.nt_gpt_input_charged_per_m  ?? 0.75))
   const [ntGptOutputCharged,  setNtGptOutputCharged]  = useState(String(globalNtRow?.nt_gpt_output_charged_per_m ?? 4.50))
@@ -144,18 +170,27 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   const [ntError,   setNtError]   = useState('')
 
   // Data Enrichment per-call charged price state
-  const [deCallCharged, setDeCallCharged] = useState(String(globalDeRow?.de_charged_per_call_usd ?? 0.0016))
+  const [deProviderRate, setDeProviderRate] = useState(String(globalDeRow?.axesso_cost_usd        ?? 0.0018))
+  const [deCallCharged,  setDeCallCharged]  = useState(String(globalDeRow?.de_charged_per_call_usd ?? 0.0018))
   const [savingDe, setSavingDe] = useState(false)
   const [savedDe,  setSavedDe]  = useState(false)
   const [deError,  setDeError]  = useState('')
 
   function handleSaveUnderwritingPricing() {
-    const rc = parseFloat(rentcastCharged)
-    const ax = parseFloat(axessoCharged)
-    const ci = parseFloat(claudeInputCharged)
-    const co = parseFloat(claudeOutputCharged)
+    const rc   = parseFloat(rentcastCharged)
+    const ax   = parseFloat(axessoCharged)
+    const ci   = parseFloat(claudeInputCharged)
+    const co   = parseFloat(claudeOutputCharged)
+    const rcC  = parseFloat(rentcastCost)
+    const axC  = parseFloat(axessoCost)
+    const ciC  = parseFloat(uwClaudeInputCost)
+    const coC  = parseFloat(uwClaudeOutputCost)
     if ([rc, ax, ci, co].some(v => isNaN(v) || v < 0)) {
-      setUwError('All prices must be non-negative numbers')
+      setUwError('All charged prices must be non-negative numbers')
+      return
+    }
+    if (!companyId && [rcC, axC, ciC, coC].some(v => isNaN(v) || v < 0)) {
+      setUwError('Provider rates must be non-negative numbers')
       return
     }
     setUwError('')
@@ -163,6 +198,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     startTransition(async () => {
       try {
         await updateUnderwritingPricing(rc, ax, ci, co, companyId)
+        if (!companyId) await saveProviderRates('underwriting', { rentcast_cost_usd: rcC, axesso_cost_usd: axC, claude_input_cost_per_m: ciC, claude_output_cost_per_m: coC })
         setSavedUw(true)
         setTimeout(() => setSavedUw(false), 3000)
       } catch (e) {
@@ -174,10 +210,16 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   }
 
   function handleSaveSalesCoachPricing() {
-    const ci = parseFloat(scInputCharged)
-    const co = parseFloat(scOutputCharged)
+    const ci  = parseFloat(scInputCharged)
+    const co  = parseFloat(scOutputCharged)
+    const ciC = parseFloat(scClaudeInputCost)
+    const coC = parseFloat(scClaudeOutputCost)
     if ([ci, co].some(v => isNaN(v) || v < 0)) {
-      setScError('All prices must be non-negative numbers')
+      setScError('All charged prices must be non-negative numbers')
+      return
+    }
+    if (!companyId && [ciC, coC].some(v => isNaN(v) || v < 0)) {
+      setScError('Provider rates must be non-negative numbers')
       return
     }
     setScError('')
@@ -185,6 +227,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     startTransition(async () => {
       try {
         await updateClaudeOnlyPricing('sales_coach', ci, co, companyId)
+        if (!companyId) await saveProviderRates('sales_coach', { claude_input_cost_per_m: ciC, claude_output_cost_per_m: coC })
         setSavedSc(true)
         setTimeout(() => setSavedSc(false), 3000)
       } catch (e) {
@@ -196,11 +239,18 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   }
 
   function handleSaveTrainingCoachPricing() {
-    const as = parseFloat(tcAssistableCharged)
-    const ci = parseFloat(tcInputCharged)
-    const co = parseFloat(tcOutputCharged)
+    const as   = parseFloat(tcAssistableCharged)
+    const ci   = parseFloat(tcInputCharged)
+    const co   = parseFloat(tcOutputCharged)
+    const asC  = parseFloat(tcAssistableCost)
+    const ciC  = parseFloat(tcClaudeInputCost)
+    const coC  = parseFloat(tcClaudeOutputCost)
     if ([as, ci, co].some(v => isNaN(v) || v < 0)) {
-      setTcError('All prices must be non-negative numbers')
+      setTcError('All charged prices must be non-negative numbers')
+      return
+    }
+    if (!companyId && [asC, ciC, coC].some(v => isNaN(v) || v < 0)) {
+      setTcError('Provider rates must be non-negative numbers')
       return
     }
     setTcError('')
@@ -208,6 +258,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     startTransition(async () => {
       try {
         await updateTrainingCoachPricing(as, ci, co, companyId)
+        if (!companyId) await saveProviderRates('training_coach', { assistable_cost_per_min: asC, claude_input_cost_per_m: ciC, claude_output_cost_per_m: coC })
         setSavedTc(true)
         setTimeout(() => setSavedTc(false), 3000)
       } catch (e) {
@@ -219,12 +270,20 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   }
 
   function handleSaveSkipTracingPricing() {
-    const n = parseFloat(stNormalCharged)
-    const a = parseFloat(stAdvancedCharged)
-    const p = parseFloat(stApnCharged)
-    const d = parseFloat(stDncCharged)
+    const n  = parseFloat(stNormalCharged)
+    const a  = parseFloat(stAdvancedCharged)
+    const p  = parseFloat(stApnCharged)
+    const d  = parseFloat(stDncCharged)
+    const nr = parseFloat(stNormalRate)
+    const ar = parseFloat(stAdvancedRate)
+    const pr = parseFloat(stApnRate)
+    const dr = parseFloat(stDncRate)
     if ([n, a, p, d].some(v => isNaN(v) || v < 0)) {
-      setStError('All prices must be non-negative numbers')
+      setStError('All charged prices must be non-negative numbers')
+      return
+    }
+    if (!companyId && [nr, ar, pr, dr].some(v => isNaN(v) || v < 0)) {
+      setStError('Provider rates must be non-negative numbers')
       return
     }
     setStError('')
@@ -232,6 +291,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     startTransition(async () => {
       try {
         await updateSkipTracingPricing(n, a, p, d, companyId)
+        if (!companyId) await saveProviderRates('skip_tracing', { st_normal_rate_usd: nr, st_advanced_rate_usd: ar, st_apn_rate_usd: pr, st_dnc_rate_usd: dr })
         setSavedSt(true)
         setTimeout(() => setSavedSt(false), 3000)
       } catch (e) {
@@ -243,11 +303,18 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   }
 
   function handleSaveNoteTakerPricing() {
-    const w  = parseFloat(ntWhisperCharged)
-    const gi = parseFloat(ntGptInputCharged)
-    const go = parseFloat(ntGptOutputCharged)
+    const w   = parseFloat(ntWhisperCharged)
+    const gi  = parseFloat(ntGptInputCharged)
+    const go  = parseFloat(ntGptOutputCharged)
+    const wC  = parseFloat(ntWhisperCost)
+    const giC = parseFloat(ntGptInputCost)
+    const goC = parseFloat(ntGptOutputCost)
     if ([w, gi, go].some(v => isNaN(v) || v < 0)) {
-      setNtError('All prices must be non-negative numbers')
+      setNtError('All charged prices must be non-negative numbers')
+      return
+    }
+    if (!companyId && [wC, giC, goC].some(v => isNaN(v) || v < 0)) {
+      setNtError('Provider rates must be non-negative numbers')
       return
     }
     setNtError('')
@@ -255,6 +322,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     startTransition(async () => {
       try {
         await updateNoteTakerPricing(w, gi, go, companyId)
+        if (!companyId) await saveProviderRates('note_taker', { nt_whisper_cost_per_min: wC, nt_gpt_input_cost_per_m: giC, nt_gpt_output_cost_per_m: goC })
         setSavedNt(true)
         setTimeout(() => setSavedNt(false), 3000)
       } catch (e) {
@@ -266,16 +334,21 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
   }
 
   function handleSaveDataEnrichmentPricing() {
-    const c = parseFloat(deCallCharged)
+    const c  = parseFloat(deCallCharged)
+    const pr = parseFloat(deProviderRate)
     if (isNaN(c) || c < 0) {
       setDeError('Price must be a non-negative number')
+      return
+    }
+    if (!companyId && (isNaN(pr) || pr < 0)) {
+      setDeError('Provider rate must be a non-negative number')
       return
     }
     setDeError('')
     setSavingDe(true)
     startTransition(async () => {
       try {
-        await updateDataEnrichmentPricing(c, companyId)
+        await updateDataEnrichmentPricing(c, companyId, !companyId ? pr : undefined)
         setSavedDe(true)
         setTimeout(() => setSavedDe(false), 3000)
       } catch (e) {
@@ -293,34 +366,54 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     setSaved(null)
     setValues(getInitialValues(resolvedCid))
 
+    // Provider rates always reflect global values (not per-company)
+    setRentcastCost(String(globalUwRow?.rentcast_cost_usd           ?? 0.074))
+    setAxessoCost(String(globalUwRow?.axesso_cost_usd               ?? 0.0018))
+    setUwClaudeInputCost(String(globalUwRow?.claude_input_cost_per_m  ?? CLAUDE_INPUT_RATE))
+    setUwClaudeOutputCost(String(globalUwRow?.claude_output_cost_per_m ?? CLAUDE_OUTPUT_RATE))
+    setScClaudeInputCost(String(globalScRow?.claude_input_cost_per_m  ?? SC_CLAUDE_INPUT_RATE))
+    setScClaudeOutputCost(String(globalScRow?.claude_output_cost_per_m ?? SC_CLAUDE_OUTPUT_RATE))
+    setTcAssistableCost(String(globalTcRow?.assistable_cost_per_min   ?? 0.07))
+    setTcClaudeInputCost(String(globalTcRow?.claude_input_cost_per_m  ?? SC_CLAUDE_INPUT_RATE))
+    setTcClaudeOutputCost(String(globalTcRow?.claude_output_cost_per_m ?? SC_CLAUDE_OUTPUT_RATE))
+    setStNormalRate(String(globalStRow?.st_normal_rate_usd            ?? 0.02))
+    setStAdvancedRate(String(globalStRow?.st_advanced_rate_usd        ?? 0.04))
+    setStApnRate(String(globalStRow?.st_apn_rate_usd                  ?? 0.10))
+    setStDncRate(String(globalStRow?.st_dnc_rate_usd                  ?? 0.02))
+    setNtWhisperCost(String(globalNtRow?.nt_whisper_cost_per_min      ?? 0.006))
+    setNtGptInputCost(String(globalNtRow?.nt_gpt_input_cost_per_m     ?? 0.75))
+    setNtGptOutputCost(String(globalNtRow?.nt_gpt_output_cost_per_m   ?? 4.50))
+    setDeProviderRate(String(globalDeRow?.axesso_cost_usd              ?? 0.0018))
+
+    // Charged prices reflect company override if one exists
     const uwRow = getPricingRow('underwriting',   resolvedCid)
-    setRentcastCharged(String(uwRow?.rentcast_charged_usd        ?? 0.074))
-    setAxessoCharged(String(uwRow?.axesso_charged_usd            ?? 0.020))
-    setClaudeInputCharged(String(uwRow?.claude_input_charged_per_m  ?? CLAUDE_INPUT_RATE))
-    setClaudeOutputCharged(String(uwRow?.claude_output_charged_per_m ?? CLAUDE_OUTPUT_RATE))
+    setRentcastCharged(String(uwRow?.rentcast_charged_usd             ?? 0.074))
+    setAxessoCharged(String(uwRow?.axesso_charged_usd                 ?? 0.0018))
+    setClaudeInputCharged(String(uwRow?.claude_input_charged_per_m    ?? CLAUDE_INPUT_RATE))
+    setClaudeOutputCharged(String(uwRow?.claude_output_charged_per_m  ?? CLAUDE_OUTPUT_RATE))
 
     const scRow = getPricingRow('sales_coach',    resolvedCid)
-    setScInputCharged(String(scRow?.claude_input_charged_per_m  ?? SC_CLAUDE_INPUT_RATE))
-    setScOutputCharged(String(scRow?.claude_output_charged_per_m ?? SC_CLAUDE_OUTPUT_RATE))
+    setScInputCharged(String(scRow?.claude_input_charged_per_m        ?? SC_CLAUDE_INPUT_RATE))
+    setScOutputCharged(String(scRow?.claude_output_charged_per_m      ?? SC_CLAUDE_OUTPUT_RATE))
 
     const tcRow = getPricingRow('training_coach', resolvedCid)
-    setTcAssistableCharged(String(tcRow?.assistable_charged_per_min  ?? 0.15))
-    setTcInputCharged(String(tcRow?.claude_input_charged_per_m  ?? SC_CLAUDE_INPUT_RATE))
-    setTcOutputCharged(String(tcRow?.claude_output_charged_per_m ?? SC_CLAUDE_OUTPUT_RATE))
+    setTcAssistableCharged(String(tcRow?.assistable_charged_per_min   ?? 0.07))
+    setTcInputCharged(String(tcRow?.claude_input_charged_per_m        ?? SC_CLAUDE_INPUT_RATE))
+    setTcOutputCharged(String(tcRow?.claude_output_charged_per_m      ?? SC_CLAUDE_OUTPUT_RATE))
 
     const stRow = getPricingRow('skip_tracing',   resolvedCid)
-    setStNormalCharged(String(stRow?.st_charged_normal_usd   ?? 0.02))
-    setStAdvancedCharged(String(stRow?.st_charged_advanced_usd ?? 0.04))
-    setStApnCharged(String(stRow?.st_charged_apn_usd      ?? 0.10))
-    setStDncCharged(String(stRow?.st_charged_dnc_usd      ?? 0.02))
+    setStNormalCharged(String(stRow?.st_charged_normal_usd            ?? 0.02))
+    setStAdvancedCharged(String(stRow?.st_charged_advanced_usd        ?? 0.04))
+    setStApnCharged(String(stRow?.st_charged_apn_usd                  ?? 0.10))
+    setStDncCharged(String(stRow?.st_charged_dnc_usd                  ?? 0.02))
 
     const ntRow = getPricingRow('note_taker',     resolvedCid)
-    setNtWhisperCharged(String(ntRow?.nt_whisper_charged_per_min  ?? 0.006))
-    setNtGptInputCharged(String(ntRow?.nt_gpt_input_charged_per_m  ?? 0.75))
-    setNtGptOutputCharged(String(ntRow?.nt_gpt_output_charged_per_m ?? 4.50))
+    setNtWhisperCharged(String(ntRow?.nt_whisper_charged_per_min      ?? 0.006))
+    setNtGptInputCharged(String(ntRow?.nt_gpt_input_charged_per_m     ?? 0.75))
+    setNtGptOutputCharged(String(ntRow?.nt_gpt_output_charged_per_m   ?? 4.50))
 
     const deRow = getPricingRow('data_enrichment', resolvedCid)
-    setDeCallCharged(String(deRow?.de_charged_per_call_usd ?? 0.0016))
+    setDeCallCharged(String(deRow?.de_charged_per_call_usd             ?? 0.0018))
   }
 
   const companyId = selectedCompany === 'global' ? null : selectedCompany
@@ -488,7 +581,17 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={refBadgeStyle}>${Number(globalUwRow?.rentcast_cost_usd ?? 0.074).toFixed(4)}/call</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                          <input
+                            type="number" step="0.001" min="0"
+                            value={rentcastCost}
+                            onChange={e => setRentcastCost(e.target.value)}
+                            disabled={!!companyId}
+                            style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }}
+                          />
+                          <span style={{ fontSize: 11, color: C.dimText }}>/ call</span>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -511,13 +614,23 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={refBadgeStyle}>${Number(globalUwRow?.axesso_cost_usd ?? 0.020).toFixed(4)}/call</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                          <input
+                            type="number" step="0.0001" min="0"
+                            value={axessoCost}
+                            onChange={e => setAxessoCost(e.target.value)}
+                            disabled={!!companyId}
+                            style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }}
+                          />
+                          <span style={{ fontSize: 11, color: C.dimText }}>/ call</span>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <span style={{ fontSize: 12, color: C.dimText }}>$</span>
                           <input
-                            type="number" step="0.001" min="0"
+                            type="number" step="0.0001" min="0"
                             value={axessoCharged}
                             onChange={e => setAxessoCharged(e.target.value)}
                             style={inputStyle}
@@ -537,7 +650,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · per 1M input tokens</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={refBadgeStyle}>${CLAUDE_INPUT_RATE.toFixed(2)}/1M tokens</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                          <input type="number" step="0.5" min="0" value={uwClaudeInputCost} onChange={e => setUwClaudeInputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                          <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -560,7 +677,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · per 1M output tokens</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={refBadgeStyle}>${CLAUDE_OUTPUT_RATE.toFixed(2)}/1M tokens</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                          <input type="number" step="0.5" min="0" value={uwClaudeOutputCost} onChange={e => setUwClaudeOutputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                          <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -637,7 +758,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M input tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>${SC_CLAUDE_INPUT_RATE.toFixed(2)}/1M tokens</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.5" min="0" value={scClaudeInputCost} onChange={e => setScClaudeInputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -655,7 +780,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M output tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>${SC_CLAUDE_OUTPUT_RATE.toFixed(2)}/1M tokens</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.5" min="0" value={scClaudeOutputCost} onChange={e => setScClaudeOutputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -721,10 +850,14 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Assistable AI</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per minute of voice AI</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>$0.1500/min</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.01" min="0" value={tcAssistableCost} onChange={e => setTcAssistableCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ min</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -744,7 +877,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M input tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>${SC_CLAUDE_INPUT_RATE.toFixed(2)}/1M tokens</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.5" min="0" value={tcClaudeInputCost} onChange={e => setTcClaudeInputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -762,7 +899,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M output tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>${SC_CLAUDE_OUTPUT_RATE.toFixed(2)}/1M tokens</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.5" min="0" value={tcClaudeOutputCost} onChange={e => setTcClaudeOutputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -826,10 +967,10 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   </div>
 
                   {[
-                    { label: 'Normal Skiptrace',   credits: 1, rate: 0.02, value: stNormalCharged,   set: setStNormalCharged,   unit: '/hit' },
-                    { label: 'Advanced Skiptrace',  credits: 2, rate: 0.04, value: stAdvancedCharged, set: setStAdvancedCharged, unit: '/hit' },
-                    { label: 'Parcel (APN) Trace',  credits: 5, rate: 0.10, value: stApnCharged,      set: setStApnCharged,      unit: '/hit' },
-                    { label: 'DNC Scrubbing',       credits: 1, rate: 0.02, value: stDncCharged,      set: setStDncCharged,      unit: '/phone' },
+                    { label: 'Normal Skiptrace',   credits: 1, rateVal: stNormalRate,   setRate: setStNormalRate,   value: stNormalCharged,   set: setStNormalCharged,   unit: '/hit' },
+                    { label: 'Advanced Skiptrace',  credits: 2, rateVal: stAdvancedRate, setRate: setStAdvancedRate, value: stAdvancedCharged, set: setStAdvancedCharged, unit: '/hit' },
+                    { label: 'Parcel (APN) Trace',  credits: 5, rateVal: stApnRate,      setRate: setStApnRate,      value: stApnCharged,      set: setStApnCharged,      unit: '/hit' },
+                    { label: 'DNC Scrubbing',       credits: 1, rateVal: stDncRate,      setRate: setStDncRate,      value: stDncCharged,      set: setStDncCharged,      unit: '/phone' },
                   ].map((row, i, arr) => (
                     <div key={row.label} style={{ display: 'grid', gridTemplateColumns: '1fr 120px 120px 160px', gap: 12, alignItems: 'center', marginBottom: i < arr.length - 1 ? 10 : 20 }}>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: 0 }}>{row.label}</p>
@@ -837,7 +978,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         <span style={refBadgeStyle}>{row.credits} credit{row.credits > 1 ? 's' : ''}</span>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
-                        <span style={refBadgeStyle}>${row.rate.toFixed(4)}{row.unit}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                          <input type="number" step="0.001" min="0" value={row.rateVal} onChange={e => row.setRate(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1, width: 80 }} />
+                          <span style={{ fontSize: 11, color: C.dimText }}>{row.unit}</span>
+                        </div>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -900,10 +1045,14 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>OpenAI Whisper</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per minute of audio</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>$0.0060/min</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.001" min="0" value={ntWhisperCost} onChange={e => setNtWhisperCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ min</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -923,7 +1072,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · per 1M input tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>$0.75/1M tokens</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.1" min="0" value={ntGptInputCost} onChange={e => setNtGptInputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -941,7 +1094,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · per 1M output tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>$4.50/1M tokens</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input type="number" step="0.5" min="0" value={ntGptOutputCost} onChange={e => setNtGptOutputCost(e.target.value)} disabled={!!companyId} style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }} />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ 1M</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1004,7 +1161,17 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
-                      <span style={refBadgeStyle}>$0.0016/call</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 12, color: C.dimText }}>$</span>
+                        <input
+                          type="number" step="0.0001" min="0"
+                          value={deProviderRate}
+                          onChange={e => setDeProviderRate(e.target.value)}
+                          disabled={!!companyId}
+                          style={{ ...inputStyle, opacity: companyId ? 0.4 : 1 }}
+                        />
+                        <span style={{ fontSize: 11, color: C.dimText }}>/ call</span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>

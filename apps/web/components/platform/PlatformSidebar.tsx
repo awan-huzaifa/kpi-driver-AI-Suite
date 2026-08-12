@@ -384,7 +384,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
                   transition={{ duration: 0.18 }}
                   style={{ overflow: 'hidden' }}
                 >
-                  {SETTINGS_SUB.filter((s) => s.id !== 'company' || isAdmin).map((s) => (
+                  {SETTINGS_SUB.filter((s) => (s.id !== 'company' && s.id !== 'notifications') || isAdmin).map((s) => (
                     <Link
                       key={s.id} href={s.href}
                       style={{

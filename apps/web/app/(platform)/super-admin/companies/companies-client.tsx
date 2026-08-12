@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { Building2, Plus, Pencil, Trash2, X, Loader2, AlertTriangle } from 'lucide-react'
+import { useState, useTransition, useRef } from 'react'
+import { Building2, Plus, Pencil, Trash2, X, Loader2, AlertTriangle, ImagePlus, Upload } from 'lucide-react'
 import type { PlanId } from '@kpidriver/auth/types'
 import PlatformShell, { type Access } from '@/components/platform/PlatformShell'
 import { C } from '@/components/platform/brand'
 import { createCompany, updateCompanyAdmin, deleteCompany } from '@/app/actions/super-admin/companies'
 import { SelectInline } from '@/components/ui/select'
+import { createClient } from '@/lib/supabase/client'
 
-// Common IANA timezones grouped by region
 const TIMEZONES = [
   { label: 'US / Canada', options: [
     { value: 'America/New_York',    label: 'Eastern Time (ET)' },
@@ -26,13 +26,13 @@ const TIMEZONES = [
     { value: 'Europe/Moscow',    label: 'Moscow (MSK)' },
   ]},
   { label: 'Asia / Pacific', options: [
-    { value: 'Asia/Dubai',      label: 'Dubai (GST)' },
-    { value: 'Asia/Karachi',    label: 'Karachi / Islamabad (PKT)' },
-    { value: 'Asia/Kolkata',    label: 'India (IST)' },
-    { value: 'Asia/Dhaka',      label: 'Dhaka (BST)' },
-    { value: 'Asia/Bangkok',    label: 'Bangkok / Jakarta (ICT)' },
-    { value: 'Asia/Singapore',  label: 'Singapore / KL (SGT)' },
-    { value: 'Asia/Tokyo',      label: 'Tokyo (JST)' },
+    { value: 'Asia/Dubai',       label: 'Dubai (GST)' },
+    { value: 'Asia/Karachi',     label: 'Karachi / Islamabad (PKT)' },
+    { value: 'Asia/Kolkata',     label: 'India (IST)' },
+    { value: 'Asia/Dhaka',       label: 'Dhaka (BST)' },
+    { value: 'Asia/Bangkok',     label: 'Bangkok / Jakarta (ICT)' },
+    { value: 'Asia/Singapore',   label: 'Singapore / KL (SGT)' },
+    { value: 'Asia/Tokyo',       label: 'Tokyo (JST)' },
     { value: 'Australia/Sydney', label: 'Sydney (AEST)' },
     { value: 'Pacific/Auckland', label: 'Auckland (NZST)' },
   ]},
@@ -47,6 +47,7 @@ interface Company {
   wallet_balance:      number
   created_at:          string
   user_count:          number
+  logo_url:            string | null
 }
 
 interface Props {
@@ -66,16 +67,24 @@ interface FormState {
 const EMPTY_FORM: FormState = { name: '', ghl_sub_account_id: '', stripe_customer_id: '', timezone: 'America/New_York' }
 
 export default function CompaniesClient({ companies: initial, currentUser, planId, access }: Props) {
-  const [companies, setCompanies] = useState(initial)
-  const [modal, setModal]         = useState<'create' | Company | null>(null)
-  const [form, setForm]           = useState<FormState>(EMPTY_FORM)
+  const [companies, setCompanies]     = useState(initial)
+  const [modal, setModal]             = useState<'create' | Company | null>(null)
+  const [form, setForm]               = useState<FormState>(EMPTY_FORM)
   const [error, setError]             = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Company | null>(null)
   const [isPending, startTransition]  = useTransition()
 
+  // Logo upload state (edit mode only)
+  const [logoFile, setLogoFile]       = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
+  const [uploading, setUploading]     = useState(false)
+  const fileInputRef                  = useRef<HTMLInputElement>(null)
+
   function openCreate() {
     setForm(EMPTY_FORM)
     setError(null)
+    setLogoFile(null)
+    setLogoPreview(null)
     setModal('create')
   }
 
@@ -87,10 +96,40 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
       timezone:           c.timezone ?? 'America/New_York',
     })
     setError(null)
+    setLogoFile(null)
+    setLogoPreview(c.logo_url)
     setModal(c)
   }
 
-  function closeModal() { setModal(null); setError(null) }
+  function closeModal() { setModal(null); setError(null); setLogoFile(null); setLogoPreview(null) }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return }
+    if (file.size > 2 * 1024 * 1024) { setError('Image must be under 2 MB'); return }
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+    setError(null)
+  }
+
+  async function uploadLogo(companyId: string): Promise<string | null> {
+    if (!logoFile) return null
+    setUploading(true)
+    try {
+      const supabase = createClient()
+      const ext  = logoFile.name.split('.').pop() ?? 'png'
+      const path = `${companyId}/${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('company-logos')
+        .upload(path, logoFile, { upsert: true, contentType: logoFile.type })
+      if (upErr) throw new Error(upErr.message)
+      const { data } = supabase.storage.from('company-logos').getPublicUrl(path)
+      return data.publicUrl
+    } finally {
+      setUploading(false)
+    }
+  }
 
   function handleDelete() {
     if (!deleteTarget) return
@@ -113,12 +152,22 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
       try {
         if (modal === 'create') {
           await createCompany(form)
-          // Optimistic add — page will revalidate on next load
         } else if (modal && typeof modal === 'object') {
-          await updateCompanyAdmin(modal.id, form)
+          let logoUrl: string | null | undefined = undefined
+          if (logoFile) {
+            logoUrl = await uploadLogo(modal.id)
+          }
+          await updateCompanyAdmin(modal.id, { ...form, ...(logoUrl !== undefined ? { logo_url: logoUrl } : {}) })
           setCompanies((prev) => prev.map((c) =>
             c.id === modal.id
-              ? { ...c, name: form.name, ghl_sub_account_id: form.ghl_sub_account_id || null, stripe_customer_id: form.stripe_customer_id || null, timezone: form.timezone || 'America/New_York' }
+              ? {
+                  ...c,
+                  name:               form.name,
+                  ghl_sub_account_id: form.ghl_sub_account_id || null,
+                  stripe_customer_id: form.stripe_customer_id || null,
+                  timezone:           form.timezone || 'America/New_York',
+                  logo_url:           logoUrl !== undefined ? logoUrl : c.logo_url,
+                }
               : c
           ))
         }
@@ -129,7 +178,8 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
     })
   }
 
-  const isEditing = modal !== null && modal !== 'create'
+  const isEditing   = modal !== null && modal !== 'create'
+  const currentLogo = isEditing ? (logoPreview ?? (modal as Company).logo_url) : null
 
   return (
     <PlatformShell planId={planId} pageTitle="Companies">
@@ -182,8 +232,11 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                 <tr key={c.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                   <td style={{ padding: '14px 22px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(48,125,192,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Building2 size={14} style={{ color: C.blue }} />
+                      <div style={{ width: 32, height: 32, borderRadius: 8, overflow: 'hidden', background: 'rgba(48,125,192,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {c.logo_url
+                          ? <img src={c.logo_url} alt={c.name} style={{ width: 32, height: 32, objectFit: 'cover' }} />
+                          : <Building2 size={14} style={{ color: C.blue }} />
+                        }
                       </div>
                       <div>
                         <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{c.name}</span>
@@ -241,7 +294,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
         )}
       </div>
 
-      {/* Modal */}
+      {/* Create / Edit Modal */}
       {modal !== null && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 100,
@@ -251,6 +304,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
           <div style={{
             background: C.card, border: `1px solid ${C.border}`,
             borderRadius: 16, padding: 28, width: '100%', maxWidth: 480,
+            maxHeight: '90vh', overflowY: 'auto',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: C.white, margin: 0 }}>
@@ -283,6 +337,61 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                   groups={TIMEZONES}
                 />
               </div>
+
+              {/* Logo upload — edit mode only */}
+              {isEditing && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.dimText, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>
+                    Company Logo
+                  </label>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    {/* Preview */}
+                    <div style={{
+                      width: 72, height: 72, borderRadius: 12, flexShrink: 0,
+                      background: 'rgba(255,255,255,0.04)', border: `1px solid ${C.border}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+                    }}>
+                      {currentLogo
+                        ? <img src={currentLogo} alt="Logo Preview" style={{ width: 72, height: 72, objectFit: 'cover' }} />
+                        : <ImagePlus size={24} style={{ color: C.dimText }} />
+                      }
+                    </div>
+
+                    <div style={{ flex: 1 }}>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 7,
+                          padding: '8px 14px', borderRadius: 9,
+                          background: 'rgba(48,125,192,0.10)', border: `1px solid rgba(48,125,192,0.25)`,
+                          color: C.blue, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        <Upload size={13} />
+                        {currentLogo ? 'Replace Logo' : 'Upload Logo'}
+                      </button>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: '6px 0 0', lineHeight: 1.5 }}>
+                        PNG, JPG, or WebP · Max 2 MB
+                      </p>
+                      {logoFile && (
+                        <p style={{ fontSize: 11, color: C.green, margin: '4px 0 0' }}>
+                          {logoFile.name} selected
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    onChange={handleFileChange}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+              )}
             </div>
 
             {error && <p style={{ color: C.red, fontSize: 12, margin: '16px 0 0' }}>{error}</p>}
@@ -290,16 +399,16 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
             <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
               <button
                 onClick={handleSubmit}
-                disabled={isPending}
+                disabled={isPending || uploading}
                 className="btn-primary"
                 style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
               >
-                {isPending && <Loader2 size={14} className="animate-spin" />}
-                {modal === 'create' ? 'Create Company' : 'Save Changes'}
+                {(isPending || uploading) && <Loader2 size={14} className="animate-spin" />}
+                {uploading ? 'Uploading Logo...' : modal === 'create' ? 'Create Company' : 'Save Changes'}
               </button>
               <button
                 onClick={closeModal}
-                disabled={isPending}
+                disabled={isPending || uploading}
                 style={{ padding: '10px 18px', borderRadius: 10, background: 'transparent', border: `1px solid ${C.border}`, color: C.mutedText, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
               >
                 Cancel
@@ -308,6 +417,7 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
           </div>
         </div>
       )}
+
       {/* Delete confirmation modal */}
       {deleteTarget && (
         <div style={{

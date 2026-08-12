@@ -82,8 +82,8 @@ export async function GET(req: Request) {
             }
           }
 
-          // Reps → individual report
-          const scReps = users.filter(u => u.access_role === "user" && u.app_sales_coach);
+          // Reps → individual report (includes admins who are also active reps)
+          const scReps = users.filter(u => u.access_role !== "super_admin" && u.app_sales_coach);
           for (const u of scReps) {
             const repCalls = scCalls.filter(c => c.user_id === u.id);
             if (!repCalls.length) continue;
@@ -131,7 +131,8 @@ export async function GET(req: Request) {
             }
           }
 
-          const tcReps = users.filter(u => u.access_role === "user" && u.app_training_coach);
+          // Reps → individual report (includes admins who are also active reps)
+          const tcReps = users.filter(u => u.access_role !== "super_admin" && u.app_training_coach);
           for (const u of tcReps) {
             const repCalls = tcCalls.filter(c => c.user_id === u.id);
             if (!repCalls.length) continue;
@@ -195,7 +196,7 @@ export async function GET(req: Request) {
 
         for (const [userId, userDeals] of dealsByUser) {
           const u = users.find(u => u.id === userId);
-          if (!u || u.access_role === "admin" || u.access_role === "super_admin") continue;
+          if (!u || u.access_role === "super_admin") continue;
           const email = emailMap.get(userId);
           if (!email) continue;
           try {

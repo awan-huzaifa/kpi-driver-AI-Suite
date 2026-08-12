@@ -500,7 +500,7 @@ export async function POST(request: NextRequest) {
     const pricingRow = uwCfgRows?.find(r => r.company_id === companyId) ?? uwCfgRows?.find(r => r.company_id === null);
 
     const RENTCAST_COST_USD = Number(pricingRow?.rentcast_cost_usd ?? 0.074);
-    const AXESSO_COST_USD   = Number(pricingRow?.axesso_cost_usd   ?? 0.020);
+    const AXESSO_COST_USD   = Number(pricingRow?.axesso_cost_usd   ?? 0.0018);
     // Charged prices — what gets deducted from the company wallet
     const chargedRentcast    = Number(pricingRow?.rentcast_charged_usd        ?? RENTCAST_COST_USD);
     const chargedAxesso      = Number(pricingRow?.axesso_charged_usd           ?? AXESSO_COST_USD);

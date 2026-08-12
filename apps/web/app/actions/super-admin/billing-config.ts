@@ -230,14 +230,17 @@ export async function updateNoteTakerPricing(
 export async function updateDataEnrichmentPricing(
   chargedPerCall: number,
   companyId: string | null = null,
+  providerRateUsd?: number,
 ) {
   await requireSuperAdmin();
   if (chargedPerCall < 0) throw new Error("Charged price cannot be negative");
+  if (providerRateUsd !== undefined && providerRateUsd < 0) throw new Error("Provider rate cannot be negative");
 
   const admin = createAdminClient();
-  const data = { de_charged_per_call_usd: chargedPerCall };
+  const data: Record<string, unknown> = { de_charged_per_call_usd: chargedPerCall };
 
   if (!companyId) {
+    if (providerRateUsd !== undefined) data.axesso_cost_usd = providerRateUsd;
     const { error } = await admin.from("billing_config").update({ ...data, updated_at: new Date().toISOString() }).eq("app", "data_enrichment").is("company_id", null);
     if (error) throw new Error(error.message);
   } else {
@@ -258,6 +261,22 @@ export async function clearCompanyPricing(app: string, companyId: string) {
     .eq("app", app)
     .eq("company_id", companyId);
 
+  if (error) throw new Error(error.message);
+  revalidatePath("/super-admin/billing-config");
+}
+
+/** Save provider (API vendor) rates for an app — global row only. */
+export async function saveProviderRates(app: string, rates: Record<string, number>) {
+  await requireSuperAdmin();
+  for (const v of Object.values(rates)) {
+    if (v < 0) throw new Error("Provider rates cannot be negative");
+  }
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("billing_config")
+    .update({ ...rates, updated_at: new Date().toISOString() })
+    .eq("app", app)
+    .is("company_id", null);
   if (error) throw new Error(error.message);
   revalidatePath("/super-admin/billing-config");
 }

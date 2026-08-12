@@ -52,6 +52,7 @@ export async function updateCompanyAdmin(id: string, data: {
   ghl_sub_account_id?: string;
   stripe_customer_id?: string;
   timezone?:           string;
+  logo_url?:           string | null;
 }) {
   await requireSuperAdmin();
   const admin = createAdminClient();
@@ -61,6 +62,7 @@ export async function updateCompanyAdmin(id: string, data: {
     ghl_sub_account_id: data.ghl_sub_account_id?.trim() || null,
     stripe_customer_id: data.stripe_customer_id?.trim() || null,
     timezone:            data.timezone?.trim() || 'America/New_York',
+    ...(data.logo_url !== undefined ? { logo_url: data.logo_url } : {}),
   }).eq("id", id);
 
   if (error) throw new Error(error.message);

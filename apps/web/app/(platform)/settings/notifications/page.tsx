@@ -22,6 +22,8 @@ export default async function NotificationsPage() {
   const isActive = sub?.status === "active" || sub?.status === "trialing";
   const isAdmin  = profile.access_role === "admin" || profile.access_role === "super_admin";
 
+  if (!isAdmin) redirect("/dashboard");
+
   return (
     <NotificationsClient
       currentUser={{ email: user.email!, fullName: profile.full_name ?? null }}
