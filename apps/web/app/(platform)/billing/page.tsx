@@ -22,7 +22,7 @@ export default async function BillingPage() {
   const companyId = profile?.company_id ?? null
   const admin = createAdminClient()
 
-  const [{ data: sub }, { data: companyRow }, { data: appSpend }, { data: usageLogs }, { data: skipTracingTxns }] = await Promise.all([
+  const [{ data: sub }, { data: companyRow }, { data: appSpend }, { data: usageLogs }, { data: skipTracingTxns }, { data: walletTxns }] = await Promise.all([
     supabase.from('subscriptions').select('plan_id, status').eq('user_id', user.id).single(),
 
     companyId
@@ -46,6 +46,16 @@ export default async function BillingPage() {
           .eq('app', 'skip_tracing')
           .eq('type', 'deduction')
           .order('created_at', { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+
+    companyId
+      ? admin
+          .from('company_wallet_transactions')
+          .select('id, type, amount_usd, description, app, created_at')
+          .eq('company_id', companyId)
+          .eq('type', 'topup')
+          .order('created_at', { ascending: false })
+          .limit(50)
       : Promise.resolve({ data: [], error: null }),
   ])
 
@@ -116,6 +126,7 @@ export default async function BillingPage() {
         priceId:   companyRow?.auto_topup_price_id  ?? null,
         threshold: companyRow?.auto_topup_threshold ?? null,
       }}
+      walletTxns={walletTxns ?? []}
     />
   )
 }

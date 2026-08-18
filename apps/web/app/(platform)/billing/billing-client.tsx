@@ -29,6 +29,15 @@ interface AutoTopup {
   threshold: number | null
 }
 
+export interface WalletTxn {
+  id:          string
+  type:        string
+  amount_usd:  number
+  description: string | null
+  app:         string | null
+  created_at:  string
+}
+
 interface Props {
   user:           { id: string; email: string; fullName: string | null }
   planId:         PlanId | null
@@ -41,6 +50,7 @@ interface Props {
   autoTopup:      AutoTopup
   dealAddresses:  Record<string, string>
   dealRunNumbers: Record<string, number>
+  walletTxns:     WalletTxn[]
 }
 
 const TABS = [
@@ -48,7 +58,7 @@ const TABS = [
   { id: 'usage'  as const, label: 'Usage',  icon: BarChart3 },
 ]
 
-export default function BillingClient({ user, planId, access, accessRole, balance, appSpend, topUpOptions, usageLogs, autoTopup, dealAddresses, dealRunNumbers }: Props) {
+export default function BillingClient({ user, planId, access, accessRole, balance, appSpend, topUpOptions, usageLogs, autoTopup, dealAddresses, dealRunNumbers, walletTxns }: Props) {
   const [tab, setTab] = useState<'wallet' | 'usage'>('wallet')
 
   return (
@@ -97,7 +107,7 @@ export default function BillingClient({ user, planId, access, accessRole, balanc
         transition={{ duration: 0.25 }}
       >
         {tab === 'wallet' ? (
-          <WalletTab balance={balance} appSpend={appSpend} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} usageLogs={usageLogs} />
+          <WalletTab balance={balance} appSpend={appSpend} topUpOptions={topUpOptions} autoTopup={autoTopup} access={access} usageLogs={usageLogs} walletTxns={walletTxns} />
         ) : (
           <UsageTab rows={usageLogs} dealAddresses={dealAddresses} dealRunNumbers={dealRunNumbers} />
         )}

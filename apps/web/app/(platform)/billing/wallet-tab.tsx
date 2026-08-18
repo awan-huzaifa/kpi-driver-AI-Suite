@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { CreditCard, Plus, Trash2, Check, Loader2, ArrowUpRight, CheckCircle2, AlertCircle, RefreshCw, Mic, Building2, GraduationCap, NotebookPen, Database, Search } from 'lucide-react'
+import { CreditCard, Plus, Trash2, Check, Loader2, ArrowUpRight, CheckCircle2, AlertCircle, RefreshCw, Mic, Building2, GraduationCap, NotebookPen, Database, Search, ArrowDownLeft, ArrowUpRight as ArrowUp } from 'lucide-react'
 import { C } from '@/components/platform/brand'
-import type { AppSpendRow } from './billing-client'
+import type { AppSpendRow, WalletTxn } from './billing-client'
 import type { UsageLogRow } from './usage-tab'
 import type { Access } from '@/components/platform/PlatformShell'
 import type { TopUpOption } from '@kpidriver/stripe/topup'
@@ -53,9 +53,10 @@ interface Props {
   autoTopup:    AutoTopup
   access:       Access
   usageLogs:    UsageLogRow[]
+  walletTxns:   WalletTxn[]
 }
 
-export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access, usageLogs }: Props) {
+export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access, usageLogs, walletTxns }: Props) {
   const [balance, setBalance]           = useState(initialBalance)
   const [toppingUp, setToppingUp]       = useState<string | null>(null)
   const [topupMessage, setTopupMessage] = useState<string | null>(null)
@@ -227,6 +228,7 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
       })()}
 
       <AppSpendCard appSpend={appSpend} access={access} />
+      <TransactionHistoryCard txns={walletTxns} />
     </div>
   )
 }
@@ -577,7 +579,89 @@ function AddCardForm({ clientSecret, onSuccess, onCancel }: { clientSecret: stri
   )
 }
 
-/* â”€â”€ App spend summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Transaction history ─────────────────────────────────────────────────────── */
+
+const APP_LABELS: Record<string, string> = {
+  underwriting:    'Deal Underwriter',
+  sales_coach:     'Sales Coach',
+  training_coach:  'Training Coach',
+  note_taker:      'Note Taker',
+  data_enrichment: 'Data Enrichment',
+  skip_tracing:    'Skip Tracing',
+}
+
+function TransactionHistoryCard({ txns }: { txns: WalletTxn[] }) {
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? txns : txns.slice(0, 10)
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
+      <div style={{ padding: '18px 22px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.text, margin: 0 }}>Top-Up History</p>
+          <p style={{ fontSize: 12, color: C.dimText, margin: '3px 0 0' }}>Wallet Top-Ups, Most Recent First</p>
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 600, color: C.dimText }}>{txns.length} Total</span>
+      </div>
+
+      {txns.length === 0 ? (
+        <div style={{ padding: '32px 22px', textAlign: 'center' }}>
+          <p style={{ fontSize: 13, color: C.dimText, margin: 0 }}>No Top-Ups Yet.</p>
+        </div>
+      ) : (
+        <>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                {['Date', 'Description', 'Amount'].map((h, i) => (
+                  <th key={h} style={{
+                    padding: i === 0 ? '10px 22px' : i === 2 ? '10px 22px' : '10px 12px',
+                    textAlign: i === 2 ? 'right' : 'left',
+                    fontSize: 10, fontWeight: 700, color: C.dimText,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map((t) => (
+                <tr key={t.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                  <td style={{ padding: '13px 22px', fontSize: 12, color: C.dimText, whiteSpace: 'nowrap' }}>
+                    {new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    <span style={{ display: 'block', fontSize: 11, opacity: 0.6 }}>
+                      {new Date(t.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
+                    </span>
+                  </td>
+                  <td style={{ padding: '13px 12px', fontSize: 13, color: C.bodyText }}>
+                    {t.description ?? 'Wallet Top-Up'}
+                  </td>
+                  <td style={{ padding: '13px 22px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: C.green, fontVariantNumeric: 'tabular-nums' }}>
+                      +${t.amount_usd.toFixed(2)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {txns.length > 10 && (
+            <div style={{ padding: '14px 22px', borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
+              <button
+                onClick={() => setShowAll(v => !v)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: C.blue }}
+              >
+                {showAll ? 'Show Less' : `Show All ${txns.length} Top-Ups`}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+/* ── App spend summary ──────────────────────────────────────────────────────── */
 
 const APP_ENTRIES: { appKey: string; accessKey: keyof Access; label: string; color: string; bg: string; Icon: React.ElementType }[] = [
   { appKey: 'sales_coach',     accessKey: 'salesCoach',     label: 'Sales Coach',      color: C.blue,    bg: 'rgba(48,125,192,0.12)',  Icon: Mic          },
