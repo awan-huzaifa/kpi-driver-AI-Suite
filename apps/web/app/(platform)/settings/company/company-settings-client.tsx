@@ -154,12 +154,12 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
                 <SelectInline
                   value={timezone}
                   onValueChange={setTimezone}
-                  placeholder="Select timezone"
+                  placeholder="Select Timezone"
                   groups={TIMEZONE_GROUPS}
                 />
               </div>
               <p style={{ fontSize: 12, fontWeight: 500, color: C.dimText, marginTop: 6 }}>
-                Automated email reports are sent at 8 AM in this timezone.
+                Automated Email Reports Are Sent At 8 AM In This Timezone.
               </p>
             </div>
 
@@ -200,7 +200,7 @@ export default function CompanySettingsClient({ currentUser, planId, access, acc
             icon={Wallet}
             label="Wallet Balance"
             value={company != null ? `$${(company.wallet_balance ?? 0).toFixed(2)}` : "—"}
-            sub={<Link href="/billing" style={{ fontSize: 11, fontWeight: 600, color: C.blue, textDecoration: "none" }}>Manage in Billing →</Link>}
+            sub={<Link href="/billing" style={{ fontSize: 11, fontWeight: 600, color: C.blue, textDecoration: "none" }}>Manage In Billing →</Link>}
           />
 
           <StatCard

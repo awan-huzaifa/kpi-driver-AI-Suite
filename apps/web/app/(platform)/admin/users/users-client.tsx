@@ -748,7 +748,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
               </div>
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>Profile Photo</p>
-                <p style={{ fontSize: 11, color: "#475569", margin: "3px 0 0" }}>Click the avatar to upload a new photo.</p>
+                <p style={{ fontSize: 11, color: "#475569", margin: "3px 0 0" }}>Click The Avatar To Upload A New Photo.</p>
                 {avatarErr && <p style={{ fontSize: 11, color: "#ED1F24", margin: "4px 0 0" }}>{avatarErr}</p>}
               </div>
               <input
@@ -849,7 +849,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                     </span>
                     {!editNotifReports && (
                       <span style={{ fontSize: 10, color: "#FCAF17", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
-                        <Lock size={9} /> Admin locked out
+                        <Lock size={9} /> Admin Locked Out
                       </span>
                     )}
                   </button>
@@ -880,7 +880,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                     </span>
                     {!editNotifBilling && (
                       <span style={{ fontSize: 10, color: "#FCAF17", fontWeight: 700, display: "flex", alignItems: "center", gap: 3 }}>
-                        <Lock size={9} /> Admin locked out
+                        <Lock size={9} /> Admin Locked Out
                       </span>
                     )}
                   </button>
@@ -897,13 +897,13 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                       color: C.blue, cursor: notifLoad ? "default" : "pointer",
                     }}
                   >
-                    {notifLoad ? "Saving…" : "Save Notification Prefs"}
+                    {notifLoad ? "Saving…" : "Save Notification Preferences"}
                   </button>
                   {notifDone && <span style={{ fontSize: 12, fontWeight: 600, color: C.green }}>Saved</span>}
                   {notifErr  && <span style={{ fontSize: 12, fontWeight: 600, color: "#ED1F24" }}>{notifErr}</span>}
                 </div>
                 <p style={{ fontSize: 11, color: C.dimText, margin: "6px 0 0" }}>
-                  Turning off a setting here locks it — the admin cannot re-enable it themselves.
+                  Turning Off A Setting Here Locks It — The Admin Cannot Re-Enable It Themselves.
                 </p>
               </div>
             )}
@@ -951,7 +951,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       <Dialog open={!!pwTarget} onOpenChange={(o) => { if (!o) { setPwTarget(null); setPwNew(""); setPwConfirm(""); setPwShow(false); setPwErr(null); setPwDone(false); } }}>
         <DialogContent
           title="Change Password"
-          description={`Set a new password for ${pwTarget?.full_name ?? pwTarget?.email ?? "this user"}.`}
+          description={`Set A New Password For ${pwTarget?.full_name ?? pwTarget?.email ?? "This User"}.`}
         >
           <div className="space-y-4">
             <div>
@@ -959,7 +959,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
               <div style={{ position: "relative" }}>
                 <Input
                   type={pwShow ? "text" : "password"}
-                  placeholder="Min. 8 characters"
+                  placeholder="Min. 8 Characters"
                   value={pwNew}
                   onChange={(e) => setPwNew(e.target.value)}
                   style={{ paddingRight: 36 }}
@@ -977,7 +977,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
               <Label>Confirm Password</Label>
               <Input
                 type={pwShow ? "text" : "password"}
-                placeholder="Repeat new password"
+                placeholder="Repeat New Password"
                 value={pwConfirm}
                 onChange={(e) => setPwConfirm(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleChangePassword()}
@@ -990,7 +990,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
             )}
             {pwDone && (
               <p className="text-xs px-3 py-2 rounded-lg" style={{ color: "#43B749", background: "rgba(67,183,73,0.08)" }}>
-                Password changed successfully.
+                Password Changed Successfully.
               </p>
             )}
           </div>

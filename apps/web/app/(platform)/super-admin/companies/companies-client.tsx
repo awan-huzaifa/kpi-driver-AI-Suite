@@ -299,12 +299,12 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
         <div style={{
           position: 'fixed', inset: 0, zIndex: 100,
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          padding: 24, paddingLeft: 272, paddingTop: 80, overflowY: 'auto',
         }} onClick={(e) => e.target === e.currentTarget && closeModal()}>
           <div style={{
             background: C.card, border: `1px solid ${C.border}`,
             borderRadius: 16, padding: 28, width: '100%', maxWidth: 480,
-            maxHeight: '90vh', overflowY: 'auto',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: C.white, margin: 0 }}>
@@ -423,7 +423,8 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
         <div style={{
           position: 'fixed', inset: 0, zIndex: 100,
           background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+          padding: 24, paddingLeft: 272, paddingTop: 80, overflowY: 'auto',
         }} onClick={(e) => e.target === e.currentTarget && setDeleteTarget(null)}>
           <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 420 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>

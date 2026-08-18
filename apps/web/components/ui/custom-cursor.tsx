@@ -16,10 +16,13 @@ export default function CustomCursor() {
       mouseY = e.clientY;
     }
 
-    function onEnterInteractive() {
+    // Event delegation — one listener on document instead of one per element
+    function onOver(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('a, button, input, textarea, select, [role="button"], label[for]')) return;
       if (ringRef.current) {
-        ringRef.current.style.width  = "44px";
-        ringRef.current.style.height = "44px";
+        ringRef.current.style.width       = "44px";
+        ringRef.current.style.height      = "44px";
         ringRef.current.style.borderColor = "rgba(67,183,73,0.7)";
         ringRef.current.style.boxShadow   = "0 0 12px rgba(67,183,73,0.25)";
       }
@@ -28,10 +31,12 @@ export default function CustomCursor() {
       }
     }
 
-    function onLeaveInteractive() {
+    function onOut(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest('a, button, input, textarea, select, [role="button"], label[for]')) return;
       if (ringRef.current) {
-        ringRef.current.style.width  = "28px";
-        ringRef.current.style.height = "28px";
+        ringRef.current.style.width       = "28px";
+        ringRef.current.style.height      = "28px";
         ringRef.current.style.borderColor = "rgba(48,125,192,0.55)";
         ringRef.current.style.boxShadow   = "0 0 8px rgba(48,125,192,0.2)";
       }
@@ -41,9 +46,9 @@ export default function CustomCursor() {
     }
 
     function loop() {
-      // Smooth ring follows mouse with lag (lerp factor 0.14)
-      ringX += (mouseX - ringX) * 0.14;
-      ringY += (mouseY - ringY) * 0.14;
+      // Lerp factor 0.18 — snappier than 0.14 while still smooth
+      ringX += (mouseX - ringX) * 0.18;
+      ringY += (mouseY - ringY) * 0.18;
 
       if (dotRef.current) {
         dotRef.current.style.left = mouseX + "px";
@@ -58,27 +63,16 @@ export default function CustomCursor() {
     }
 
     document.addEventListener("mousemove", onMove);
-
-    const interactives = () =>
-      document.querySelectorAll<HTMLElement>("a, button, input, textarea, select, [role='button'], label[for]");
-
-    function attachListeners() {
-      interactives().forEach(el => {
-        el.addEventListener("mouseenter", onEnterInteractive);
-        el.addEventListener("mouseleave", onLeaveInteractive);
-      });
-    }
-
-    attachListeners();
-    const observer = new MutationObserver(attachListeners);
-    observer.observe(document.body, { childList: true, subtree: true });
+    document.addEventListener("mouseover",  onOver);
+    document.addEventListener("mouseout",   onOut);
 
     rafId = requestAnimationFrame(loop);
 
     return () => {
       document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseover",  onOver);
+      document.removeEventListener("mouseout",   onOut);
       cancelAnimationFrame(rafId);
-      observer.disconnect();
     };
   }, []);
 
@@ -98,7 +92,7 @@ export default function CustomCursor() {
           transform: "translate(-50%, -50%)",
           transition: "transform 0.15s ease",
           boxShadow: "0 0 6px rgba(48,125,192,0.8), 0 0 12px rgba(48,125,192,0.4)",
-          mixBlendMode: "normal",
+          willChange: "transform, left, top",
         }}
       />
       {/* Ring */}
@@ -115,6 +109,7 @@ export default function CustomCursor() {
           transform: "translate(-50%, -50%)",
           boxShadow: "0 0 8px rgba(48,125,192,0.2)",
           transition: "width 0.2s ease, height 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease",
+          willChange: "transform, left, top",
         }}
       />
     </>

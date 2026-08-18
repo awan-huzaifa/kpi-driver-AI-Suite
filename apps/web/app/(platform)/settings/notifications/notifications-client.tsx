@@ -67,7 +67,7 @@ function NotifToggle({
               padding: "2px 7px", borderRadius: 99,
             }}>
               <Lock size={9} />
-              Managed by Administrator
+              Managed By Administrator
             </span>
           )}
         </div>

@@ -321,7 +321,7 @@ export default function UsageTab({ rows = [], dealAddresses = {}, dealRunNumbers
                                 </span>
                                 {(() => {
                                   const idx = dealRunNumbers[r.id] ?? 0
-                                  const label = idx === 0 ? 'Run 1' : `Re-run ${idx}`
+                                  const label = idx === 0 ? 'Run 1' : `Re Run ${idx}`
                                   const color = idx === 0 ? C.dimText : '#FCAF17'
                                   return (
                                     <span style={{

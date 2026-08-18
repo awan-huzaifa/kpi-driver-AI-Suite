@@ -60,12 +60,12 @@ const APP_LABELS: Record<string, string> = {
 }
 
 const APP_DESC: Record<string, string> = {
-  underwriting:   'Per-API pricing applied to each deal underwriting pipeline run.',
-  sales_coach:    'Per-token Claude Sonnet 4.6 pricing applied to each live call scored.',
-  training_coach: 'Per-component pricing: Assistable voice AI ($/min) + Claude Sonnet 4.6 tokens.',
-  note_taker:     'Per-component pricing: OpenAI Whisper transcription ($/min) + GPT tokens.',
-  data_enrichment:'Per-call Axesso pricing applied to each data enrichment lookup.',
-  skip_tracing:   'Per-credit Tracerfy pricing. All flow types use credits_deducted × charged rate.',
+  underwriting:   'Per API Pricing Applied To Each Deal Underwriting Pipeline Run.',
+  sales_coach:    'Per Token Claude Sonnet 4.6 Pricing Applied To Each Live Call Scored.',
+  training_coach: 'Per Component Pricing: Assistable Voice AI ($/Min) + Claude Sonnet 4.6 Tokens.',
+  note_taker:     'Per Component Pricing: OpenAI Whisper Transcription ($/Min) + GPT Tokens.',
+  data_enrichment:'Per Call Axesso Pricing Applied To Each Data Enrichment Lookup.',
+  skip_tracing:   'Per Credit Tracerfy Pricing. All Flow Types Use Credits Deducted × Charged Rate.',
 }
 
 // Apps that use the new per-component pricing model (no multiplier)
@@ -186,11 +186,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     const ciC  = parseFloat(uwClaudeInputCost)
     const coC  = parseFloat(uwClaudeOutputCost)
     if ([rc, ax, ci, co].some(v => isNaN(v) || v < 0)) {
-      setUwError('All charged prices must be non-negative numbers')
+      setUwError('All Charged Prices Must Be Non-Negative Numbers')
       return
     }
     if (!companyId && [rcC, axC, ciC, coC].some(v => isNaN(v) || v < 0)) {
-      setUwError('Provider rates must be non-negative numbers')
+      setUwError('Provider Rates Must Be Non-Negative Numbers')
       return
     }
     setUwError('')
@@ -202,7 +202,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         setSavedUw(true)
         setTimeout(() => setSavedUw(false), 3000)
       } catch (e) {
-        setUwError(e instanceof Error ? e.message : 'Failed to save')
+        setUwError(e instanceof Error ? e.message : 'Failed To Save')
       } finally {
         setSavingUw(false)
       }
@@ -215,11 +215,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     const ciC = parseFloat(scClaudeInputCost)
     const coC = parseFloat(scClaudeOutputCost)
     if ([ci, co].some(v => isNaN(v) || v < 0)) {
-      setScError('All charged prices must be non-negative numbers')
+      setScError('All Charged Prices Must Be Non-Negative Numbers')
       return
     }
     if (!companyId && [ciC, coC].some(v => isNaN(v) || v < 0)) {
-      setScError('Provider rates must be non-negative numbers')
+      setScError('Provider Rates Must Be Non-Negative Numbers')
       return
     }
     setScError('')
@@ -231,7 +231,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         setSavedSc(true)
         setTimeout(() => setSavedSc(false), 3000)
       } catch (e) {
-        setScError(e instanceof Error ? e.message : 'Failed to save')
+        setScError(e instanceof Error ? e.message : 'Failed To Save')
       } finally {
         setSavingSc(false)
       }
@@ -246,11 +246,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     const ciC  = parseFloat(tcClaudeInputCost)
     const coC  = parseFloat(tcClaudeOutputCost)
     if ([as, ci, co].some(v => isNaN(v) || v < 0)) {
-      setTcError('All charged prices must be non-negative numbers')
+      setTcError('All Charged Prices Must Be Non-Negative Numbers')
       return
     }
     if (!companyId && [asC, ciC, coC].some(v => isNaN(v) || v < 0)) {
-      setTcError('Provider rates must be non-negative numbers')
+      setTcError('Provider Rates Must Be Non-Negative Numbers')
       return
     }
     setTcError('')
@@ -262,7 +262,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         setSavedTc(true)
         setTimeout(() => setSavedTc(false), 3000)
       } catch (e) {
-        setTcError(e instanceof Error ? e.message : 'Failed to save')
+        setTcError(e instanceof Error ? e.message : 'Failed To Save')
       } finally {
         setSavingTc(false)
       }
@@ -279,11 +279,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     const pr = parseFloat(stApnRate)
     const dr = parseFloat(stDncRate)
     if ([n, a, p, d].some(v => isNaN(v) || v < 0)) {
-      setStError('All charged prices must be non-negative numbers')
+      setStError('All Charged Prices Must Be Non-Negative Numbers')
       return
     }
     if (!companyId && [nr, ar, pr, dr].some(v => isNaN(v) || v < 0)) {
-      setStError('Provider rates must be non-negative numbers')
+      setStError('Provider Rates Must Be Non-Negative Numbers')
       return
     }
     setStError('')
@@ -295,7 +295,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         setSavedSt(true)
         setTimeout(() => setSavedSt(false), 3000)
       } catch (e) {
-        setStError(e instanceof Error ? e.message : 'Failed to save')
+        setStError(e instanceof Error ? e.message : 'Failed To Save')
       } finally {
         setSavingSt(false)
       }
@@ -310,11 +310,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     const giC = parseFloat(ntGptInputCost)
     const goC = parseFloat(ntGptOutputCost)
     if ([w, gi, go].some(v => isNaN(v) || v < 0)) {
-      setNtError('All charged prices must be non-negative numbers')
+      setNtError('All Charged Prices Must Be Non-Negative Numbers')
       return
     }
     if (!companyId && [wC, giC, goC].some(v => isNaN(v) || v < 0)) {
-      setNtError('Provider rates must be non-negative numbers')
+      setNtError('Provider Rates Must Be Non-Negative Numbers')
       return
     }
     setNtError('')
@@ -326,7 +326,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         setSavedNt(true)
         setTimeout(() => setSavedNt(false), 3000)
       } catch (e) {
-        setNtError(e instanceof Error ? e.message : 'Failed to save')
+        setNtError(e instanceof Error ? e.message : 'Failed To Save')
       } finally {
         setSavingNt(false)
       }
@@ -337,11 +337,11 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
     const c  = parseFloat(deCallCharged)
     const pr = parseFloat(deProviderRate)
     if (isNaN(c) || c < 0) {
-      setDeError('Price must be a non-negative number')
+      setDeError('Price Must Be A Non-Negative Number')
       return
     }
     if (!companyId && (isNaN(pr) || pr < 0)) {
-      setDeError('Provider rate must be a non-negative number')
+      setDeError('Provider Rate Must Be A Non-Negative Number')
       return
     }
     setDeError('')
@@ -352,7 +352,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
         setSavedDe(true)
         setTimeout(() => setSavedDe(false), 3000)
       } catch (e) {
-        setDeError(e instanceof Error ? e.message : 'Failed to save')
+        setDeError(e instanceof Error ? e.message : 'Failed To Save')
       } finally {
         setSavingDe(false)
       }
@@ -497,7 +497,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
           Billing Config
         </h1>
         <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: 0 }}>
-          All apps now use per-component charged prices set directly by the super admin — no multipliers.
+          All Apps Now Use Per Component Charged Prices Set Directly By The Super Admin — No Multipliers.
         </p>
       </div>
 
@@ -550,7 +550,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         {APP_LABELS[app]}
                       </p>
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Per-API Pricing
+                        Per API Pricing
                       </span>
                       {companyId && (
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.06em', background: hasOverride('underwriting') ? 'rgba(252,175,23,0.12)' : 'rgba(255,255,255,0.05)', border: hasOverride('underwriting') ? '1px solid rgba(252,175,23,0.25)' : '1px solid rgba(255,255,255,0.08)', color: hasOverride('underwriting') ? '#FCAF17' : C.dimText }}>
@@ -578,7 +578,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>RentCast</p>
-                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
+                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API Call</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -611,7 +611,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Axesso</p>
-                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
+                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API Call</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -647,7 +647,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Input Tokens</p>
-                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · per 1M input tokens</p>
+                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · Per 1M Input Tokens</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -674,7 +674,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                       <div>
                         <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Output Tokens</p>
-                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · per 1M output tokens</p>
+                        <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · Per 1M Output Tokens</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -706,7 +706,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         {uwError && <p style={{ fontSize: 11, color: C.red, margin: 0 }}>{uwError}</p>}
                         {companyId && hasOverride('underwriting') && (
                           <button onClick={() => handleReset('underwriting')} disabled={resetting === 'underwriting'} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 9, background: 'rgba(237,31,36,0.08)', border: '1px solid rgba(237,31,36,0.18)', color: '#ED1F24', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                            {resetting === 'underwriting' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset to Global
+                            {resetting === 'underwriting' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset To Global
                           </button>
                         )}
                       </div>
@@ -731,7 +731,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         {APP_LABELS[app]}
                       </p>
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Per-Token Pricing
+                        Per Token Pricing
                       </span>
                       {companyId && (
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.06em', background: hasOverride('sales_coach') ? 'rgba(252,175,23,0.12)' : 'rgba(255,255,255,0.05)', border: hasOverride('sales_coach') ? '1px solid rgba(252,175,23,0.25)' : '1px solid rgba(255,255,255,0.08)', color: hasOverride('sales_coach') ? '#FCAF17' : C.dimText }}>
@@ -755,7 +755,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Input Tokens</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M input tokens</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Input Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -777,7 +777,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Output Tokens</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M output tokens</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Output Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -801,7 +801,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       {scError && <p style={{ fontSize: 11, color: C.red, margin: 0 }}>{scError}</p>}
                       {companyId && hasOverride('sales_coach') && (
                         <button onClick={() => handleReset('sales_coach')} disabled={resetting === 'sales_coach'} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 9, background: 'rgba(237,31,36,0.08)', border: '1px solid rgba(237,31,36,0.18)', color: '#ED1F24', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          {resetting === 'sales_coach' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset to Global
+                          {resetting === 'sales_coach' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset To Global
                         </button>
                       )}
                     </div>
@@ -826,7 +826,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         {APP_LABELS[app]}
                       </p>
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Per-Component Pricing
+                        Per Component Pricing
                       </span>
                       {companyId && (
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.06em', background: hasOverride('training_coach') ? 'rgba(252,175,23,0.12)' : 'rgba(255,255,255,0.05)', border: hasOverride('training_coach') ? '1px solid rgba(252,175,23,0.25)' : '1px solid rgba(255,255,255,0.08)', color: hasOverride('training_coach') ? '#FCAF17' : C.dimText }}>
@@ -850,7 +850,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Assistable AI</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per minute of voice AI</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per Minute Of Voice AI</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -874,7 +874,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Input Tokens</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M input tokens</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Input Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -896,7 +896,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Output Tokens</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · per 1M output tokens</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Output Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -920,7 +920,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       {tcError && <p style={{ fontSize: 11, color: C.red, margin: 0 }}>{tcError}</p>}
                       {companyId && hasOverride('training_coach') && (
                         <button onClick={() => handleReset('training_coach')} disabled={resetting === 'training_coach'} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 9, background: 'rgba(237,31,36,0.08)', border: '1px solid rgba(237,31,36,0.18)', color: '#ED1F24', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          {resetting === 'training_coach' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset to Global
+                          {resetting === 'training_coach' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset To Global
                         </button>
                       )}
                     </div>
@@ -945,7 +945,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         {APP_LABELS[app]}
                       </p>
                       <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                        Per-Credit Pricing
+                        Per Credit Pricing
                       </span>
                       {companyId && (
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.06em', background: hasOverride('skip_tracing') ? 'rgba(252,175,23,0.12)' : 'rgba(255,255,255,0.05)', border: hasOverride('skip_tracing') ? '1px solid rgba(252,175,23,0.25)' : '1px solid rgba(255,255,255,0.08)', color: hasOverride('skip_tracing') ? '#FCAF17' : C.dimText }}>
@@ -1000,7 +1000,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       {stError && <p style={{ fontSize: 11, color: C.red, margin: 0 }}>{stError}</p>}
                       {companyId && hasOverride('skip_tracing') && (
                         <button onClick={() => handleReset('skip_tracing')} disabled={resetting === 'skip_tracing'} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 9, background: 'rgba(237,31,36,0.08)', border: '1px solid rgba(237,31,36,0.18)', color: '#ED1F24', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          {resetting === 'skip_tracing' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset to Global
+                          {resetting === 'skip_tracing' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset To Global
                         </button>
                       )}
                     </div>
@@ -1022,7 +1022,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                       <p style={{ fontSize: 15, fontWeight: 700, color: C.white, margin: 0 }}>{APP_LABELS[app]}</p>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Per-Component Pricing</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Per Component Pricing</span>
                       {companyId && (
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.06em', background: hasOverride('note_taker') ? 'rgba(252,175,23,0.12)' : 'rgba(255,255,255,0.05)', border: hasOverride('note_taker') ? '1px solid rgba(252,175,23,0.25)' : '1px solid rgba(255,255,255,0.08)', color: hasOverride('note_taker') ? '#FCAF17' : C.dimText }}>
                           {hasOverride('note_taker') ? 'Override' : 'Using Global'}
@@ -1045,7 +1045,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>OpenAI Whisper</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per minute of audio</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per Minute Of Audio</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1069,7 +1069,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>GPT — Input Tokens</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · per 1M input tokens</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · Per 1M Input Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1091,7 +1091,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>GPT — Output Tokens</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · per 1M output tokens</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · Per 1M Output Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1115,7 +1115,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       {ntError && <p style={{ fontSize: 11, color: C.red, margin: 0 }}>{ntError}</p>}
                       {companyId && hasOverride('note_taker') && (
                         <button onClick={() => handleReset('note_taker')} disabled={resetting === 'note_taker'} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 9, background: 'rgba(237,31,36,0.08)', border: '1px solid rgba(237,31,36,0.18)', color: '#ED1F24', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          {resetting === 'note_taker' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset to Global
+                          {resetting === 'note_taker' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset To Global
                         </button>
                       )}
                     </div>
@@ -1137,7 +1137,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
                       <p style={{ fontSize: 15, fontWeight: 700, color: C.white, margin: 0 }}>{APP_LABELS[app]}</p>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Per-Call Pricing</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#43B749', background: 'rgba(67,183,73,0.10)', border: '1px solid rgba(67,183,73,0.2)', borderRadius: 5, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Per Call Pricing</span>
                       {companyId && (
                         <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, textTransform: 'uppercase', letterSpacing: '0.06em', background: hasOverride('data_enrichment') ? 'rgba(252,175,23,0.12)' : 'rgba(255,255,255,0.05)', border: hasOverride('data_enrichment') ? '1px solid rgba(252,175,23,0.25)' : '1px solid rgba(255,255,255,0.08)', color: hasOverride('data_enrichment') ? '#FCAF17' : C.dimText }}>
                           {hasOverride('data_enrichment') ? 'Override' : 'Using Global'}
@@ -1158,7 +1158,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <div>
                       <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Axesso</p>
-                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API call</p>
+                      <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Per API Call</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -1187,7 +1187,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                       {deError && <p style={{ fontSize: 11, color: C.red, margin: 0 }}>{deError}</p>}
                       {companyId && hasOverride('data_enrichment') && (
                         <button onClick={() => handleReset('data_enrichment')} disabled={resetting === 'data_enrichment'} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 13px', borderRadius: 9, background: 'rgba(237,31,36,0.08)', border: '1px solid rgba(237,31,36,0.18)', color: '#ED1F24', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          {resetting === 'data_enrichment' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset to Global
+                          {resetting === 'data_enrichment' ? <Loader2 size={12} className="animate-spin" /> : <RotateCcw size={12} />} Reset To Global
                         </button>
                       )}
                     </div>
@@ -1226,7 +1226,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                         border:     isOverride ? '1px solid rgba(252,175,23,0.25)' : '1px solid rgba(255,255,255,0.08)',
                         color:      isOverride ? '#FCAF17' : C.dimText,
                       }}>
-                        {isOverride ? 'Override' : 'Using global'}
+                        {isOverride ? 'Override' : 'Using Global'}
                       </span>
                     )}
                   </div>
