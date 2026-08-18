@@ -7,7 +7,7 @@ export async function autoTopupIfNeeded(companyId: string, newBalance: number): 
 
   const { data: company } = await admin
     .from("companies")
-    .select("auto_topup_enabled, auto_topup_threshold, auto_topup_price_id, stripe_customer_id")
+    .select("auto_topup_enabled, auto_topup_threshold, auto_topup_price_id, stripe_customer_id, name")
     .eq("id", companyId)
     .single();
 
@@ -29,11 +29,16 @@ export async function autoTopupIfNeeded(companyId: string, newBalance: number): 
   }
 
   try {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
+    const companyName = company.name ?? 'Unknown Company'
+    const description = `Auto-Recharge for Sub-Account - ${companyName} of USD ${option.amount} was successfully added to the wallet. Please, check the billing page for more details: ${appUrl}/billing`
+
     const intent = await chargeWithSavedMethod(
       company.stripe_customer_id,
       defaultPm.id,
       option.amount * 100,
       companyId,
+      description,
     );
 
     const { error } = await admin.rpc("add_wallet_balance", {
