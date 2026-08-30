@@ -617,7 +617,7 @@ function TransactionHistoryCard({ txns }: { txns: WalletTxn[] }) {
                   <th key={h} style={{
                     padding: i === 0 ? '10px 22px' : i === 2 ? '10px 22px' : '10px 12px',
                     textAlign: i === 2 ? 'right' : 'left',
-                    fontSize: 10, fontWeight: 700, color: C.dimText,
+                    fontSize: 10, fontWeight: 700, color: C.white,
                     textTransform: 'uppercase', letterSpacing: '0.06em',
                   }}>{h}</th>
                 ))}
@@ -626,9 +626,9 @@ function TransactionHistoryCard({ txns }: { txns: WalletTxn[] }) {
             <tbody>
               {visible.map((t) => (
                 <tr key={t.id} style={{ borderBottom: `1px solid ${C.border}` }}>
-                  <td style={{ padding: '13px 22px', fontSize: 12, color: C.dimText, whiteSpace: 'nowrap' }}>
+                  <td style={{ padding: '13px 22px', fontSize: 12, color: C.bodyText, whiteSpace: 'nowrap' }}>
                     {new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    <span style={{ display: 'block', fontSize: 11, opacity: 0.6 }}>
+                    <span style={{ display: 'block', fontSize: 11, color: C.dimText }}>
                       {new Date(t.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                     </span>
                   </td>

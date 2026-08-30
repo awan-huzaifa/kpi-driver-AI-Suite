@@ -544,7 +544,7 @@ export default function AnalyticsClient({ calls, companies, accessRole, currentU
         </ChartCard>
 
         {/* Score by agent type */}
-        <ChartCard title="Score by Agent Type" sub="Avg Score — FUS Vs ACQ" color="#307DC0">
+        <ChartCard title="Score by Agent Type" sub="Avg Score FUS Vs ACQ" color="#307DC0">
           {data.scoreByType.length === 0 ? (
             <div className="flex items-center justify-center h-[200px] text-sm" style={{ color: "#334155" }}>No Data</div>
           ) : (

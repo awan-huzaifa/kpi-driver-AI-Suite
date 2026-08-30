@@ -497,7 +497,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
           Billing Config
         </h1>
         <p style={{ fontSize: 14, fontWeight: 500, color: C.bodyText, margin: 0 }}>
-          All Apps Now Use Per Component Charged Prices Set Directly By The Super Admin — No Multipliers.
+          All Apps Now Use Per Component Charged Prices Set Directly By The Super Admin. No Multipliers.
         </p>
       </div>
 
@@ -646,7 +646,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                     {/* Claude input row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                       <div>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Input Tokens</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude Input Tokens</p>
                         <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · Per 1M Input Tokens</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -673,7 +673,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                     {/* Claude output row */}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                       <div>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Output Tokens</p>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude Output Tokens</p>
                         <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Opus · Per 1M Output Tokens</p>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -754,7 +754,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   {/* Claude Input row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Input Tokens</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude Input Tokens</p>
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Input Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -776,7 +776,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   {/* Claude Output row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Output Tokens</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude Output Tokens</p>
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Output Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -873,7 +873,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   {/* Claude Input row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Input Tokens</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude Input Tokens</p>
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Input Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -895,7 +895,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   {/* Claude Output row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude — Output Tokens</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>Claude Output Tokens</p>
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>Sonnet 4.6 · Per 1M Output Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1068,7 +1068,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   {/* GPT Input row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 12 }}>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>GPT — Input Tokens</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>GPT Input Tokens</p>
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · Per 1M Input Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -1090,7 +1090,7 @@ export default function BillingConfigClient({ config, companies, currentUser, pl
                   {/* GPT Output row */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px 160px', gap: 12, alignItems: 'center', marginBottom: 20 }}>
                     <div>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>GPT — Output Tokens</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.white, margin: '0 0 2px' }}>GPT Output Tokens</p>
                       <p style={{ fontSize: 11, color: C.dimText, margin: 0 }}>gpt-5.4-mini · Per 1M Output Tokens</p>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'center' }}>

@@ -46,9 +46,8 @@ export default function CustomCursor() {
     }
 
     function loop() {
-      // Lerp factor 0.18 — snappier than 0.14 while still smooth
-      ringX += (mouseX - ringX) * 0.18;
-      ringY += (mouseY - ringY) * 0.18;
+      ringX = mouseX;
+      ringY = mouseY;
 
       if (dotRef.current) {
         dotRef.current.style.left = mouseX + "px";

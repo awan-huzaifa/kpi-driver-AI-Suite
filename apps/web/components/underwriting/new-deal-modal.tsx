@@ -381,7 +381,7 @@ export function NewDealModal({ trigger }: { trigger: React.ReactNode }) {
                         />
                       </div>
                     ))}
-                    <span className="text-[10px] text-muted/50">(Optional — Leave Blank To Auto-Detect)</span>
+                    <span className="text-[10px] text-muted/50">(Optional, Leave Blank To Auto-Detect)</span>
                   </div>
                 </div>
 

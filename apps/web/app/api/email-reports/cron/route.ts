@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/email/client";
 import { getLocalHour, getLocalDate, getDueReportTypes, getPeriodBounds, REPORT_LABELS } from "@/lib/email/periods";
-import { scTeamTemplate, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
+import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
 
 export const runtime = "nodejs";
 
@@ -59,26 +59,39 @@ export async function GET(req: Request) {
       if (scEnabled) {
         const { data: scCalls } = await admin
           .from("live_calls")
-          .select("id, user_id, score, scorable, direction, duration_sec, call_result, created_at, evaluation, agent:users(full_name, agent_type)")
+          .select("id, user_id, score, scorable, direction, duration_sec, call_result, created_at, evaluation, contact_name, crm_link, agent:users(full_name, agent_type)")
           .eq("company_id", company.id)
           .gte("created_at", period.from)
           .lte("created_at", period.to);
 
         if (scCalls?.length) {
-          // Admins → team report
-          for (const u of admins) {
-            const email = emailMap.get(u.id);
-            if (!email) continue;
-            try {
-              await getResend().emails.send({
-                from:    FROM_EMAIL,
-                to:      email,
-                subject: `Sales Coach Team Report — ${period.label}`,
-                html:    scTeamTemplate(company.name, period, scCalls as any, reportLabel),
-              });
-              totalSent++;
-            } catch (e) {
-              console.error("[email-reports] SC team send failed:", e);
+          // Admins → one email per active agent type
+          const byType = new Map<string, typeof scCalls>()
+          for (const c of scCalls) {
+            const t = (c.agent as any)?.agent_type ?? 'none'
+            if (!byType.has(t)) byType.set(t, [])
+            byType.get(t)!.push(c)
+          }
+
+          for (const agentType of SC_TYPE_ORDER) {
+            const typeCalls = byType.get(agentType)
+            if (!typeCalls?.length) continue
+            const typeLabel = agentType.toUpperCase()
+            const html = scAgentTypeTeamTemplate(agentType, company.name, period, typeCalls as any, reportLabel)
+            for (const u of admins) {
+              const email = emailMap.get(u.id)
+              if (!email) continue
+              try {
+                await getResend().emails.send({
+                  from:    FROM_EMAIL,
+                  to:      email,
+                  subject: `Sales Coach ${typeLabel} Team Report — ${period.label}`,
+                  html,
+                })
+                totalSent++
+              } catch (e) {
+                console.error(`[email-reports] SC team (${agentType}) send failed:`, e)
+              }
             }
           }
 
