@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/email/client";
 import { getPeriodBounds, REPORT_LABELS } from "@/lib/email/periods";
-import { scTeamTemplate, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
+import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
 
 export const runtime = "nodejs";
 
@@ -88,17 +88,27 @@ export async function GET(req: Request) {
 
     const calls = scCalls ?? [];
 
-    // Team report → first admin only (to avoid flooding)
+    // Team report — one per active agent type, send to first admin only (to avoid flooding)
     const firstAdmin = admins[0];
     if (firstAdmin) {
       const to = resolveEmail(firstAdmin.id);
       if (to) {
-        await getResend().emails.send({
-          from: FROM_EMAIL, to,
-          subject: `[TEST] Sales Coach Team Report — ${period.label}`,
-          html: scTeamTemplate(company.name, period, calls as any, reportLabel),
-        });
-        sent.push(`SC Team → ${to}`);
+        const byType = new Map<string, typeof calls>()
+        for (const c of calls) {
+          const t = (c.agent as any)?.agent_type ?? 'none'
+          if (!byType.has(t)) byType.set(t, [])
+          byType.get(t)!.push(c)
+        }
+        for (const agentType of SC_TYPE_ORDER) {
+          const typeCalls = byType.get(agentType)
+          if (!typeCalls?.length) continue
+          await getResend().emails.send({
+            from: FROM_EMAIL, to,
+            subject: `[TEST] Sales Coach ${agentType.toUpperCase()} Team Report — ${period.label}`,
+            html: scAgentTypeTeamTemplate(agentType, company.name, period, typeCalls as any, reportLabel),
+          });
+          sent.push(`SC ${agentType.toUpperCase()} Team → ${to}`);
+        }
       }
     }
 

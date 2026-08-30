@@ -4,7 +4,7 @@ import { createClient } from '@kpidriver/auth/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getResend, FROM_EMAIL } from '@/lib/email/client'
 import { getPeriodBounds, REPORT_LABELS, type ReportType } from '@/lib/email/periods'
-import { scTeamTemplate, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from '@/lib/email/templates'
+import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from '@/lib/email/templates'
 
 export type TemplateId = 'sc-team' | 'sc-rep' | 'tc-team' | 'tc-rep' | 'uw-team' | 'uw-rep'
 
@@ -97,12 +97,22 @@ export async function sendTestReportEmails(
       if (tplId === 'sc-team') {
         const { data: calls } = await admin
           .from('live_calls')
-          .select('id, user_id, score, scorable, direction, duration_sec, call_result, created_at, evaluation, agent:users(full_name, agent_type)')
+          .select('id, user_id, score, scorable, direction, duration_sec, call_result, created_at, evaluation, contact_name, crm_link, agent:users(full_name, agent_type)')
           .eq('company_id', companyId)
           .gte('created_at', periodBounds.from)
           .lte('created_at', periodBounds.to)
-        html    = scTeamTemplate(company.name, periodBounds, (calls ?? []) as any, reportLabel)
-        subject = `Sales Coach Team Report — ${periodBounds.label}`
+        const allCalls = (calls ?? []) as any[]
+        // For test preview: pick the first agent type that has calls
+        const byType = new Map<string, any[]>()
+        for (const c of allCalls) {
+          const t = c.agent?.agent_type ?? 'none'
+          if (!byType.has(t)) byType.set(t, [])
+          byType.get(t)!.push(c)
+        }
+        const firstType = SC_TYPE_ORDER.find(t => byType.has(t)) ?? 'none'
+        const typeCalls = byType.get(firstType) ?? allCalls
+        html    = scAgentTypeTeamTemplate(firstType, company.name, periodBounds, typeCalls, reportLabel)
+        subject = `Sales Coach ${firstType.toUpperCase()} Team Report — ${periodBounds.label}`
       }
 
       else if (tplId === 'sc-rep') {
