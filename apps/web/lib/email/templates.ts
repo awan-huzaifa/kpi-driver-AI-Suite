@@ -172,6 +172,16 @@ function scAgentTypeSection(calls: SCCall[], agentType: string): string {
 
 export const SC_TYPE_ORDER = ['fus', 'acq', 'tc', 'cc', 'dispo', 'dispo_fus', 'tca', 'none']
 
+function teamify(text: string): string {
+  return text
+    .replace(/\byou\b/gi,        'the team')
+    .replace(/\byour\b/gi,       "the team's")
+    .replace(/\bthe agent\b/gi,  'the team')
+    .replace(/\bthe rep\b/gi,    'the team')
+    .replace(/\bthey\b/gi,       'the team')
+    .replace(/\btheir\b/gi,      "the team's")
+}
+
 export function scAgentTypeTeamTemplate(agentType: string, companyName: string, period: PeriodBounds, calls: SCCall[], reportLabel: string): string {
   const label        = AGENT_TYPE_LABELS[agentType] ?? agentType.toUpperCase()
   const scorable     = calls.filter(c => c.scorable && c.score !== null)
@@ -190,19 +200,21 @@ export function scAgentTypeTeamTemplate(agentType: string, companyName: string, 
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 8)
 
-  // Aggregate strengths + coaching actions from evaluations
+  // Aggregate strengths + coaching actions from evaluations (teamified — no individual names)
   const strengths: string[] = []
   const actions:   string[] = []
   for (const c of scorable.slice(0, 20)) {
     const ev = (c as any).evaluation
     if (ev?.strengths) {
       for (const s of ev.strengths.slice(0, 2)) {
-        if (s && !strengths.includes(s)) strengths.push(s)
+        const t = s ? teamify(s) : null
+        if (t && !strengths.includes(t)) strengths.push(t)
       }
     }
     if (ev?.coaching_actions) {
       for (const a of ev.coaching_actions.slice(0, 2)) {
-        if (a.action && !actions.includes(a.action)) actions.push(a.action)
+        const t = a.action ? teamify(a.action) : null
+        if (t && !actions.includes(t)) actions.push(t)
       }
     }
   }
