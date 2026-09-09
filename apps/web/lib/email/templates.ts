@@ -1,4 +1,4 @@
-import type { PeriodBounds, ReportType, REPORT_LABELS } from './periods'
+import type { PeriodBounds } from './periods'
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -128,47 +128,6 @@ const AGENT_TYPE_LABELS: Record<string, string> = {
   none:     'Unassigned',
 }
 
-function scAgentTypeSection(calls: SCCall[], agentType: string): string {
-  const label    = AGENT_TYPE_LABELS[agentType] ?? agentType.toUpperCase()
-  const scorable = calls.filter(c => c.scorable && c.score !== null)
-  const avgScore = scorable.length ? Math.round(scorable.reduce((s, c) => s + c.score!, 0) / scorable.length) : null
-  const scorableRate = calls.length ? Math.round((scorable.length / calls.length) * 100) : 0
-
-  const repMap = new Map<string, { name: string; total: number; count: number }>()
-  for (const c of scorable) {
-    const name = c.agent?.full_name ?? 'Unknown'
-    const ex   = repMap.get(c.user_id)
-    ex ? (ex.total += c.score!, ex.count++) : repMap.set(c.user_id, { name, total: c.score!, count: 1 })
-  }
-  const topReps = Array.from(repMap.values())
-    .map(r => ({ name: r.name, avg: Math.round(r.total / r.count), count: r.count }))
-    .sort((a, b) => b.avg - a.avg)
-    .slice(0, 8)
-
-  return `
-    <div style="margin-bottom:28px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
-      <div style="background:#f0f7ff;padding:12px 16px;border-bottom:1px solid #e2e8f0;">
-        <span style="font-size:13px;font-weight:800;color:${BLUE};text-transform:uppercase;letter-spacing:0.08em;">${label}</span>
-        <span style="margin-left:10px;font-size:12px;color:#64748b;">${calls.length} calls · ${scorable.length} scored · Avg ${avgScore ?? '—'} · ${scorableRate}% scorable</span>
-      </div>
-      <div style="padding:16px;">
-        ${statRow([
-          { label: 'Total Calls',   value: calls.length,       color: NAVY  },
-          { label: 'Avg Score',     value: avgScore ?? '—',    color: avgScore ? scoreColor(avgScore) : '#64748b' },
-          { label: 'Scorable Rate', value: `${scorableRate}%`, color: BLUE  },
-          { label: 'Scored',        value: scorable.length,    color: GREEN },
-        ])}
-        ${topReps.length ? `
-          <div style="margin-top:14px;">
-            ${dataTable(['#', 'Rep', 'Avg Score', 'Calls'], topReps.map((r, i) => [
-              `${i + 1}`, r.name, scoreChip(r.avg), String(r.count),
-            ]))}
-          </div>
-        ` : ''}
-      </div>
-    </div>
-  `
-}
 
 export const SC_TYPE_ORDER = ['fus', 'acq', 'tc', 'cc', 'dispo', 'dispo_fus', 'tca', 'none']
 
@@ -182,7 +141,36 @@ function teamify(text: string): string {
     .replace(/\btheir\b/gi,      "the team's")
 }
 
-export function scAgentTypeTeamTemplate(agentType: string, companyName: string, period: PeriodBounds, calls: SCCall[], reportLabel: string): string {
+// Extract raw strengths + actions from calls — exported so cron can clean them before passing back
+export function extractTeamBullets(calls: SCCall[]): { strengths: string[]; actions: string[] } {
+  const scorable  = calls.filter(c => c.scorable && c.score !== null)
+  const strengths: string[] = []
+  const actions:   string[] = []
+  for (const c of scorable.slice(0, 20)) {
+    const ev = (c as any).evaluation
+    if (ev?.strengths) {
+      for (const s of ev.strengths.slice(0, 2)) {
+        if (s && !strengths.includes(s)) strengths.push(s)
+      }
+    }
+    if (ev?.coaching_actions) {
+      for (const a of ev.coaching_actions.slice(0, 2)) {
+        if (a.action && !actions.includes(a.action)) actions.push(a.action)
+      }
+    }
+  }
+  return { strengths, actions }
+}
+
+export function scAgentTypeTeamTemplate(
+  agentType: string,
+  companyName: string,
+  period: PeriodBounds,
+  calls: SCCall[],
+  reportLabel: string,
+  cleanedStrengths?: string[],
+  cleanedActions?: string[],
+): string {
   const label        = AGENT_TYPE_LABELS[agentType] ?? agentType.toUpperCase()
   const scorable     = calls.filter(c => c.scorable && c.score !== null)
   const avgScore     = scorable.length ? Math.round(scorable.reduce((s, c) => s + c.score!, 0) / scorable.length) : null
@@ -200,24 +188,10 @@ export function scAgentTypeTeamTemplate(agentType: string, companyName: string, 
     .sort((a, b) => b.avg - a.avg)
     .slice(0, 8)
 
-  // Aggregate strengths + coaching actions from evaluations (teamified — no individual names)
-  const strengths: string[] = []
-  const actions:   string[] = []
-  for (const c of scorable.slice(0, 20)) {
-    const ev = (c as any).evaluation
-    if (ev?.strengths) {
-      for (const s of ev.strengths.slice(0, 2)) {
-        const t = s ? teamify(s) : null
-        if (t && !strengths.includes(t)) strengths.push(t)
-      }
-    }
-    if (ev?.coaching_actions) {
-      for (const a of ev.coaching_actions.slice(0, 2)) {
-        const t = a.action ? teamify(a.action) : null
-        if (t && !actions.includes(t)) actions.push(t)
-      }
-    }
-  }
+  // Use pre-cleaned bullets if provided, otherwise fall back to teamify() on raw
+  const raw = extractTeamBullets(calls)
+  const strengths = cleanedStrengths ?? raw.strengths.map(teamify)
+  const actions   = cleanedActions   ?? raw.actions.map(teamify)
 
   // Recent scored calls
   const recent = [...scorable].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10)

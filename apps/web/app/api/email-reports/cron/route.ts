@@ -1,9 +1,50 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/email/client";
 import { getLocalHour, getLocalDate, getDueReportTypes, getPeriodBounds, REPORT_LABELS } from "@/lib/email/periods";
-import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
+import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, extractTeamBullets, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
 
 export const runtime = "nodejs";
+
+async function cleanBulletsForTeam(
+  strengths: string[],
+  actions: string[],
+): Promise<{ strengths: string[]; actions: string[] }> {
+  if (!strengths.length && !actions.length) return { strengths, actions }
+  try {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY_SALES_COACH })
+    const prompt = `You are editing performance report bullet points for a team summary email sent to managers.
+
+Rewrite each bullet so it:
+- Refers to "the team" as the subject (never an individual name or "you"/"your"/"the agent"/"the rep")
+- Keeps the same meaning, concise
+- Removes any specific person's name if present
+
+Return ONLY a JSON object with two arrays: { "strengths": [...], "actions": [...] }
+No explanation, no markdown, just the JSON.
+
+Strengths to rewrite:
+${JSON.stringify(strengths)}
+
+Coaching actions to rewrite:
+${JSON.stringify(actions)}`
+
+    const msg = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const text = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
+    const parsed = JSON.parse(text) as { strengths: string[]; actions: string[] }
+    return {
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : strengths,
+      actions:   Array.isArray(parsed.actions)   ? parsed.actions   : actions,
+    }
+  } catch {
+    // Fall back to raw bullets — email still sends
+    return { strengths, actions }
+  }
+}
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -77,7 +118,9 @@ export async function GET(req: Request) {
             const typeCalls = byType.get(agentType)
             if (!typeCalls?.length) continue
             const typeLabel = agentType.toUpperCase()
-            const html = scAgentTypeTeamTemplate(agentType, company.name, period, typeCalls as any, reportLabel)
+            const raw     = extractTeamBullets(typeCalls as any)
+            const cleaned = await cleanBulletsForTeam(raw.strengths, raw.actions)
+            const html = scAgentTypeTeamTemplate(agentType, company.name, period, typeCalls as any, reportLabel, cleaned.strengths, cleaned.actions)
             for (const u of admins) {
               const email = emailMap.get(u.id)
               if (!email) continue
