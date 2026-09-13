@@ -20,6 +20,7 @@ const PUBLIC_PATHS = [
   '/api/note-taker/ingest',
   '/api/data-enrichment/ingest',
   '/api/skip-tracing/ingest',
+  '/api/kpi/ingest',
   '/api/email-reports/cron',
 ]
 
@@ -31,6 +32,7 @@ const APP_GATE = [
   { prefix: '/note-taker',       flag: 'app_note_taker'       },
   { prefix: '/data-enrichment',  flag: 'app_data_enrichment'  },
   { prefix: '/skip-tracing',     flag: 'app_skip_tracing'     },
+  { prefix: '/kpi-dashboard',   flag: 'app_kpi_dashboard',  minRole: 'admin' as const },
 ] as const
 
 export async function middleware(request: NextRequest) {
@@ -56,7 +58,7 @@ export async function middleware(request: NextRequest) {
   if (gated) {
     const { data: userRow } = await supabase
       .from('users')
-      .select('access_role, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing')
+      .select('access_role, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, app_kpi_dashboard')
       .eq('id', user.id)
       .single()
 
@@ -69,14 +71,20 @@ export async function middleware(request: NextRequest) {
       app_note_taker:      userRow?.app_note_taker,
       app_data_enrichment: userRow?.app_data_enrichment,
       app_skip_tracing:    userRow?.app_skip_tracing,
+      app_kpi_dashboard:   userRow?.app_kpi_dashboard,
     }
     const hasFlag = flagMap[gated.flag] === true
+    const minRole = (gated as { minRole?: string }).minRole
 
-    // super_admin always passes regardless of flags
-    if (!isSuperAdmin && !hasFlag) {
-      if (isAdmin) {
-        return NextResponse.redirect(new URL('/auth/unlock-app', request.url))
-      }
+    // super_admin always passes
+    if (isSuperAdmin) { /* allow */ }
+    // admin-only routes: admit admins unconditionally, block users
+    else if (minRole === 'admin') {
+      if (!isAdmin) return NextResponse.redirect(new URL('/dashboard?no_access=1', request.url))
+    }
+    // flag-gated routes: admin/user both need the flag
+    else if (!hasFlag) {
+      if (isAdmin) return NextResponse.redirect(new URL('/auth/unlock-app', request.url))
       return NextResponse.redirect(new URL('/dashboard?no_access=1', request.url))
     }
   }

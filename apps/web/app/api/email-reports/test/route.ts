@@ -1,7 +1,47 @@
+import Anthropic from "@anthropic-ai/sdk";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/email/client";
 import { getPeriodBounds, REPORT_LABELS } from "@/lib/email/periods";
-import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
+import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, extractTeamBullets, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
+
+async function cleanBulletsForTeam(
+  strengths: string[],
+  actions: string[],
+): Promise<{ strengths: string[]; actions: string[] }> {
+  if (!strengths.length && !actions.length) return { strengths, actions }
+  try {
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY_SALES_COACH })
+    const prompt = `You are editing performance report bullet points for a team summary email sent to managers.
+
+Rewrite each bullet so it:
+- Refers to "the team" as the subject (never an individual name or "you"/"your"/"the agent"/"the rep")
+- Keeps the same meaning, concise
+- Removes any specific person's name if present
+
+Return ONLY a JSON object with two arrays: { "strengths": [...], "actions": [...] }
+No explanation, no markdown, just the JSON.
+
+Strengths to rewrite:
+${JSON.stringify(strengths)}
+
+Coaching actions to rewrite:
+${JSON.stringify(actions)}`
+
+    const msg = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1024,
+      messages: [{ role: 'user', content: prompt }],
+    })
+    const text = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
+    const parsed = JSON.parse(text) as { strengths: string[]; actions: string[] }
+    return {
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : strengths,
+      actions:   Array.isArray(parsed.actions)   ? parsed.actions   : actions,
+    }
+  } catch {
+    return { strengths, actions }
+  }
+}
 
 export const runtime = "nodejs";
 
@@ -81,7 +121,7 @@ export async function GET(req: Request) {
   if (scEnabled) {
     const { data: scCalls } = await admin
       .from("live_calls")
-      .select("id, user_id, score, scorable, direction, duration_sec, call_result, created_at, evaluation, agent:users(full_name, agent_type)")
+      .select("id, user_id, score, scorable, direction, duration_sec, call_result, created_at, evaluation, contact_name, crm_link, agent:users(full_name, agent_type)")
       .eq("company_id", company.id)
       .gte("created_at", period.from)
       .lte("created_at", period.to);
@@ -102,10 +142,12 @@ export async function GET(req: Request) {
         for (const agentType of SC_TYPE_ORDER) {
           const typeCalls = byType.get(agentType)
           if (!typeCalls?.length) continue
+          const raw     = extractTeamBullets(typeCalls as any)
+          const cleaned = await cleanBulletsForTeam(raw.strengths, raw.actions)
           await getResend().emails.send({
             from: FROM_EMAIL, to,
             subject: `[TEST] Sales Coach ${agentType.toUpperCase()} Team Report — ${period.label}`,
-            html: scAgentTypeTeamTemplate(agentType, company.name, period, typeCalls as any, reportLabel),
+            html: scAgentTypeTeamTemplate(agentType, company.name, period, typeCalls as any, reportLabel, cleaned.strengths, cleaned.actions),
           });
           sent.push(`SC ${agentType.toUpperCase()} Team → ${to}`);
         }

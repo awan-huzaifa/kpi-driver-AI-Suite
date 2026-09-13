@@ -37,7 +37,7 @@ export default async function BillingConfigPage() {
       companies={companies ?? []}
       currentUser={{ email: user.email!, fullName: profile?.full_name ?? null }}
       planId={planId}
-      access={{ underwriting: true, salesCoach: true, trainingCoach: true, noteTaker: true, dataEnrichment: true, skipTracing: true }}
+      access={{ underwriting: true, salesCoach: true, trainingCoach: true, noteTaker: true, dataEnrichment: true, skipTracing: true, kpiDashboard: true }}
     />
   );
 }

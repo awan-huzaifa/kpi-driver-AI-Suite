@@ -12,7 +12,7 @@ export default async function BillingPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('full_name, access_role, company_id, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing')
+    .select('full_name, access_role, company_id, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, app_kpi_dashboard')
     .eq('id', user.id)
     .single()
 
@@ -114,6 +114,7 @@ export default async function BillingPage() {
         noteTaker:      isAdmin || (profile?.app_note_taker      ?? false),
         dataEnrichment: isAdmin || (profile?.app_data_enrichment ?? false),
         skipTracing:    isAdmin || (profile?.app_skip_tracing    ?? false),
+        kpiDashboard:   isAdmin || (profile?.app_kpi_dashboard   ?? false),
       }}
       balance={companyRow?.wallet_balance ?? 0}
       appSpend={appSpend ?? []}

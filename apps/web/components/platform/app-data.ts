@@ -2,6 +2,7 @@ import type { ElementType } from 'react'
 import {
   Mic, Building2, Bot, GraduationCap, BookOpen, NotebookPen, Database, Search,
   LayoutDashboard, Phone, Trophy, BarChart3, BarChart2, Users, Hash, FolderOpen,
+  TrendingUp, MessageSquare, Mail, MousePointerClick, UserCheck, Home,
 } from 'lucide-react'
 
 export interface Access {
@@ -11,6 +12,7 @@ export interface Access {
   noteTaker:      boolean
   dataEnrichment: boolean
   skipTracing:    boolean
+  kpiDashboard:   boolean
 }
 
 export type AccessKey = keyof Access
@@ -106,6 +108,26 @@ export const APP_REGISTRY: AppEntry[] = [
     href: '/data-enrichment', icon: Database, accessKey: 'dataEnrichment', accentRgb: '48,125,192',
     subNav: [
       { href: '/data-enrichment', label: 'Enrichment Logs', icon: Database, exact: true },
+    ],
+  },
+  {
+    id: 'kpi-dashboard', label: 'KPI Dashboard', status: 'live',
+    tagline: 'Every KPI, One Place',
+    desc: 'Track ACQ & DISPO Performance In Real Time. Funnels, Conversion Rates, And Rep Leaderboards — Straight From GHL.',
+    features: ['ACQ & DISPO Funnel Tracking', 'Live Conversion Ratios', 'Per-Rep Leaderboard'],
+    href: '/kpi-dashboard', icon: TrendingUp, accessKey: 'kpiDashboard', accentRgb: '252,175,23',
+    subNav: [
+      { href: '/kpi-dashboard',             label: 'Overview',     icon: LayoutDashboard, exact: true },
+      { href: '/kpi-dashboard/acq',         label: 'ACQ Funnel',   icon: BarChart3                   },
+      { href: '/kpi-dashboard/dispo',       label: 'DISPO Funnel', icon: BarChart2                   },
+      // { href: '/kpi-dashboard/leaderboard', label: 'Leaderboard',  icon: Trophy                      },
+      { href: '/kpi-dashboard/calls',       label: 'Call KPIs',   icon: Phone              },
+      { href: '/kpi-dashboard/sms',         label: 'SMS KPIs',    icon: MessageSquare      },
+      { href: '/kpi-dashboard/ppc',         label: 'PPC KPIs',    icon: MousePointerClick  },
+      { href: '/kpi-dashboard/dm',          label: 'DM KPIs',     icon: Mail               },
+      { href: '/kpi-dashboard/ppl',         label: 'PPL KPIs',    icon: UserCheck          },
+      { href: '/kpi-dashboard/seo',         label: 'SEO KPIs',    icon: Search             },
+      { href: '/kpi-dashboard/listed',      label: 'Listed KPIs', icon: Home               },
     ],
   },
   {

@@ -11,7 +11,7 @@ export default async function SuperAdminCompaniesPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("full_name, access_role, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing")
+    .select("full_name, access_role, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, app_kpi_dashboard")
     .eq("id", user.id)
     .single();
 
@@ -60,6 +60,7 @@ export default async function SuperAdminCompaniesPage() {
         noteTaker:      true,
         dataEnrichment: true,
         skipTracing:    true,
+        kpiDashboard:   true,
       }}
     />
   );
