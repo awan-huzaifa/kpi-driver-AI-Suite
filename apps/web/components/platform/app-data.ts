@@ -2,7 +2,7 @@ import type { ElementType } from 'react'
 import {
   Mic, Building2, Bot, GraduationCap, BookOpen, NotebookPen, Database, Search,
   LayoutDashboard, Phone, Trophy, BarChart3, BarChart2, Users, Hash, FolderOpen,
-  TrendingUp, MessageSquare, Mail, MousePointerClick, UserCheck, Home,
+  TrendingUp, MessageSquare, Mail, MousePointerClick, UserCheck, Home, DollarSign, Wallet,
 } from 'lucide-react'
 
 export interface Access {
@@ -120,7 +120,7 @@ export const APP_REGISTRY: AppEntry[] = [
       { href: '/kpi-dashboard',             label: 'Overview',     icon: LayoutDashboard, exact: true },
       { href: '/kpi-dashboard/acq',         label: 'ACQ Funnel',   icon: BarChart3                   },
       { href: '/kpi-dashboard/dispo',       label: 'DISPO Funnel', icon: BarChart2                   },
-      // { href: '/kpi-dashboard/leaderboard', label: 'Leaderboard',  icon: Trophy                      },
+      { href: '/kpi-dashboard/leaderboard', label: 'Leaderboard',  icon: Trophy                      },
       { href: '/kpi-dashboard/calls',       label: 'Call KPIs',   icon: Phone              },
       { href: '/kpi-dashboard/sms',         label: 'SMS KPIs',    icon: MessageSquare      },
       { href: '/kpi-dashboard/ppc',         label: 'PPC KPIs',    icon: MousePointerClick  },
@@ -128,6 +128,8 @@ export const APP_REGISTRY: AppEntry[] = [
       { href: '/kpi-dashboard/ppl',         label: 'PPL KPIs',    icon: UserCheck          },
       { href: '/kpi-dashboard/seo',         label: 'SEO KPIs',    icon: Search             },
       { href: '/kpi-dashboard/listed',      label: 'Listed KPIs', icon: Home               },
+      { href: '/kpi-dashboard/ceo',         label: 'CEO Dashboard', icon: DollarSign         },
+      { href: '/kpi-dashboard/finances',    label: 'Finance Input', icon: Wallet, minRole: 'admin' as const },
     ],
   },
   {

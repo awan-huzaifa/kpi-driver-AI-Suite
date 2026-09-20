@@ -252,16 +252,170 @@ Rank · Rep (with ACQ/DISPO type badge) · Leads · Meetings · Offers · Contra
 
 ---
 
+## Step 7b — SMS Source Page ✅
+**Files:** `apps/web/app/kpi-dashboard/sms/sms-client.tsx` + `page.tsx`
+**Status:** Complete.
+
+- First table: lead source = SMS, record count (single view, no tabs)
+- Source KPIs: `no_show` only
+- Other tables same as Call page (KPI table, Leads/KPI ratio, SMS sessions)
+- Icon: `MessageSquare`
+
+---
+
+## Step 7c — PPC Source Page ✅
+**Files:** `apps/web/app/kpi-dashboard/ppc/ppc-client.tsx` + `page.tsx`
+**Status:** Complete.
+
+- First table: 3 tabs — Website (MainSite.com / LandingA/B.com / PromoPage.com) | Validity (Valid/Invalid) | Form (Form 1/2)
+- PPC metadata seeded with `lcg(99)`, stored in `DUMMY_PPC_META` keyed by `contact_id`
+- Source KPIs: `contract_rejected`, `appointment_cancelled`
+- Icon: `MousePointerClick`
+
+---
+
+## Step 7d — DM Source Page ✅
+**Files:** `apps/web/app/kpi-dashboard/dm/dm-client.tsx` + `page.tsx`
+**Status:** Complete.
+
+- First table: Campaign | Record Count (6 campaigns, seeded `lcg(111)`)
+- Source KPIs: `lead_assigned`, `closed_deal`, `appointment_held`
+- Icon: `Mail`
+
+---
+
+## Step 7e — PPL Source Page ✅
+**Files:** `apps/web/app/kpi-dashboard/ppl/ppl-client.tsx` + `page.tsx`
+**Status:** Complete.
+
+- First table: 3 tabs — Source (PPL total) | Dispute (Denied/Accepted/New, seeded `lcg(122)`) | Type (contact type)
+- Source KPIs: `lead`, `lead_assigned`, `live_transfer_successful`, `live_transfer_unsuccessful`
+- Icon: `UserCheck`
+
+---
+
+## Step 7f — SEO Source Page ✅
+**Files:** `apps/web/app/kpi-dashboard/seo/seo-client.tsx` + `page.tsx`
+**Status:** Complete.
+
+- First table: 3 tabs — Website (5 sites) | Validity (Valid 72%/Non-Valid) | Form (Form 1/2/3)
+- Two bar charts: leads by website + leads by form
+- SEO metadata seeded `lcg(133)`, stored in `DUMMY_SEO_META`
+- Source KPIs: `lead`, `lead_assigned`, `offer_made`
+- Icon: `Search`
+
+---
+
+## Step 7g — Listed Source Page ✅
+**Files:** `apps/web/app/kpi-dashboard/listed/listed-client.tsx` + `page.tsx`
+**Status:** Complete.
+
+- First table: Agent Name | Record Count (no tabs)
+- Source KPIs: `lead`, `lead_assigned`, `rejected_offer`
+- Icon: `Home`
+
+---
+
+## Step 8 — Source-specific KPI tables (all 7 source pages) ✅
+**Status:** Complete.
+
+Each source page has:
+1. **Compact "Source KPIs" card** — only that source's relevant KPIs + count, above the main tables
+2. **Leads/KPI ratio** — filled only for source-relevant KPIs; `—` for all others
+
+KPI assignments per source:
+- Call: `lead`, `cancelled_deal`, `lead_assigned`, `contract_signed`, `appointment_set`
+- SMS: `no_show`
+- PPC: `contract_rejected`, `appointment_cancelled`
+- DM: `lead_assigned`, `closed_deal`, `appointment_held`
+- PPL: `lead`, `lead_assigned`, `live_transfer_successful`, `live_transfer_unsuccessful`
+- SEO: `lead`, `lead_assigned`, `offer_made`
+- Listed: `lead`, `lead_assigned`, `rejected_offer`
+
+Pattern: `SOURCE_KPIS_LIST` array + `SOURCE_KPIS = new Set(SOURCE_KPIS_LIST)` at module level per page.
+
+---
+
+## Step 9 — ACQ Performance & KPI Matrices ✅
+**File:** `apps/web/app/kpi-dashboard/acq/acq-funnel-client.tsx`
+**Status:** Complete.
+
+Three new sections added to ACQ Funnel page:
+
+1. **Agent Performance Metrics table** — Agent | Talk Time | Total Calls | Unique Leads | SMS Sent | Avg Duration
+   - Talk time + calls from `DUMMY_CALLER_SESSIONS` (seeded `lcg(77)`)
+   - SMS sent from `DUMMY_SMS_SESSIONS` (seeded `lcg(88)`)
+   - Unique leads from filtered `kpi_name === 'lead'` events
+
+2. **ACQ Positive KPIs matrix** — Agent rows × 8 positive KPI columns; green counts when > 0, `—` when 0
+   - KPIs: Lead Assigned, Live Trans. ✓, Appt Set, Appt Held, Offer Made, Contract Sent, Signed, Closed
+
+3. **ACQ Negative KPIs matrix** — Agent rows × 6 negative KPI columns; red counts when > 0
+   - KPIs: Live Trans. ✗, No Show, Appt Cancelled, Rej. Offer, Contract Rej., Cancelled
+
+Both matrices have sticky agent name column.
+
+---
+
+## Step 10 — Qualification / Quality feature ✅
+**Files:** `dummy-data.ts`, `acq-funnel-client.tsx`, `dispo-funnel-client.tsx`
+**Status:** Complete.
+
+### Data model additions (`DummyKpiEvent`)
+Three new fields, populated only for `kpi_name === 'lead'`:
+- `quality: 'Qualified' | 'Disqualified' | 'Pending' | null` — 35/20/45% split
+- `date_created: string | null` — contact created 1–14 days before `occurred_at`
+- `stage: string | null` — CRM stage at time of lead
+
+### Stage constants exported from `dummy-data.ts`
+- `REGULAR_STAGES` (13): Contacted Follow Up, Perseverant, 30 Day Nurture, 3 Months Nurture, 6 Months Nurture, 12 Months Nurture, Attempted Contact, Dispute Lead, Needs Skip Tracing, Skiptrace Completed, Dead, dnd, ghosted
+- `VIP_STAGES` (10): Responded, New Lead, Appointment Set, Offer Made, Offer Rejected, Contract Sent, Contract Signed, Closed Deal, Negotiating, Cancelled Deal
+- `DISPO_STAGES` (9): New Potential Buyer, Showing Requested, Offer Received, Interested, Contract Signed, Qualified, Responded, Dead, DND
+
+### ACQ qual tables (4 new sections)
+1. **Qualification Status per Lead Source** — source × Qualified/Pending/Disqualified + total
+2. **Qualification Status per Stage** — REGULAR_STAGES × qual status
+3. **Qualification Status per Stage (VIP)** — VIP_STAGES × qual status
+4. **Lead Source per Qualification Date** — grouped by source → agent subrows × qual status
+
+### DISPO qual + KPI tables (5 new sections)
+1. **DISPO Positive KPI matrix** — agents × 8 positive KPIs (green)
+2. **DISPO Negative KPI matrix** — agents × 5 negative KPIs (red)
+3. **Status per Potential Buyer Source** — all DISPO sources × qual status
+4. **Qualification Status per Stage** — DISPO_STAGES × qual status
+5. **Potential Buyer Source per Qualification Date** — filtered to buyer sources (SEO/Inbound Buyer/PPL/DM/Listed) → agent subrows × qual status
+
+### PRNG seeds used
+- `lcg(144)` — ACQ quality/stage
+- `lcg(155)` — DISPO quality/stage
+
+---
+
+## Step 11 — Access control & misc ✅
+**Status:** Complete.
+
+- **Leaderboard hidden** — nav entry commented out in `app-data.ts`
+- **KPI Dashboard restricted to admin/super_admin only** — `minRole: 'admin'` added to the `APP_GATE` entry in `middleware.ts`; `user` role redirected to `/dashboard?no_access=1` regardless of `app_kpi_dashboard` flag
+- **DISPO agents expanded** — 7 reps (was 2): Lisa Park, Tom Wilson, Kevin Nguyen, Rachel Foster, Marcus Bell, Diana Ortiz, Jason Tran
+- **Migration 055 made fully idempotent** — `DROP POLICY IF EXISTS` added before all 9 `CREATE POLICY` statements
+
+---
+
 ## Planned Steps
 
 | Step | Description | Status |
 |------|-------------|--------|
 | 1 | DB migration (`055_kpi_dashboard.sql`) | ✅ Written |
 | 2 | App scaffold (route group, layout, middleware, sidebar entry, `app-data.ts`) | ✅ Done |
-| 3 | Dummy data + Overview page (summary stat cards, date filter) | ✅ Done |
-| 4 | ACQ Funnel page (pyramid: Lead → Closed Deal) | ✅ Done |
-| 5 | DISPO Funnel page (pyramid: Lead → Closed Deal) | ✅ Done |
-| 6 | Per-rep Leaderboard table (sortable, filterable) | ✅ Done |
-| 7 | Call Metrics page (`/kpi-dashboard/calls`) + `call_logs` DB table | ✅ Done |
-| 8 | Ingest route (`POST /api/kpi/ingest`) | Pending |
-| 9 | Pipeline Config UI (admin maps GHL labels → kpi_name) | Pending |
+| 3 | Dummy data + Overview page | ✅ Done |
+| 4 | ACQ Funnel page | ✅ Done |
+| 5 | DISPO Funnel page | ✅ Done |
+| 6 | Leaderboard (hidden for now) | ✅ Done |
+| 7 | All 7 source pages (Call/SMS/PPC/DM/PPL/SEO/Listed) | ✅ Done |
+| 8 | Source-specific KPI tables + Leads/KPI ratio | ✅ Done |
+| 9 | ACQ Performance Metrics + Positive/Negative KPI matrices | ✅ Done |
+| 10 | Qualification/Quality feature (ACQ + DISPO) | ✅ Done |
+| 11 | Access control (admin-only) + DISPO agent expansion | ✅ Done |
+| 12 | Ingest route (`POST /api/kpi/ingest`) | Pending |
+| 13 | Pipeline Config UI (admin maps GHL labels → kpi_name) | Pending |
+| 14 | Milestone 2: swap dummy data for Supabase queries | Pending |

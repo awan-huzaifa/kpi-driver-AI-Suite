@@ -143,10 +143,25 @@ export default function DispoFunnelClient() {
   const [customTo,    setCustomTo]    = useState('')
   const [selectedRep, setSelectedRep] = useState<string | null>(null)
   const [leadSource,  setLeadSource]  = useState('')
+  const [netKpi,      setNetKpi]      = useState(false)
 
   const allLeadSources = useMemo(() =>
     [...new Set(DUMMY_EVENTS.filter(e => e.kpi_type === 'DISPO' && e.kpi_name === 'lead').map(e => e.lead_source))].sort()
   , [])
+
+  const netKpiContactIds = useMemo(() => {
+    if (!netKpi) return null
+    const { from, to } = periodBounds(period, customFrom, customTo)
+    const s = new Set<string>()
+    for (const e of DUMMY_EVENTS) {
+      if (e.kpi_name !== 'lead' || !e.date_created) continue
+      const d = new Date(e.date_created)
+      if (from && d < from) continue
+      if (to   && d > to)   continue
+      s.add(e.contact_id)
+    }
+    return s
+  }, [netKpi, period, customFrom, customTo])
 
   const filtered = useMemo(() => {
     const { from, to } = periodBounds(period, customFrom, customTo)
@@ -157,9 +172,10 @@ export default function DispoFunnelClient() {
       const d = new Date(e.occurred_at)
       if (from && d < from) return false
       if (to   && d > to)   return false
+      if (netKpiContactIds && !netKpiContactIds.has(e.contact_id)) return false
       return true
     })
-  }, [period, customFrom, customTo, selectedRep, leadSource])
+  }, [period, customFrom, customTo, selectedRep, leadSource, netKpiContactIds])
 
   const counts = useMemo(() => {
     const allKeys = [
@@ -234,6 +250,26 @@ export default function DispoFunnelClient() {
     [...new Set(filtered.map(e => e.user_name))].sort()
   , [filtered])
 
+  const posKpiMaxes = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const k of DISPO_POSITIVE_KPIS) {
+      let max = 0
+      for (const a of matrixAgents) { const v = agentKpiMatrix.get(a)?.get(k.key) ?? 0; if (v > max) max = v }
+      m.set(k.key, max)
+    }
+    return m
+  }, [agentKpiMatrix, matrixAgents])
+
+  const negKpiMaxes = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const k of DISPO_NEGATIVE_KPIS) {
+      let max = 0
+      for (const a of matrixAgents) { const v = agentKpiMatrix.get(a)?.get(k.key) ?? 0; if (v > max) max = v }
+      m.set(k.key, max)
+    }
+    return m
+  }, [agentKpiMatrix, matrixAgents])
+
   // ── qualification useMemos (lead events only) ─────────────────────────────
 
   const leadEvents = useMemo(() =>
@@ -291,6 +327,20 @@ export default function DispoFunnelClient() {
           <p style={{ fontSize: 13, color: C.mutedText, margin: '4px 0 0' }}>Disposition pipeline, contact-level conversion tracking</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 3 }}>
+            {(['KPI', 'Net KPI'] as const).map(mode => {
+              const active = (mode === 'Net KPI') === netKpi
+              return (
+                <button key={mode} onClick={() => setNetKpi(mode === 'Net KPI')} style={{
+                  padding: '5px 12px', fontSize: 12, fontWeight: 700, borderRadius: 6,
+                  border: 'none', cursor: 'pointer',
+                  background: active ? C.yellow : 'transparent',
+                  color: active ? '#0D1C2A' : C.dimText,
+                  transition: 'all 0.15s',
+                }}>{mode}</button>
+              )
+            })}
+          </div>
           <SourcePicker value={leadSource} options={allLeadSources} onChange={setLeadSource} accentColor={C.yellow} />
           <DateRangePicker
             period={period} customFrom={customFrom} customTo={customTo}
@@ -415,6 +465,33 @@ export default function DispoFunnelClient() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* ── Funnel Stage Bar Chart ──────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, padding: '24px 28px', marginBottom: 24 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.white, marginBottom: 20 }}>Stage Volume</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+          {MAIN_STAGES.map((stage) => {
+            const count = counts[stage.key] ?? 0
+            const maxCount = Math.max(counts['lead'] ?? 1, 1)
+            const barH = Math.max((count / maxCount) * 130, count > 0 ? 3 : 0)
+            const isClose = stage.key === 'closed_deal'
+            return (
+              <div key={stage.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.white, marginBottom: 4 }}>{count}</span>
+                <div style={{ width: '100%', maxWidth: 44, height: barH, background: isClose ? C.green : C.yellow, borderRadius: '4px 4px 0 0', opacity: 0.9 }} />
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginBottom: 8 }} />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {MAIN_STAGES.map(stage => (
+            <div key={stage.key} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: C.dimText, lineHeight: 1.3 }}>
+              {stage.label}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -548,20 +625,59 @@ export default function DispoFunnelClient() {
                 </tr>
               </thead>
               <tbody>
-                {repRows.map((rep, i) => (
-                  <tr key={rep.name} style={{ borderBottom: i < repRows.length - 1 ? `1px solid ${bd}` : undefined }}>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text, fontWeight: 600, whiteSpace: 'nowrap' }}>{rep.name}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.leads}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.interested}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.showingSet}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.showingHeld}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.offers}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, fontWeight: rep.closed > 0 ? 700 : 400, color: rep.closed > 0 ? C.green : C.mutedText }}>
-                      {rep.closed}
-                    </td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.mutedText }}>{rep.conv}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const maxLeads  = Math.max(...repRows.map(r => r.leads),  1)
+                  const maxClosed = Math.max(...repRows.map(r => r.closed), 1)
+                  const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32']
+                  const avatarPalette = [C.blue, C.green, C.yellow, '#9b59b6', '#e67e22', '#1abc9c', '#e74c3c']
+                  return repRows.map((rep, i) => {
+                    const convNum   = parseFloat(rep.conv)
+                    const convColor = convNum >= 10 ? C.green : convNum >= 5 ? C.yellow : C.red
+                    const rankColor = rankColors[i] ?? C.dimText
+                    const rankBg    = i < 3 ? `rgba(${i===0?'255,215,0':i===1?'192,192,192':'205,127,50'},0.12)` : 'rgba(255,255,255,0.04)'
+                    const initials  = rep.name.split(' ').map((n: string) => n[0] ?? '').join('').slice(0, 2).toUpperCase()
+                    const avBg      = avatarPalette[i % avatarPalette.length]
+                    return (
+                      <tr key={rep.name} style={{ borderBottom: i < repRows.length - 1 ? `1px solid ${bd}` : undefined }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <td style={{ padding: '12px 20px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: rankBg, border: `1.5px solid ${rankColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: rankColor, flexShrink: 0 }}>{i + 1}</div>
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: `linear-gradient(135deg, ${avBg}, ${avBg}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: C.white, flexShrink: 0 }}>{initials}</div>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{rep.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 20px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>{rep.leads}</span>
+                            <div style={{ height: 3, width: 64, background: 'rgba(255,255,255,0.07)', borderRadius: 2 }}>
+                              <div style={{ width: `${(rep.leads / maxLeads) * 100}%`, height: '100%', background: C.blue, borderRadius: 2 }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.interested}</td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.showingSet}</td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.showingHeld}</td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.offers}</td>
+                        <td style={{ padding: '12px 20px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontSize: 14, fontWeight: rep.closed > 0 ? 700 : 400, color: rep.closed > 0 ? C.green : C.mutedText }}>{rep.closed}</span>
+                            {rep.closed > 0 && (
+                              <div style={{ height: 3, width: 64, background: 'rgba(255,255,255,0.07)', borderRadius: 2 }}>
+                                <div style={{ width: `${(rep.closed / maxClosed) * 100}%`, height: '100%', background: C.green, borderRadius: 2 }} />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 20px' }}>
+                          <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, background: `${convColor}18`, color: convColor, border: `1px solid ${convColor}40` }}>{rep.conv}</span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                })()}
               </tbody>
             </table>
           </div>
@@ -598,8 +714,10 @@ export default function DispoFunnelClient() {
                       </td>
                       {DISPO_POSITIVE_KPIS.map(k => {
                         const count = kmap?.get(k.key) ?? 0
+                        const max   = posKpiMaxes.get(k.key) ?? 1
+                        const intensity = max > 0 ? count / max : 0
                         return (
-                          <td key={k.key} style={{ padding: '9px 8px', textAlign: 'center', fontSize: 13, fontWeight: count > 0 ? 700 : 400, color: count > 0 ? C.green : C.dimText, borderLeft: `1px solid rgba(255,255,255,0.04)` }}>
+                          <td key={k.key} style={{ padding: '9px 8px', textAlign: 'center', fontSize: 13, fontWeight: count > 0 ? 700 : 400, color: count > 0 ? C.green : C.dimText, borderLeft: `1px solid rgba(255,255,255,0.04)`, background: count > 0 ? `rgba(67,183,73,${(intensity * 0.22).toFixed(2)})` : undefined, transition: 'background 0.2s' }}>
                             {count > 0 ? count : '—'}
                           </td>
                         )
@@ -643,8 +761,10 @@ export default function DispoFunnelClient() {
                       </td>
                       {DISPO_NEGATIVE_KPIS.map(k => {
                         const count = kmap?.get(k.key) ?? 0
+                        const max   = negKpiMaxes.get(k.key) ?? 1
+                        const intensity = max > 0 ? count / max : 0
                         return (
-                          <td key={k.key} style={{ padding: '9px 8px', textAlign: 'center', fontSize: 13, fontWeight: count > 0 ? 700 : 400, color: count > 0 ? C.red : C.dimText, borderLeft: `1px solid rgba(255,255,255,0.04)` }}>
+                          <td key={k.key} style={{ padding: '9px 8px', textAlign: 'center', fontSize: 13, fontWeight: count > 0 ? 700 : 400, color: count > 0 ? C.red : C.dimText, borderLeft: `1px solid rgba(255,255,255,0.04)`, background: count > 0 ? `rgba(237,31,36,${(intensity * 0.2).toFixed(2)})` : undefined, transition: 'background 0.2s' }}>
                             {count > 0 ? count : '—'}
                           </td>
                         )
@@ -670,6 +790,7 @@ export default function DispoFunnelClient() {
                   <th key={q} style={{ textAlign: 'right', padding: '8px 12px', color: QUAL_COLORS[q], fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, whiteSpace: 'nowrap' }}>{q}</th>
                 ))}
                 <th style={{ textAlign: 'right', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}` }}>Total</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, minWidth: 100 }}>Breakdown</th>
               </tr>
             </thead>
             <tbody>
@@ -684,6 +805,13 @@ export default function DispoFunnelClient() {
                       </td>
                     ))}
                     <td style={{ padding: '8px 12px', textAlign: 'right', color: C.mutedText, fontWeight: 600 }}>{total}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      {total > 0 && (
+                        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', minWidth: 90 }}>
+                          {QUAL_COLS.map(qk => { const pct = total > 0 ? ((qmap.get(qk) ?? 0) / total) * 100 : 0; return pct > 0 ? <div key={qk} style={{ width: `${pct}%`, background: QUAL_COLORS[qk] }} title={`${qk}: ${Math.round(pct)}%`} /> : null })}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
@@ -704,6 +832,7 @@ export default function DispoFunnelClient() {
                   <th key={q} style={{ textAlign: 'right', padding: '8px 12px', color: QUAL_COLORS[q], fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, whiteSpace: 'nowrap' }}>{q}</th>
                 ))}
                 <th style={{ textAlign: 'right', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}` }}>Total</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, minWidth: 100 }}>Breakdown</th>
               </tr>
             </thead>
             <tbody>
@@ -720,6 +849,13 @@ export default function DispoFunnelClient() {
                       </td>
                     ))}
                     <td style={{ padding: '8px 12px', textAlign: 'right', color: C.mutedText, fontWeight: 600 }}>{total}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      {total > 0 && (
+                        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', minWidth: 90 }}>
+                          {QUAL_COLS.map(qk => { const pct = total > 0 ? ((qmap.get(qk) ?? 0) / total) * 100 : 0; return pct > 0 ? <div key={qk} style={{ width: `${pct}%`, background: QUAL_COLORS[qk] }} title={`${qk}: ${Math.round(pct)}%`} /> : null })}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
@@ -743,6 +879,7 @@ export default function DispoFunnelClient() {
                       <th key={q} style={{ textAlign: 'right', padding: '7px 12px', color: QUAL_COLORS[q], fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, whiteSpace: 'nowrap' }}>{q}</th>
                     ))}
                     <th style={{ textAlign: 'right', padding: '7px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}` }}>Total</th>
+                    <th style={{ textAlign: 'left', padding: '7px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, minWidth: 90 }}>Breakdown</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -757,6 +894,13 @@ export default function DispoFunnelClient() {
                           </td>
                         ))}
                         <td style={{ padding: '7px 12px', textAlign: 'right', color: C.mutedText, fontWeight: 600 }}>{total}</td>
+                        <td style={{ padding: '7px 12px' }}>
+                          {total > 0 && (
+                            <div style={{ display: 'flex', height: 7, borderRadius: 3, overflow: 'hidden', minWidth: 80 }}>
+                              {QUAL_COLS.map(qk => { const pct = total > 0 ? ((qmap.get(qk) ?? 0) / total) * 100 : 0; return pct > 0 ? <div key={qk} style={{ width: `${pct}%`, background: QUAL_COLORS[qk] }} title={`${qk}: ${Math.round(pct)}%`} /> : null })}
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     )
                   })}

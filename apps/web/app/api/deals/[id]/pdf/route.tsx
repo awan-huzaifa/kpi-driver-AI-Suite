@@ -15,7 +15,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const [{ data: deal }, { data: report }] = await Promise.all([
-    supabase.from("deals").select("*").eq("id", id).eq("user_id", user.id).single(),
+    supabase.from("deals").select("*").eq("id", id).single(),
     supabase.from("underwriting_reports").select("*").eq("deal_id", id).single(),
   ]);
 

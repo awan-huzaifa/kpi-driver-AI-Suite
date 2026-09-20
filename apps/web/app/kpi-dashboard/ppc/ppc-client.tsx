@@ -30,13 +30,28 @@ const KPI_ORDER = Object.keys(KPI_LABELS)
 const SOURCE_KPIS_LIST = ['contract_rejected', 'appointment_cancelled']
 const SOURCE_KPIS      = new Set(SOURCE_KPIS_LIST)
 
-type FilterTab = 'Website' | 'Validity' | 'Form'
+type FilterTab = 'Lead Source' | 'Campaign'
 
 export default function PpcClient() {
   const [period,     setPeriod]     = useState<DatePeriod>('30d')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo,   setCustomTo]   = useState('')
-  const [filterTab,  setFilterTab]  = useState<FilterTab>('Website')
+  const [filterTab,  setFilterTab]  = useState<FilterTab>('Lead Source')
+  const [netKpi,     setNetKpi]     = useState(false)
+
+  const netKpiContactIds = useMemo(() => {
+    if (!netKpi) return null
+    const { from, to } = periodBounds(period, customFrom, customTo)
+    const s = new Set<string>()
+    for (const e of DUMMY_EVENTS) {
+      if (e.kpi_name !== 'lead' || !e.date_created) continue
+      const d = new Date(e.date_created)
+      if (from && d < from) continue
+      if (to   && d > to)   continue
+      s.add(e.contact_id)
+    }
+    return s
+  }, [netKpi, period, customFrom, customTo])
 
   // ── filtered ACQ + PPC events ─────────────────────────────────────────────────
 
@@ -44,13 +59,14 @@ export default function PpcClient() {
     const { from, to } = periodBounds(period, customFrom, customTo)
     return DUMMY_EVENTS.filter(e => {
       if (e.kpi_type !== 'ACQ') return false
-      if (e.lead_source !== 'PPC') return false
+      if (!e.lead_source?.includes('PPC')) return false
       const d = new Date(e.occurred_at)
       if (from && d < from) return false
       if (to   && d > to)   return false
+      if (netKpiContactIds && !netKpiContactIds.has(e.contact_id)) return false
       return true
     })
-  }, [period, customFrom, customTo])
+  }, [period, customFrom, customTo, netKpiContactIds])
 
   // ── ppc meta lookup (contact_id → meta) ──────────────────────────────────────
 
@@ -99,9 +115,8 @@ export default function PpcClient() {
     for (const e of leadEvents) {
       const meta = metaMap.get(e.contact_id)
       let key = ''
-      if (filterTab === 'Website')  key = meta?.website  ?? 'Unknown'
-      if (filterTab === 'Validity') key = meta?.validity  === 'valid' ? 'Valid' : 'Invalid'
-      if (filterTab === 'Form')     key = meta?.form      ?? 'Unknown'
+      if (filterTab === 'Lead Source') key = meta?.website ?? 'Unknown'
+      if (filterTab === 'Campaign')    key = meta?.form    ?? 'Unknown'
       map.set(key, (map.get(key) ?? 0) + 1)
     }
     return [...map.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
@@ -140,6 +155,12 @@ export default function PpcClient() {
     return [...map.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
   }, [ppcEvents, metaMap])
 
+  const leadsPerAgent = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const e of ppcEvents) if (e.kpi_name === 'lead') map.set(e.user_name, (map.get(e.user_name) ?? 0) + 1)
+    return [...map.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
+  }, [ppcEvents])
+
   const bd = C.border
 
   return (
@@ -151,8 +172,24 @@ export default function PpcClient() {
           <h1 style={{ fontSize: 24, fontWeight: 700, color: C.white, margin: 0 }}>PPC Source</h1>
           <p style={{ fontSize: 13, color: C.mutedText, margin: '4px 0 0' }}>ACQ pipeline performance for leads sourced via paid search</p>
         </div>
-        <DateRangePicker period={period} customFrom={customFrom} customTo={customTo}
-          onPeriod={setPeriod} onCustomFrom={setCustomFrom} onCustomTo={setCustomTo} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 3 }}>
+            {(['KPI', 'Net KPI'] as const).map(mode => {
+              const active = (mode === 'Net KPI') === netKpi
+              return (
+                <button key={mode} onClick={() => setNetKpi(mode === 'Net KPI')} style={{
+                  padding: '5px 12px', fontSize: 12, fontWeight: 700, borderRadius: 6,
+                  border: 'none', cursor: 'pointer',
+                  background: active ? C.blue : 'transparent',
+                  color: active ? C.white : C.dimText,
+                  transition: 'all 0.15s',
+                }}>{mode}</button>
+              )
+            })}
+          </div>
+          <DateRangePicker period={period} customFrom={customFrom} customTo={customTo}
+            onPeriod={setPeriod} onCustomFrom={setCustomFrom} onCustomTo={setCustomTo} />
+        </div>
       </div>
 
       {/* ── Stat cards ───────────────────────────────────────────── */}
@@ -254,43 +291,13 @@ export default function PpcClient() {
         )
       })()}
 
-      {/* ── Source KPIs ──────────────────────────────────────────── */}
-      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
-        <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>PPC Source KPIs</span>
-          <span style={{ fontSize: 11, color: C.dimText }}>KPIs tracked specifically for this lead source</span>
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${bd}` }}>
-              <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>KPI</th>
-              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Record Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {SOURCE_KPIS_LIST.map((k, i, arr) => {
-              const count = sourceKpiCounts.get(k) ?? 0
-              return (
-                <tr key={k} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td style={{ padding: '10px 20px', fontSize: 13, color: k === 'lead' ? C.blue : C.text, fontWeight: k === 'lead' ? 700 : 400 }}>{KPI_LABELS[k] ?? k}</td>
-                  <td style={{ padding: '10px 20px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: count > 0 ? C.blue : C.dimText }}>{count.toLocaleString()}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
       {/* ── Website/Validity/Form toggle + CRM KPI table ─────────── */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, alignItems: 'stretch' }}>
 
         {/* 3-tab filter table */}
         <div style={{ flex: 1, background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', borderBottom: `1px solid ${bd}` }}>
-            {(['Website', 'Validity', 'Form'] as FilterTab[]).map(tab => {
+            {(['Lead Source', 'Campaign'] as FilterTab[]).map(tab => {
               const active = filterTab === tab
               return (
                 <button key={tab} onClick={() => setFilterTab(tab)} style={{
@@ -306,7 +313,7 @@ export default function PpcClient() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${bd}` }}>
-                  <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{filterTab}</th>
+                  <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{filterTab === 'Lead Source' ? 'Lead Source' : 'Campaign'}</th>
                   <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads</th>
                 </tr>
               </thead>
@@ -316,15 +323,7 @@ export default function PpcClient() {
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                   >
-                    <td style={{ padding: '11px 20px', fontSize: 14, color: C.text }}>
-                      {filterTab === 'Validity' && (
-                        <span style={{
-                          display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-                          background: row.name === 'Valid' ? C.green : C.red, marginRight: 8,
-                        }} />
-                      )}
-                      {row.name}
-                    </td>
+                    <td style={{ padding: '11px 20px', fontSize: 14, color: C.text }}>{row.name}</td>
                     <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.blue }}>{row.count.toLocaleString()}</td>
                   </tr>
                 ))}
@@ -371,7 +370,7 @@ export default function PpcClient() {
       {/* ── Leads by Website Bar Chart ───────────────────────────── */}
       {websiteLeads.length > 0 && (
         <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, padding: '20px 24px' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.white, marginBottom: 20 }}>Leads by Website</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: C.white, marginBottom: 20 }}>Leads by Lead Source</div>
           {(() => {
             const maxCount = Math.max(...websiteLeads.map(r => r.count), 1)
             return (
@@ -391,6 +390,36 @@ export default function PpcClient() {
           })()}
         </div>
       )}
+
+      {/* ── Leads by Agent ──────────────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
+        <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}` }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>Leads by Agent</span>
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${bd}` }}>
+              <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Agent</th>
+              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads Assigned</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leadsPerAgent.length === 0 && (
+              <tr><td colSpan={2} style={{ padding: 24, textAlign: 'center', fontSize: 13, color: C.dimText }}>No data</td></tr>
+            )}
+            {leadsPerAgent.map((row, i, arr) => (
+              <tr key={row.name}
+                style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <td style={{ padding: '11px 20px', fontSize: 14, color: C.text, fontWeight: 600 }}>{row.name}</td>
+                <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.blue }}>{row.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <div style={{ marginTop: 28, textAlign: 'center' }}>
         <span style={{ fontSize: 11, color: C.dimText, background: 'rgba(252,175,23,0.07)', border: '1px solid rgba(252,175,23,0.15)', borderRadius: 6, padding: '5px 12px', letterSpacing: '0.04em' }}>

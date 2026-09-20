@@ -155,6 +155,12 @@ export default function PplClient() {
     return (['New', 'Accepted', 'Denied'] as const).map(d => ({ label: d, count: map.get(d) ?? 0, color: DISPUTE_COLORS[d] }))
   }, [pplEvents, metaMap])
 
+  const leadsPerAgent = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const e of pplEvents) if (e.kpi_name === 'lead') map.set(e.user_name, (map.get(e.user_name) ?? 0) + 1)
+    return [...map.entries()].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
+  }, [pplEvents])
+
   const bd = C.border
 
   const TABS: FilterTab[] = ['Source', 'Dispute', 'Type']
@@ -271,36 +277,6 @@ export default function PplClient() {
         )
       })()}
 
-      {/* ── Source KPIs ──────────────────────────────────────────── */}
-      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
-        <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>PPL Source KPIs</span>
-          <span style={{ fontSize: 11, color: C.dimText }}>KPIs tracked specifically for this lead source</span>
-        </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: `1px solid ${bd}` }}>
-              <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>KPI</th>
-              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Record Count</th>
-            </tr>
-          </thead>
-          <tbody>
-            {SOURCE_KPIS_LIST.map((k, i, arr) => {
-              const count = sourceKpiCounts.get(k) ?? 0
-              return (
-                <tr key={k} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td style={{ padding: '10px 20px', fontSize: 13, color: k === 'lead' ? C.blue : C.text, fontWeight: k === 'lead' ? 700 : 400 }}>{KPI_LABELS[k] ?? k}</td>
-                  <td style={{ padding: '10px 20px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: count > 0 ? C.blue : C.dimText }}>{count.toLocaleString()}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
       {/* ── Filter table + CRM KPI table ─────────────────────────── */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 24, alignItems: 'stretch' }}>
 
@@ -406,6 +382,36 @@ export default function PplClient() {
             </div>
           )
         })()}
+      </div>
+
+      {/* ── Leads by Agent ──────────────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
+        <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}` }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>Leads by Agent</span>
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${bd}` }}>
+              <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Agent</th>
+              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads Assigned</th>
+            </tr>
+          </thead>
+          <tbody>
+            {leadsPerAgent.length === 0 && (
+              <tr><td colSpan={2} style={{ padding: 24, textAlign: 'center', fontSize: 13, color: C.dimText }}>No data</td></tr>
+            )}
+            {leadsPerAgent.map((row, i, arr) => (
+              <tr key={row.name}
+                style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <td style={{ padding: '11px 20px', fontSize: 14, color: C.text, fontWeight: 600 }}>{row.name}</td>
+                <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.blue }}>{row.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div style={{ marginTop: 28, textAlign: 'center' }}>

@@ -152,10 +152,25 @@ export default function AcqFunnelClient() {
   const [customTo,    setCustomTo]    = useState('')
   const [selectedRep, setSelectedRep] = useState<string | null>(null)
   const [leadSource,  setLeadSource]  = useState('')
+  const [netKpi,      setNetKpi]      = useState(false)
 
   const allLeadSources = useMemo(() =>
     [...new Set(DUMMY_EVENTS.filter(e => e.kpi_type === 'ACQ' && e.kpi_name === 'lead').map(e => e.lead_source))].sort()
   , [])
+
+  const netKpiContactIds = useMemo(() => {
+    if (!netKpi) return null
+    const { from, to } = periodBounds(period, customFrom, customTo)
+    const s = new Set<string>()
+    for (const e of DUMMY_EVENTS) {
+      if (e.kpi_name !== 'lead' || !e.date_created) continue
+      const d = new Date(e.date_created)
+      if (from && d < from) continue
+      if (to   && d > to)   continue
+      s.add(e.contact_id)
+    }
+    return s
+  }, [netKpi, period, customFrom, customTo])
 
   const filtered = useMemo(() => {
     const { from, to } = periodBounds(period, customFrom, customTo)
@@ -166,9 +181,10 @@ export default function AcqFunnelClient() {
       const d = new Date(e.occurred_at)
       if (from && d < from) return false
       if (to   && d > to)   return false
+      if (netKpiContactIds && !netKpiContactIds.has(e.contact_id)) return false
       return true
     })
-  }, [period, customFrom, customTo, selectedRep, leadSource])
+  }, [period, customFrom, customTo, selectedRep, leadSource, netKpiContactIds])
 
   // Stage counts (unique contacts per kpi_name)
   const counts = useMemo(() => {
@@ -203,13 +219,18 @@ export default function AcqFunnelClient() {
 
   // Rep breakdown
   const repRows = useMemo(() => {
-    type R = { leads: Set<string>; apptSet: Set<string>; apptHeld: Set<string>; offers: Set<string>; signed: Set<string>; closed: Set<string> }
+    type R = { leads: Set<string>; apptSetFor: Set<string>; apptSetBy: Set<string>; apptHeld: Set<string>; offers: Set<string>; signed: Set<string>; closed: Set<string> }
     const map = new Map<string, R>()
     for (const e of filtered) {
-      if (!map.has(e.user_name)) map.set(e.user_name, { leads: new Set(), apptSet: new Set(), apptHeld: new Set(), offers: new Set(), signed: new Set(), closed: new Set() })
+      if (!map.has(e.user_name)) map.set(e.user_name, { leads: new Set(), apptSetFor: new Set(), apptSetBy: new Set(), apptHeld: new Set(), offers: new Set(), signed: new Set(), closed: new Set() })
       const r = map.get(e.user_name)!
       if (e.kpi_name === 'lead')             r.leads.add(e.contact_id)
-      if (e.kpi_name === 'appointment_set')  r.apptSet.add(e.contact_id)
+      if (e.kpi_name === 'appointment_set') {
+        // Dummy split: contacts starting a-m = "set by" this rep; n-z/digits = "set for" this rep
+        const code = e.contact_id.charCodeAt(0)
+        if (code >= 97 && code <= 109) r.apptSetBy.add(e.contact_id)
+        else r.apptSetFor.add(e.contact_id)
+      }
       if (e.kpi_name === 'appointment_held') r.apptHeld.add(e.contact_id)
       if (e.kpi_name === 'offer_made')       r.offers.add(e.contact_id)
       if (e.kpi_name === 'contract_signed')  r.signed.add(e.contact_id)
@@ -218,8 +239,8 @@ export default function AcqFunnelClient() {
     return Array.from(map.entries())
       .map(([name, d]) => ({
         name,
-        leads: d.leads.size, apptSet: d.apptSet.size, apptHeld: d.apptHeld.size,
-        offers: d.offers.size, signed: d.signed.size, closed: d.closed.size,
+        leads: d.leads.size, apptSetFor: d.apptSetFor.size, apptSetBy: d.apptSetBy.size,
+        apptHeld: d.apptHeld.size, offers: d.offers.size, signed: d.signed.size, closed: d.closed.size,
         conv: d.leads.size > 0 ? (d.closed.size / d.leads.size * 100).toFixed(1) + '%' : '0%',
       }))
       .sort((a, b) => b.closed - a.closed || b.leads - a.leads)
@@ -284,6 +305,26 @@ export default function AcqFunnelClient() {
     [...new Set(filtered.map(e => e.user_name))].sort()
   , [filtered])
 
+  const posKpiMaxes = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const k of POSITIVE_KPIS) {
+      let max = 0
+      for (const a of matrixAgents) { const v = agentKpiMatrix.get(a)?.get(k.key) ?? 0; if (v > max) max = v }
+      m.set(k.key, max)
+    }
+    return m
+  }, [agentKpiMatrix, matrixAgents])
+
+  const negKpiMaxes = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const k of NEGATIVE_KPIS) {
+      let max = 0
+      for (const a of matrixAgents) { const v = agentKpiMatrix.get(a)?.get(k.key) ?? 0; if (v > max) max = v }
+      m.set(k.key, max)
+    }
+    return m
+  }, [agentKpiMatrix, matrixAgents])
+
   // ── qualification useMemos (lead events only) ─────────────────────────────
 
   const leadEvents = useMemo(() =>
@@ -344,6 +385,64 @@ export default function AcqFunnelClient() {
     Qualified: C.green, Pending: C.yellow, Disqualified: C.red,
   }
 
+  // ── Speed to KPI ─────────────────────────────────────────────────────────────
+  // For each contact that progressed A → B, measure the elapsed time in hours.
+  // Returns { label, avgHours, medHours, count, fromKey, toKey }
+
+  const SPEED_STEPS = [
+    { fromKey: 'lead',             toKey: 'lead_assigned',    label: 'Lead → Assigned',   color: '#7c3aed', icon: '⚡' },
+    { fromKey: 'lead',             toKey: 'appointment_set',  label: 'Lead → Appt Set',   color: C.blue,    icon: '📅' },
+    { fromKey: 'appointment_set',  toKey: 'appointment_held', label: 'Appt Set → Held',   color: '#0891b2', icon: '🤝' },
+    { fromKey: 'appointment_held', toKey: 'offer_made',       label: 'Held → Offer',      color: C.yellow,  icon: '💰' },
+    { fromKey: 'offer_made',       toKey: 'contract_signed',  label: 'Offer → Signed',    color: '#f97316', icon: '✍️' },
+    { fromKey: 'contract_signed',  toKey: 'closed_deal',      label: 'Signed → Closed',   color: C.green,   icon: '🏁' },
+  ]
+
+  const speedData = useMemo(() => {
+    // Build a map: contact_id → { kpi_name → occurred_at }
+    const contactTimes = new Map<string, Map<string, number>>()
+    for (const e of filtered) {
+      if (!contactTimes.has(e.contact_id)) contactTimes.set(e.contact_id, new Map())
+      const t = new Date(e.occurred_at).getTime()
+      const existing = contactTimes.get(e.contact_id)!.get(e.kpi_name)
+      // keep earliest occurrence if duplicates
+      if (existing == null || t < existing) contactTimes.get(e.contact_id)!.set(e.kpi_name, t)
+    }
+
+    return SPEED_STEPS.map(step => {
+      const deltas: number[] = []
+      for (const [, times] of contactTimes) {
+        const fromT = times.get(step.fromKey)
+        const toT   = times.get(step.toKey)
+        if (fromT == null || toT == null || toT <= fromT) continue
+        deltas.push((toT - fromT) / (1000 * 3600)) // hours
+      }
+      if (deltas.length === 0) return { ...step, avgHours: null, medHours: null, count: 0 }
+      deltas.sort((a, b) => a - b)
+      const avg = deltas.reduce((s, v) => s + v, 0) / deltas.length
+      const med = deltas[Math.floor(deltas.length / 2)]
+      return { ...step, avgHours: avg, medHours: med, count: deltas.length }
+    })
+  }, [filtered])
+
+  function fmtHours(h: number): string {
+    if (h < 1)   return `${Math.round(h * 60)}m`
+    if (h < 24)  return `${h.toFixed(1)}h`
+    const days = h / 24
+    return days < 7 ? `${days.toFixed(1)}d` : `${(days / 7).toFixed(1)}w`
+  }
+
+  function speedColor(h: number, stepIndex: number): string {
+    // thresholds vary by step — later steps are naturally slower
+    const thresholds = [4, 24, 48, 72, 168, 336] // hours: green cutoff per step
+    const t = thresholds[stepIndex] ?? 72
+    if (h <= t * 0.25) return C.green
+    if (h <= t * 0.6)  return '#78c97e'
+    if (h <= t)        return C.yellow
+    if (h <= t * 2)    return '#f97316'
+    return C.red
+  }
+
   const bd = C.border
 
   return (
@@ -356,6 +455,20 @@ export default function AcqFunnelClient() {
           <p style={{ fontSize: 13, color: C.mutedText, margin: '4px 0 0' }}>Acquisition pipeline, contact-level conversion tracking</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 3 }}>
+            {(['KPI', 'Net KPI'] as const).map(mode => {
+              const active = (mode === 'Net KPI') === netKpi
+              return (
+                <button key={mode} onClick={() => setNetKpi(mode === 'Net KPI')} style={{
+                  padding: '5px 12px', fontSize: 12, fontWeight: 700, borderRadius: 6,
+                  border: 'none', cursor: 'pointer',
+                  background: active ? C.blue : 'transparent',
+                  color: active ? C.white : C.dimText,
+                  transition: 'all 0.15s',
+                }}>{mode}</button>
+              )
+            })}
+          </div>
           <SourcePicker value={leadSource} options={allLeadSources} onChange={setLeadSource} accentColor={C.blue} />
           <DateRangePicker
             period={period} customFrom={customFrom} customTo={customTo}
@@ -402,6 +515,136 @@ export default function AcqFunnelClient() {
             <div style={{ fontSize: 12, color: C.bodyText }}>{card.sub}</div>
           </div>
         ))}
+      </div>
+
+      {/* ── Speed to KPI ─────────────────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, padding: '20px 28px', marginBottom: 24, overflow: 'hidden', position: 'relative' }}>
+        {/* background glow */}
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="6.5" stroke="#7c3aed" strokeWidth="1.2" />
+                <path d="M8 4.5V8L10.5 10" stroke="#7c3aed" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.white }}>Speed to KPI</div>
+              <div style={{ fontSize: 11, color: C.dimText }}>Avg time between each stage — faster is better</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {[{ dot: C.green, label: 'Fast' }, { dot: C.yellow, label: 'Avg' }, { dot: C.red, label: 'Slow' }].map(l => (
+              <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: l.dot }} />
+                <span style={{ fontSize: 11, color: C.dimText }}>{l.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cards row */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+          {speedData.map((step, i) => {
+            const hasData = step.avgHours != null && step.count > 0
+            const avgColor = hasData ? speedColor(step.avgHours!, i) : C.dimText
+            const medColor = hasData ? speedColor(step.medHours!, i) : C.dimText
+
+            return (
+              <div key={step.fromKey + step.toKey} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.06)`, borderRadius: 12, padding: '14px 14px 12px', position: 'relative', overflow: 'hidden' }}>
+                {/* top accent bar */}
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${step.color}, transparent)`, borderRadius: '12px 12px 0 0' }} />
+
+                {/* step connector arrow */}
+                {i < speedData.length - 1 && (
+                  <div style={{ position: 'absolute', top: '50%', right: -7, transform: 'translateY(-50%)', zIndex: 2, color: C.dimText, fontSize: 10, lineHeight: 1 }}>›</div>
+                )}
+
+                <div style={{ fontSize: 10, fontWeight: 700, color: step.color, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>{step.label}</div>
+
+                {hasData ? (
+                  <>
+                    {/* Avg big number */}
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ fontSize: 10, color: C.dimText, marginBottom: 2 }}>Avg</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: avgColor, lineHeight: 1 }}>{fmtHours(step.avgHours!)}</div>
+                    </div>
+
+                    {/* Median */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontSize: 9, color: C.dimText, marginBottom: 1 }}>Median</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: medColor }}>{fmtHours(step.medHours!)}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 9, color: C.dimText, marginBottom: 1 }}>Contacts</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: C.mutedText }}>{step.count}</div>
+                      </div>
+                    </div>
+
+                    {/* Speed gauge bar */}
+                    {(() => {
+                      const thresholds = [4, 24, 48, 72, 168, 336]
+                      const maxH = (thresholds[i] ?? 72) * 2
+                      const fillPct = Math.min((step.avgHours! / maxH) * 100, 100)
+                      return (
+                        <div>
+                          <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ width: `${fillPct}%`, height: '100%', background: `linear-gradient(90deg, ${avgColor}, ${avgColor}88)`, borderRadius: 2, transition: 'width 0.5s ease' }} />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+                            <span style={{ fontSize: 9, color: C.green }}>Fast</span>
+                            <span style={{ fontSize: 9, color: C.red }}>Slow</span>
+                          </div>
+                        </div>
+                      )
+                    })()}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: C.dimText, marginTop: 12 }}>No data</div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Timeline strip */}
+        <div style={{ marginTop: 18, padding: '12px 16px', background: 'rgba(255,255,255,0.02)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{ fontSize: 10, color: C.dimText, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>End-to-end pipeline timeline (avg)</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto' }}>
+            {speedData.map((step, i) => {
+              const hasData = step.avgHours != null && step.count > 0
+              const col = hasData ? speedColor(step.avgHours!, i) : C.dimText
+              const totalHours = speedData.reduce((s, s2) => s + (s2.avgHours ?? 0), 0)
+              const widthPct   = totalHours > 0 && hasData ? Math.max((step.avgHours! / totalHours) * 100, 8) : 8
+              return (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                  <div style={{ background: `${col}22`, border: `1px solid ${col}44`, borderRadius: 6, padding: '5px 10px', minWidth: 70, width: `${widthPct * 6}px`, maxWidth: 180, textAlign: 'center' }}>
+                    <div style={{ fontSize: 9, color: col, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.label.split('→')[1]?.trim()}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: col }}>{hasData ? fmtHours(step.avgHours!) : '—'}</div>
+                  </div>
+                  {i < speedData.length - 1 && (
+                    <div style={{ width: 20, height: 1, background: 'rgba(255,255,255,0.1)', flexShrink: 0, position: 'relative' }}>
+                      <div style={{ position: 'absolute', right: -3, top: -4, fontSize: 10, color: C.dimText }}>›</div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+            {/* total */}
+            {(() => {
+              const total = speedData.reduce((s, s2) => s + (s2.avgHours ?? 0), 0)
+              return total > 0 ? (
+                <div style={{ marginLeft: 16, padding: '5px 12px', background: 'rgba(67,183,73,0.1)', border: `1px solid ${C.green}40`, borderRadius: 6 }}>
+                  <div style={{ fontSize: 9, color: C.green, fontWeight: 700 }}>TOTAL</div>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: C.green }}>{fmtHours(total)}</div>
+                </div>
+              ) : null
+            })()}
+          </div>
+        </div>
       </div>
 
       {/* ── Pipeline Funnel ──────────────────────────────────────── */}
@@ -480,6 +723,33 @@ export default function AcqFunnelClient() {
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* ── Funnel Stage Bar Chart ──────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, padding: '24px 28px', marginBottom: 24 }}>
+        <div style={{ fontSize: 14, fontWeight: 700, color: C.white, marginBottom: 20 }}>Stage Volume</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6 }}>
+          {MAIN_STAGES.map((stage) => {
+            const count = counts[stage.key] ?? 0
+            const maxCount = Math.max(counts['lead'] ?? 1, 1)
+            const barH = Math.max((count / maxCount) * 130, count > 0 ? 3 : 0)
+            const isClose = stage.key === 'closed_deal'
+            return (
+              <div key={stage.key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.white, marginBottom: 4 }}>{count}</span>
+                <div style={{ width: '100%', maxWidth: 52, height: barH, background: isClose ? C.green : C.blue, borderRadius: '4px 4px 0 0', opacity: 0.9 }} />
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginBottom: 8 }} />
+        <div style={{ display: 'flex', gap: 6 }}>
+          {MAIN_STAGES.map(stage => (
+            <div key={stage.key} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: C.dimText, lineHeight: 1.3 }}>
+              {stage.label}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -605,7 +875,7 @@ export default function AcqFunnelClient() {
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: `1px solid ${bd}` }}>
-                  {['Rep', 'Leads', 'Appts Set', 'Appts Held', 'Offers', 'Contracts', 'Closed', 'Lead to Close'].map(h => (
+                  {['Rep', 'Leads', 'Appt Set For', 'Appt Set By', 'Appts Held', 'Offers', 'Contracts', 'Closed', 'Lead to Close'].map(h => (
                     <th key={h} style={{
                       padding: '10px 20px', textAlign: 'left',
                       fontSize: 11, fontWeight: 700, color: C.dimText,
@@ -615,20 +885,60 @@ export default function AcqFunnelClient() {
                 </tr>
               </thead>
               <tbody>
-                {repRows.map((rep, i) => (
-                  <tr key={rep.name} style={{ borderBottom: i < repRows.length - 1 ? `1px solid ${bd}` : undefined }}>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text, fontWeight: 600, whiteSpace: 'nowrap' }}>{rep.name}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.leads}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.apptSet}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.apptHeld}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.offers}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.signed}</td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, fontWeight: rep.closed > 0 ? 700 : 400, color: rep.closed > 0 ? C.green : C.mutedText }}>
-                      {rep.closed}
-                    </td>
-                    <td style={{ padding: '12px 20px', fontSize: 14, color: C.mutedText }}>{rep.conv}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const maxLeads  = Math.max(...repRows.map(r => r.leads),  1)
+                  const maxClosed = Math.max(...repRows.map(r => r.closed), 1)
+                  const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32']
+                  const avatarPalette = [C.blue, C.green, C.yellow, '#9b59b6', '#e67e22']
+                  return repRows.map((rep, i) => {
+                    const convNum   = parseFloat(rep.conv)
+                    const convColor = convNum >= 10 ? C.green : convNum >= 5 ? C.yellow : C.red
+                    const rankColor = rankColors[i] ?? C.dimText
+                    const rankBg    = i < 3 ? `rgba(${i===0?'255,215,0':i===1?'192,192,192':'205,127,50'},0.12)` : 'rgba(255,255,255,0.04)'
+                    const initials  = rep.name.split(' ').map((n: string) => n[0] ?? '').join('').slice(0, 2).toUpperCase()
+                    const avBg      = avatarPalette[i % avatarPalette.length]
+                    return (
+                      <tr key={rep.name} style={{ borderBottom: i < repRows.length - 1 ? `1px solid ${bd}` : undefined }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                      >
+                        <td style={{ padding: '12px 20px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 24, height: 24, borderRadius: '50%', background: rankBg, border: `1.5px solid ${rankColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: rankColor, flexShrink: 0 }}>{i + 1}</div>
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: `linear-gradient(135deg, ${avBg}, ${avBg}99)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: C.white, flexShrink: 0 }}>{initials}</div>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{rep.name}</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 20px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>{rep.leads}</span>
+                            <div style={{ height: 3, width: 64, background: 'rgba(255,255,255,0.07)', borderRadius: 2 }}>
+                              <div style={{ width: `${(rep.leads / maxLeads) * 100}%`, height: '100%', background: C.blue, borderRadius: 2 }} />
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.blue, fontWeight: 600 }}>{rep.apptSetFor}</td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.yellow, fontWeight: 600 }}>{rep.apptSetBy}</td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.apptHeld}</td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.offers}</td>
+                        <td style={{ padding: '12px 20px', fontSize: 14, color: C.text }}>{rep.signed}</td>
+                        <td style={{ padding: '12px 20px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontSize: 14, fontWeight: rep.closed > 0 ? 700 : 400, color: rep.closed > 0 ? C.green : C.mutedText }}>{rep.closed}</span>
+                            {rep.closed > 0 && (
+                              <div style={{ height: 3, width: 64, background: 'rgba(255,255,255,0.07)', borderRadius: 2 }}>
+                                <div style={{ width: `${(rep.closed / maxClosed) * 100}%`, height: '100%', background: C.green, borderRadius: 2 }} />
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 20px' }}>
+                          <span style={{ display: 'inline-block', padding: '3px 8px', borderRadius: 6, fontSize: 12, fontWeight: 700, background: `${convColor}18`, color: convColor, border: `1px solid ${convColor}40` }}>{rep.conv}</span>
+                        </td>
+                      </tr>
+                    )
+                  })
+                })()}
               </tbody>
             </table>
           </div>
@@ -652,19 +962,45 @@ export default function AcqFunnelClient() {
                 </tr>
               </thead>
               <tbody>
-                {perfRows.map((row, i) => (
-                  <tr key={row.agent} style={{ borderBottom: i < perfRows.length - 1 ? `1px solid ${bd}` : undefined }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '11px 20px', fontSize: 13, fontWeight: 600, color: C.text, whiteSpace: 'nowrap' }}>{row.agent}</td>
-                    <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 13, color: C.blue, fontWeight: 600 }}>{fmtTalkTime(row.talkSec)}</td>
-                    <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 13, color: C.bodyText }}>{row.totalCalls.toLocaleString()}</td>
-                    <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 13, color: C.green, fontWeight: 600 }}>{row.uniqueLeads.toLocaleString()}</td>
-                    <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 13, color: C.yellow, fontWeight: 600 }}>{row.smsSent.toLocaleString()}</td>
-                    <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 13, color: C.dimText }}>{fmtAvgDuration(row.avgDurSec)}</td>
-                  </tr>
-                ))}
+                {(() => {
+                  const maxTalk  = Math.max(...perfRows.map(r => r.talkSec),    1)
+                  const maxCalls = Math.max(...perfRows.map(r => r.totalCalls), 1)
+                  const maxLeads = Math.max(...perfRows.map(r => r.uniqueLeads),1)
+                  return perfRows.map((row, i) => (
+                    <tr key={row.agent} style={{ borderBottom: i < perfRows.length - 1 ? `1px solid ${bd}` : undefined }}
+                      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <td style={{ padding: '11px 20px', fontSize: 13, fontWeight: 600, color: C.text, whiteSpace: 'nowrap' }}>{row.agent}</td>
+                      <td style={{ padding: '11px 20px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                          <span style={{ fontSize: 13, color: C.blue, fontWeight: 600 }}>{fmtTalkTime(row.talkSec)}</span>
+                          <div style={{ height: 3, width: 64, background: 'rgba(255,255,255,0.07)', borderRadius: 2 }}>
+                            <div style={{ width: `${(row.talkSec / maxTalk) * 100}%`, height: '100%', background: C.blue, borderRadius: 2 }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '11px 20px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                          <span style={{ fontSize: 13, color: C.text }}>{row.totalCalls.toLocaleString()}</span>
+                          <div style={{ height: 3, width: 64, background: 'rgba(255,255,255,0.07)', borderRadius: 2 }}>
+                            <div style={{ width: `${(row.totalCalls / maxCalls) * 100}%`, height: '100%', background: 'rgba(255,255,255,0.35)', borderRadius: 2 }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '11px 20px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3 }}>
+                          <span style={{ fontSize: 13, color: C.green, fontWeight: 600 }}>{row.uniqueLeads.toLocaleString()}</span>
+                          <div style={{ height: 3, width: 64, background: 'rgba(255,255,255,0.07)', borderRadius: 2 }}>
+                            <div style={{ width: `${(row.uniqueLeads / maxLeads) * 100}%`, height: '100%', background: C.green, borderRadius: 2 }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 13, color: C.yellow, fontWeight: 600 }}>{row.smsSent.toLocaleString()}</td>
+                      <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 13, color: C.dimText }}>{fmtAvgDuration(row.avgDurSec)}</td>
+                    </tr>
+                  ))
+                })()}
               </tbody>
             </table>
           </div>
@@ -697,8 +1033,10 @@ export default function AcqFunnelClient() {
                     <td style={{ padding: '9px 20px', position: 'sticky', left: 0, background: 'inherit', zIndex: 1, fontSize: 12, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', borderRight: `1px solid ${bd}` }}>{agent}</td>
                     {POSITIVE_KPIS.map(k => {
                       const count = agentKpiMatrix.get(agent)?.get(k.key) ?? 0
+                      const max   = posKpiMaxes.get(k.key) ?? 1
+                      const intensity = max > 0 ? count / max : 0
                       return (
-                        <td key={k.key} style={{ width: 90, padding: '9px 6px', textAlign: 'center', borderLeft: `1px solid rgba(255,255,255,0.04)` }}>
+                        <td key={k.key} style={{ width: 90, padding: '9px 6px', textAlign: 'center', borderLeft: `1px solid rgba(255,255,255,0.04)`, background: count > 0 ? `rgba(67,183,73,${(intensity * 0.22).toFixed(2)})` : undefined, transition: 'background 0.2s' }}>
                           <span style={{ fontSize: 13, fontWeight: count > 0 ? 700 : 400, color: count > 0 ? C.green : C.dimText }}>{count > 0 ? count : '—'}</span>
                         </td>
                       )
@@ -737,8 +1075,10 @@ export default function AcqFunnelClient() {
                     <td style={{ padding: '9px 20px', position: 'sticky', left: 0, background: 'inherit', zIndex: 1, fontSize: 12, fontWeight: 700, color: C.text, whiteSpace: 'nowrap', borderRight: `1px solid ${bd}` }}>{agent}</td>
                     {NEGATIVE_KPIS.map(k => {
                       const count = agentKpiMatrix.get(agent)?.get(k.key) ?? 0
+                      const max   = negKpiMaxes.get(k.key) ?? 1
+                      const intensity = max > 0 ? count / max : 0
                       return (
-                        <td key={k.key} style={{ width: 90, padding: '9px 6px', textAlign: 'center', borderLeft: `1px solid rgba(255,255,255,0.04)` }}>
+                        <td key={k.key} style={{ width: 90, padding: '9px 6px', textAlign: 'center', borderLeft: `1px solid rgba(255,255,255,0.04)`, background: count > 0 ? `rgba(237,31,36,${(intensity * 0.2).toFixed(2)})` : undefined, transition: 'background 0.2s' }}>
                           <span style={{ fontSize: 13, fontWeight: count > 0 ? 700 : 400, color: count > 0 ? C.red : C.dimText }}>{count > 0 ? count : '—'}</span>
                         </td>
                       )
@@ -763,6 +1103,7 @@ export default function AcqFunnelClient() {
                   <th key={q} style={{ textAlign: 'right', padding: '8px 12px', color: QUAL_COLORS[q], fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, whiteSpace: 'nowrap' }}>{q}</th>
                 ))}
                 <th style={{ textAlign: 'right', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}` }}>Total</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, minWidth: 100 }}>Breakdown</th>
               </tr>
             </thead>
             <tbody>
@@ -777,6 +1118,13 @@ export default function AcqFunnelClient() {
                       </td>
                     ))}
                     <td style={{ padding: '8px 12px', textAlign: 'right', color: C.mutedText, fontWeight: 600 }}>{total}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      {total > 0 && (
+                        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', minWidth: 90 }}>
+                          {QUAL_COLS.map(qk => { const pct = total > 0 ? ((qmap.get(qk) ?? 0) / total) * 100 : 0; return pct > 0 ? <div key={qk} style={{ width: `${pct}%`, background: QUAL_COLORS[qk] }} title={`${qk}: ${Math.round(pct)}%`} /> : null })}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
@@ -797,6 +1145,7 @@ export default function AcqFunnelClient() {
                   <th key={q} style={{ textAlign: 'right', padding: '8px 12px', color: QUAL_COLORS[q], fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, whiteSpace: 'nowrap' }}>{q}</th>
                 ))}
                 <th style={{ textAlign: 'right', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}` }}>Total</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, minWidth: 100 }}>Breakdown</th>
               </tr>
             </thead>
             <tbody>
@@ -813,6 +1162,13 @@ export default function AcqFunnelClient() {
                       </td>
                     ))}
                     <td style={{ padding: '8px 12px', textAlign: 'right', color: C.mutedText, fontWeight: 600 }}>{total}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      {total > 0 && (
+                        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', minWidth: 90 }}>
+                          {QUAL_COLS.map(qk => { const pct = total > 0 ? ((qmap.get(qk) ?? 0) / total) * 100 : 0; return pct > 0 ? <div key={qk} style={{ width: `${pct}%`, background: QUAL_COLORS[qk] }} title={`${qk}: ${Math.round(pct)}%`} /> : null })}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
@@ -833,6 +1189,7 @@ export default function AcqFunnelClient() {
                   <th key={q} style={{ textAlign: 'right', padding: '8px 12px', color: QUAL_COLORS[q], fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, whiteSpace: 'nowrap' }}>{q}</th>
                 ))}
                 <th style={{ textAlign: 'right', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}` }}>Total</th>
+                <th style={{ textAlign: 'left', padding: '8px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, minWidth: 100 }}>Breakdown</th>
               </tr>
             </thead>
             <tbody>
@@ -849,6 +1206,13 @@ export default function AcqFunnelClient() {
                       </td>
                     ))}
                     <td style={{ padding: '8px 12px', textAlign: 'right', color: C.mutedText, fontWeight: 600 }}>{total}</td>
+                    <td style={{ padding: '8px 12px' }}>
+                      {total > 0 && (
+                        <div style={{ display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden', minWidth: 90 }}>
+                          {QUAL_COLS.map(qk => { const pct = total > 0 ? ((qmap.get(qk) ?? 0) / total) * 100 : 0; return pct > 0 ? <div key={qk} style={{ width: `${pct}%`, background: QUAL_COLORS[qk] }} title={`${qk}: ${Math.round(pct)}%`} /> : null })}
+                        </div>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
@@ -872,6 +1236,7 @@ export default function AcqFunnelClient() {
                       <th key={q} style={{ textAlign: 'right', padding: '7px 12px', color: QUAL_COLORS[q], fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, whiteSpace: 'nowrap' }}>{q}</th>
                     ))}
                     <th style={{ textAlign: 'right', padding: '7px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}` }}>Total</th>
+                    <th style={{ textAlign: 'left', padding: '7px 12px', color: C.mutedText, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${bd}`, minWidth: 90 }}>Breakdown</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -886,6 +1251,13 @@ export default function AcqFunnelClient() {
                           </td>
                         ))}
                         <td style={{ padding: '7px 12px', textAlign: 'right', color: C.mutedText, fontWeight: 600 }}>{total}</td>
+                        <td style={{ padding: '7px 12px' }}>
+                          {total > 0 && (
+                            <div style={{ display: 'flex', height: 7, borderRadius: 3, overflow: 'hidden', minWidth: 80 }}>
+                              {QUAL_COLS.map(qk => { const pct = total > 0 ? ((qmap.get(qk) ?? 0) / total) * 100 : 0; return pct > 0 ? <div key={qk} style={{ width: `${pct}%`, background: QUAL_COLORS[qk] }} title={`${qk}: ${Math.round(pct)}%`} /> : null })}
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     )
                   })}

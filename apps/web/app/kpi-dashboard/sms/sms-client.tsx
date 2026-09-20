@@ -45,6 +45,21 @@ export default function SmsClient() {
   const [agentTypeTab, setAgentTypeTab] = useState<'Agent' | 'Type'>('Agent')
   const [smsSort,      setSmsSort]      = useState<SmsSortKey>('leads_submitted')
   const [smsDir,       setSmsDir]       = useState<'asc' | 'desc'>('desc')
+  const [netKpi,       setNetKpi]       = useState(false)
+
+  const netKpiContactIds = useMemo(() => {
+    if (!netKpi) return null
+    const { from, to } = periodBounds(period, customFrom, customTo)
+    const s = new Set<string>()
+    for (const e of DUMMY_EVENTS) {
+      if (e.kpi_name !== 'lead' || !e.date_created) continue
+      const d = new Date(e.date_created)
+      if (from && d < from) continue
+      if (to   && d > to)   continue
+      s.add(e.contact_id)
+    }
+    return s
+  }, [netKpi, period, customFrom, customTo])
 
   // ── filtered ACQ + SMS source events ─────────────────────────────────────────
 
@@ -56,9 +71,10 @@ export default function SmsClient() {
       const d = new Date(e.occurred_at)
       if (from && d < from) return false
       if (to   && d > to)   return false
+      if (netKpiContactIds && !netKpiContactIds.has(e.contact_id)) return false
       return true
     })
-  }, [period, customFrom, customTo])
+  }, [period, customFrom, customTo, netKpiContactIds])
 
   // ── filtered SMS sessions ─────────────────────────────────────────────────────
 
@@ -140,34 +156,36 @@ export default function SmsClient() {
     const leadCount = counts.get('lead') ?? 0
     return KPI_ORDER.map(k => {
       const count = counts.get(k) ?? 0
-      return { key: k, label: KPI_LABELS[k] ?? k, count, ratio: (SOURCE_KPIS.has(k) && k !== 'lead' && count > 0) ? (leadCount / count).toFixed(2) : '—' }
+      return { key: k, label: KPI_LABELS[k] ?? k, count, ratio: (k !== 'lead' && count > 0) ? (leadCount / count).toFixed(2) : '—' }
     })
   }, [smsEvents])
 
   // ── SMS agent table (aggregated) ──────────────────────────────────────────────
 
   const smsAgentRows = useMemo(() => {
-    type R = { sms_sent: number; sms_delivered: number; sms_received: number; sms_blocked: number; leads_submitted: number }
+    type R = { sms_sent: number; sms_delivered: number; sms_received: number; sms_blocked: number }
     const map = new Map<string, R>()
     for (const s of smsSessions) {
-      if (!map.has(s.agent_name)) map.set(s.agent_name, { sms_sent: 0, sms_delivered: 0, sms_received: 0, sms_blocked: 0, leads_submitted: 0 })
+      if (!map.has(s.agent_name)) map.set(s.agent_name, { sms_sent: 0, sms_delivered: 0, sms_received: 0, sms_blocked: 0 })
       const r = map.get(s.agent_name)!
-      r.sms_sent        += s.sms_sent
-      r.sms_delivered   += s.sms_delivered
-      r.sms_received    += s.sms_received
-      r.sms_blocked     += s.sms_blocked
-      r.leads_submitted += s.leads_submitted
+      r.sms_sent      += s.sms_sent
+      r.sms_delivered += s.sms_delivered
+      r.sms_received  += s.sms_received
+      r.sms_blocked   += s.sms_blocked
     }
+    // Use CRM event lead counts as source of truth
+    const crmLeads = new Map<string, number>()
+    for (const e of smsEvents) if (e.kpi_name === 'lead') crmLeads.set(e.user_name, (crmLeads.get(e.user_name) ?? 0) + 1)
     return [...map.entries()].map(([name, d]) => ({
-      agent_name:        name,
-      sms_sent:          d.sms_sent,
-      sms_received:      d.sms_received,
-      response_rate:     d.sms_sent > 0 ? d.sms_received / d.sms_sent : 0,
-      delivery_rate:     d.sms_sent > 0 ? d.sms_delivered / d.sms_sent : 0,
-      carrier_block_rate: d.sms_sent > 0 ? d.sms_blocked / d.sms_sent : 0,
-      leads_submitted:   d.leads_submitted,
+      agent_name:         name,
+      sms_sent:           d.sms_sent,
+      sms_received:       d.sms_received,
+      response_rate:      d.sms_sent > 0 ? d.sms_received / d.sms_sent : 0,
+      delivery_rate:      d.sms_sent > 0 ? d.sms_delivered / d.sms_sent : 0,
+      carrier_block_rate: d.sms_sent > 0 ? d.sms_blocked  / d.sms_sent : 0,
+      leads_submitted:    crmLeads.get(name) ?? 0,
     }))
-  }, [smsSessions])
+  }, [smsSessions, smsEvents])
 
   const sortedSmsAgents = useMemo(() => {
     return [...smsAgentRows].sort((a, b) => {
@@ -194,8 +212,24 @@ export default function SmsClient() {
           <h1 style={{ fontSize: 24, fontWeight: 700, color: C.white, margin: 0 }}>SMS Source</h1>
           <p style={{ fontSize: 13, color: C.mutedText, margin: '4px 0 0' }}>ACQ pipeline performance for leads sourced via SMS campaigns</p>
         </div>
-        <DateRangePicker period={period} customFrom={customFrom} customTo={customTo}
-          onPeriod={setPeriod} onCustomFrom={setCustomFrom} onCustomTo={setCustomTo} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 8, padding: 3 }}>
+            {(['KPI', 'Net KPI'] as const).map(mode => {
+              const active = (mode === 'Net KPI') === netKpi
+              return (
+                <button key={mode} onClick={() => setNetKpi(mode === 'Net KPI')} style={{
+                  padding: '5px 12px', fontSize: 12, fontWeight: 700, borderRadius: 6,
+                  border: 'none', cursor: 'pointer',
+                  background: active ? C.blue : 'transparent',
+                  color: active ? C.white : C.dimText,
+                  transition: 'all 0.15s',
+                }}>{mode}</button>
+              )
+            })}
+          </div>
+          <DateRangePicker period={period} customFrom={customFrom} customTo={customTo}
+            onPeriod={setPeriod} onCustomFrom={setCustomFrom} onCustomTo={setCustomTo} />
+        </div>
       </div>
 
       {/* ── Stat cards ───────────────────────────────────────────── */}
@@ -297,137 +331,130 @@ export default function SmsClient() {
         )
       })()}
 
-      {/* ── Source KPIs ──────────────────────────────────────────── */}
+      {/* ── SMS CRM KPIs ────────────────────────────────────────── */}
       <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
-        <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>SMS Source KPIs</span>
-          <span style={{ fontSize: 11, color: C.dimText }}>KPIs tracked specifically for this lead source</span>
+        <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}` }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>SMS CRM KPIs</span>
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ borderBottom: `1px solid ${bd}` }}>
               <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>KPI</th>
-              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Record Count</th>
+              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Count</th>
+              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads / KPI</th>
             </tr>
           </thead>
           <tbody>
-            {SOURCE_KPIS_LIST.map((k, i, arr) => {
-              const count = sourceKpiCounts.get(k) ?? 0
-              return (
-                <tr key={k} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                >
-                  <td style={{ padding: '10px 20px', fontSize: 13, color: k === 'lead' ? C.blue : C.text, fontWeight: k === 'lead' ? 700 : 400 }}>{KPI_LABELS[k] ?? k}</td>
-                  <td style={{ padding: '10px 20px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: count > 0 ? C.blue : C.dimText }}>{count.toLocaleString()}</td>
-                </tr>
-              )
-            })}
+            {kpiRows.filter(r => r.count > 0).map((row, i, arr) => (
+              <tr key={row.key}
+                style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <td style={{ padding: '10px 20px', fontSize: 13, color: row.key === 'lead' ? C.yellow : C.text, fontWeight: row.key === 'lead' ? 700 : 400 }}>{row.label}</td>
+                <td style={{ padding: '10px 20px', textAlign: 'right', fontSize: 13, fontWeight: 700, color: row.count > 0 ? C.yellow : C.dimText }}>{row.count.toLocaleString()}</td>
+                <td style={{ padding: '10px 20px', textAlign: 'right', fontSize: 13, color: row.ratio !== '—' ? C.green : C.dimText }}>{row.ratio}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      {/* ── Agent/Type toggle + CRM KPI table ────────────────────── */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24, alignItems: 'stretch' }}>
-
-        {/* Agent / Type toggle */}
-        <div style={{ flex: 1, background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', borderBottom: `1px solid ${bd}` }}>
-            {(['Agent', 'Type'] as const).map(tab => {
-              const active = agentTypeTab === tab
-              return (
-                <button key={tab} onClick={() => setAgentTypeTab(tab)} style={{
-                  flex: 1, padding: '12px 0', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
-                  background: active ? 'rgba(48,125,192,0.1)' : 'transparent',
-                  color: active ? C.white : C.mutedText,
-                  borderBottom: active ? `2px solid ${C.blue}` : '2px solid transparent',
-                }}>{tab}</button>
-              )
-            })}
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${bd}` }}>
-                  <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-                    {agentTypeTab === 'Agent' ? 'Agent' : 'Lead Type'}
-                  </th>
-                  <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads Submitted</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(agentTypeTab === 'Agent' ? agentRows : typeRows).map((row, i, arr) => (
-                  <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '11px 20px', fontSize: 14, color: C.text }}>{row.name}</td>
-                    <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.blue }}>{row.count.toLocaleString()}</td>
-                  </tr>
-                ))}
-                {(agentTypeTab === 'Agent' ? agentRows : typeRows).length === 0 && (
-                  <tr><td colSpan={2} style={{ padding: 24, textAlign: 'center', fontSize: 13, color: C.dimText }}>No data</td></tr>
+      {/* ── Agent/Type toggle ────────────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
+        <div style={{ display: 'flex', borderBottom: `1px solid ${bd}` }}>
+          {(['Agent', 'Type'] as const).map(tab => {
+            const active = agentTypeTab === tab
+            return (
+              <button key={tab} onClick={() => setAgentTypeTab(tab)} style={{
+                padding: '12px 24px', fontSize: 13, fontWeight: 700, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                background: active ? 'rgba(48,125,192,0.1)' : 'transparent',
+                color: active ? C.white : C.mutedText,
+                borderBottom: active ? `2px solid ${C.blue}` : '2px solid transparent',
+              }}>{tab}</button>
+            )
+          })}
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${bd}` }}>
+              <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+                {agentTypeTab === 'Agent' ? 'Agent' : 'Lead Type'}
+              </th>
+              {agentTypeTab === 'Agent' && (
+                <th style={{ padding: '10px 20px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>ACQ Username</th>
+              )}
+              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads Submitted</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(agentTypeTab === 'Agent' ? agentRows : typeRows).map((row, i, arr) => (
+              <tr key={row.name} style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <td style={{ padding: '11px 20px', fontSize: 14, color: C.text }}>{row.name}</td>
+                {agentTypeTab === 'Agent' && (
+                  <td style={{ padding: '11px 20px', fontSize: 13, color: C.dimText, fontFamily: 'monospace' }}>
+                    @{row.name.toLowerCase().replace(/\s+/g, '.')}
+                  </td>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* SMS CRM KPI table */}
-        <div style={{ flex: 2, background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', minWidth: 0 }}>
-          <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>SMS CRM KPIs</span>
-            <span style={{ fontSize: 11, color: C.dimText }}>Leads / KPI = Total Leads ÷ KPI Count</span>
-          </div>
-          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: `1px solid ${bd}` }}>
-                  <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>KPI</th>
-                  <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Count</th>
-                  <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads / KPI</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kpiRows.map((row, i) => (
-                  <tr key={row.key} style={{ borderBottom: i < kpiRows.length - 1 ? `1px solid ${bd}` : undefined }}
-                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '10px 20px', fontSize: 13, color: row.key === 'lead' ? C.blue : C.text, fontWeight: row.key === 'lead' ? 700 : 400 }}>{row.label}</td>
-                    <td style={{ padding: '10px 20px', textAlign: 'right', fontSize: 13, color: C.bodyText }}>{row.count.toLocaleString()}</td>
-                    <td style={{ padding: '10px 20px', textAlign: 'right', fontSize: 13, color: row.ratio === '—' ? C.dimText : C.yellow, fontWeight: 600 }}>{row.ratio}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.blue }}>{row.count.toLocaleString()}</td>
+              </tr>
+            ))}
+            {(agentTypeTab === 'Agent' ? agentRows : typeRows).length === 0 && (
+              <tr><td colSpan={agentTypeTab === 'Agent' ? 3 : 2} style={{ padding: 24, textAlign: 'center', fontSize: 13, color: C.dimText }}>No data</td></tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
-      {/* ── SMS Sent Per Agent Bar Chart ─────────────────────────── */}
-      {smsAgentRows.length > 0 && (
-        <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, padding: '20px 24px', marginBottom: 24 }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: C.white, marginBottom: 20 }}>SMS Sent Per Agent</div>
-          {(() => {
-            const maxSent = Math.max(...smsAgentRows.map(r => r.sms_sent), 1)
-            return (
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 16, height: 160 }}>
-                {[...smsAgentRows].sort((a, b) => b.sms_sent - a.sms_sent).map(r => {
-                  const barH = Math.max((r.sms_sent / maxSent) * 130, 4)
-                  return (
-                    <div key={r.agent_name} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: C.yellow }}>{r.sms_sent.toLocaleString()}</span>
-                      <div style={{ width: '100%', height: barH, background: `linear-gradient(to top, ${C.yellow}, rgba(252,175,23,0.4))`, borderRadius: '4px 4px 0 0' }} />
-                      <span style={{ fontSize: 11, color: C.mutedText, textAlign: 'center', lineHeight: 1.3 }}>{r.agent_name.split(' ')[0]}</span>
-                    </div>
-                  )
-                })}
+      {/* ── SMS Sent + Leads Per Agent Bar Chart ─────────────────── */}
+      {smsAgentRows.length > 0 && (() => {
+        const sorted   = [...smsAgentRows].sort((a, b) => b.sms_sent - a.sms_sent)
+        const maxSent  = Math.max(...sorted.map(r => r.sms_sent), 1)
+        const maxLeads = Math.max(...sorted.map(r => r.leads_submitted), 1)
+        const maxVal   = Math.max(maxSent, maxLeads, 1)
+        const BAR_H    = 130
+        return (
+          <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, padding: '20px 24px', marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.white }}>SMS Sent & Leads Per Agent</div>
+              <div style={{ display: 'flex', gap: 16 }}>
+                {[{ color: C.yellow, label: 'SMS Sent' }, { color: C.green, label: 'Leads Submitted' }].map(l => (
+                  <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 12, height: 12, background: l.color, borderRadius: 2 }} />
+                    <span style={{ fontSize: 11, color: C.dimText }}>{l.label}</span>
+                  </div>
+                ))}
               </div>
-            )
-          })()}
-        </div>
-      )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: BAR_H + 40 }}>
+              {sorted.map(r => {
+                const sentH  = Math.max((r.sms_sent        / maxVal) * BAR_H, 4)
+                const leadsH = Math.max((r.leads_submitted / maxVal) * BAR_H, 2)
+                return (
+                  <div key={r.agent_name} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: BAR_H }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.yellow }}>{r.sms_sent.toLocaleString()}</span>
+                        <div style={{ width: 18, height: sentH, background: `linear-gradient(to top, ${C.yellow}, rgba(252,175,23,0.4))`, borderRadius: '3px 3px 0 0' }} />
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: C.green }}>{r.leads_submitted}</span>
+                        <div style={{ width: 18, height: leadsH, background: `linear-gradient(to top, ${C.green}, rgba(67,183,73,0.5))`, borderRadius: '3px 3px 0 0' }} />
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 11, color: C.mutedText, textAlign: 'center', lineHeight: 1.3 }}>
+                      {r.agent_name.split(' ')[0]}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── SMS Activity Table ───────────────────────────────────── */}
       <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden' }}>
@@ -492,6 +519,36 @@ export default function SmsClient() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── Leads by Agent ──────────────────────────────────────── */}
+      <div style={{ background: C.card, border: `1px solid ${bd}`, borderRadius: 14, overflow: 'hidden', marginBottom: 24 }}>
+        <div style={{ padding: '14px 20px', borderBottom: `1px solid ${bd}` }}>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>Leads by Agent</span>
+        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ borderBottom: `1px solid ${bd}` }}>
+              <th style={{ padding: '10px 20px', textAlign: 'left',  fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Agent</th>
+              <th style={{ padding: '10px 20px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Leads Assigned</th>
+            </tr>
+          </thead>
+          <tbody>
+            {agentRows.length === 0 && (
+              <tr><td colSpan={2} style={{ padding: 24, textAlign: 'center', fontSize: 13, color: C.dimText }}>No data</td></tr>
+            )}
+            {agentRows.map((row, i, arr) => (
+              <tr key={row.name}
+                style={{ borderBottom: i < arr.length - 1 ? `1px solid ${bd}` : undefined }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.025)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+              >
+                <td style={{ padding: '11px 20px', fontSize: 14, color: C.text, fontWeight: 600 }}>{row.name}</td>
+                <td style={{ padding: '11px 20px', textAlign: 'right', fontSize: 14, fontWeight: 700, color: C.yellow }}>{row.count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       <div style={{ marginTop: 28, textAlign: 'center' }}>

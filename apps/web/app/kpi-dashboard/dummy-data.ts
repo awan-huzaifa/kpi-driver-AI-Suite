@@ -492,3 +492,54 @@ export const DUMMY_PPL_META: PplLeadMeta[] = generatePplMeta()
 
 // ── Helpers re-exported for convenience ──────────────────────────────────────
 export { ACQ_LEAD_SOURCES, DISPO_LEAD_SOURCES, PPC_WEBSITES, PPC_FORMS, DM_CAMPAIGNS, SEO_WEBSITES, SEO_FORMS }
+
+// ── CEO Dashboard — financial dummy data ─────────────────────────────────────
+
+export const ACQ_LEAD_SOURCE_COSTS: Record<string, number> = {
+  'Call':           3200,
+  'PPC':            8500,
+  'SEO':            2100,
+  'DM':             1800,
+  'PPL':            4200,
+  'Listed':         1200,
+  'SMS':             900,
+  'Inbound Seller':  500,
+}
+
+export const DISPO_LEAD_SOURCE_COSTS: Record<string, number> = {
+  'SEO':            2800,
+  'Listed':         1500,
+  'PPL':            3200,
+  'DM':             1600,
+  'PPC':            4200,
+  'Zillow':         2100,
+  'Redfin':         1800,
+  'PropStream':     1200,
+  'Facebook':       3500,
+  'Inbound Buyer':   500,
+  'Investor Lift':  1000,
+  'Realtor.com':    2500,
+  'SMS':             800,
+  'Call':           1100,
+  'MLS':             300,
+}
+
+export const CEO_EXPENSES = [
+  { category: 'Commission',  amount: 12000 },
+  { category: 'Admin',       amount:  4500 },
+  { category: 'Draws',       amount:  8000 },
+  { category: 'Dispo Fees',  amount:  2200 },
+  { category: 'Payroll',     amount: 18000 },
+  { category: 'Software',    amount:  1800 },
+] as const
+
+export const EXIT_STRATEGIES = ['Wholesale', 'Fix & Flip', 'Seller Finance', 'Subject To', 'Novation'] as const
+export type ExitStrategy = typeof EXIT_STRATEGIES[number]
+
+const exitRng = lcg(166)
+
+export const DUMMY_EXIT_STRATEGIES = new Map<string, ExitStrategy>(
+  DUMMY_EVENTS
+    .filter(e => e.kpi_name === 'closed_deal')
+    .map(e => [e.contact_id, EXIT_STRATEGIES[Math.floor(exitRng() * EXIT_STRATEGIES.length)] as ExitStrategy])
+)
