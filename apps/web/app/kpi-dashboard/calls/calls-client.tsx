@@ -610,8 +610,5 @@ export default function CallsClient() {
         </table>
       </div>
 
-      <div style={{ marginTop: 28, textAlign: 'center' }}>
-        <span style={{
-      </div>
   )
 }
