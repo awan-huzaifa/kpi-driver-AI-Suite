@@ -278,10 +278,6 @@ export default function CeoDashboardClient() {
           <h1 style={{ fontSize: 22, fontWeight: 800, color: C.white, margin: 0 }}>CEO Dashboard</h1>
           <p style={{ fontSize: 13, color: C.dimText, marginTop: 4 }}>Financial overview — revenue, costs, ROAS, and profitability per channel</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: 'rgba(252,175,23,0.08)', border: '1px solid rgba(252,175,23,0.2)', borderRadius: 8 }}>
-          <span style={{ fontSize: 11, color: C.yellow, fontWeight: 700, letterSpacing: '0.06em' }}>MOCKUP</span>
-          <span style={{ fontSize: 11, color: C.dimText }}>dummy data · replace in Milestone 2</span>
-        </div>
       </div>
 
       {/* ── Stat cards ─────────────────────────────────────────────────────── */}
@@ -679,7 +675,7 @@ export default function CeoDashboardClient() {
         <div style={{ padding: '16px 24px', borderBottom: `1px solid ${bd}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>Monthly Business Expenses</span>
-            <span style={{ fontSize: 11, color: C.dimText, marginLeft: 10 }}>excluding lead spend · admin-editable in Milestone 2</span>
+            <span style={{ fontSize: 11, color: C.dimText, marginLeft: 10 }}>excluding lead spend</span>
           </div>
           <span style={{ fontSize: 14, fontWeight: 700, color: C.red }}>{fmtK(totalOtherExpenses)} total</span>
         </div>

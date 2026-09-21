@@ -61,8 +61,8 @@ function SaveToast({ show, onHide }: { show: boolean; onHide: () => void }) {
         <path d="M4.5 8.5 L7 11 L11.5 5.5" stroke={C.green} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: C.green }}>Changes saved (mock)</div>
-        <div style={{ fontSize: 11, color: C.dimText, marginTop: 1 }}>Persists to Supabase in Milestone 2 · click to dismiss</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.green }}>Changes saved</div>
+        <div style={{ fontSize: 11, color: C.dimText, marginTop: 1 }}>Click to dismiss</div>
       </div>
     </div>
   )
@@ -232,9 +232,6 @@ export default function FinancesClient() {
             </svg>
             Save Changes
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(252,175,23,0.08)', border: '1px solid rgba(252,175,23,0.2)', borderRadius: 8 }}>
-            <span style={{ fontSize: 10, color: C.yellow, fontWeight: 700 }}>MOCKUP</span>
-          </div>
         </div>
       </div>
 
@@ -481,7 +478,7 @@ export default function FinancesClient() {
               <circle cx="9" cy="5.5" r="0.8" fill={C.blue} />
             </svg>
             <div style={{ fontSize: 12, color: C.dimText, lineHeight: 1.6 }}>
-              <strong style={{ color: C.blue }}>In Milestone 2</strong> — these categories will be editable by admin/accountant from this screen and saved per-month to Supabase. The CEO Dashboard will pull live values automatically. You can also add custom expense categories.
+              Log monthly business expenses here. These values feed directly into the CEO Dashboard cost and ROAS calculations.
             </div>
           </div>
         </div>
@@ -571,7 +568,7 @@ export default function FinancesClient() {
               <circle cx="9" cy="5.5" r="0.8" fill={C.green} />
             </svg>
             <div style={{ fontSize: 12, color: C.dimText, lineHeight: 1.6 }}>
-              <strong style={{ color: C.green }}>How profits flow</strong> — reps should enter the deal profit on the GHL contact before moving it to Closed Deal. That value comes in via webhook as <code style={{ color: C.blue, fontSize: 11 }}>potential_profit</code>. If missing or incorrect, the accountant corrects it here. In Milestone 2, edits save to <code style={{ color: C.blue, fontSize: 11 }}>live_calls.potential_profit</code> and immediately update the CEO Dashboard.
+              <strong style={{ color: C.green }}>How profits flow</strong> — reps enter the deal profit on the GHL contact before moving it to Closed Deal. That value comes in via webhook as <code style={{ color: C.blue, fontSize: 11 }}>potential_profit</code>. If missing or incorrect, the accountant corrects it here.
             </div>
           </div>
         </div>

@@ -486,11 +486,6 @@ export default function OverviewClient() {
         </div>
       )}
 
-      <div style={{ marginTop: 28, textAlign: 'center' }}>
-        <span style={{ fontSize: 11, color: C.dimText, background: 'rgba(252,175,23,0.07)', border: '1px solid rgba(252,175,23,0.15)', borderRadius: 6, padding: '5px 12px', letterSpacing: '0.04em' }}>
-          MOCKUP — dummy data · replace with Supabase query in Milestone 2
-        </span>
-      </div>
     </div>
   )
 }
