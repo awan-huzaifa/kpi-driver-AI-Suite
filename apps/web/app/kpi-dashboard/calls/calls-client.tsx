@@ -610,5 +610,6 @@ export default function CallsClient() {
         </table>
       </div>
 
+    </div>
   )
 }
