@@ -1,0 +1,16 @@
+{
+  "v": 4,
+  "createdOnFiles": { "v": 1, "at": "2026-09-24T18:55:00Z" },
+  "title": "KPI Driver — Product Success Metrics",
+  "order": ["cover", "north-star", "aarrr", "sales-coach", "training-coach", "underwriting", "skip-tracing", "platform", "priority"],
+  "sections": {
+    "s1": { "description": "What we measure and why", "start": "cover" },
+    "s2": { "description": "Per-app outcome metrics", "start": "sales-coach" },
+    "s3": { "description": "Platform-wide view and priorities", "start": "platform" }
+  },
+  "faces": {
+    "dm-sans": { "family": "DM Sans", "href": "https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" },
+    "nunito-sans": { "family": "Nunito Sans", "href": "https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700&display=swap" }
+  },
+  "designSystems": []
+}

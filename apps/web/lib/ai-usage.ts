@@ -9,15 +9,16 @@ export interface CostBreakdown {
 }
 
 export interface UsageLog {
-  company_id:      string;
-  app:             "underwriting" | "sales_coach" | "training_coach" | "note_taker" | "data_enrichment";
-  entity_id:       string;
-  entity_type:     "deal" | "live_call" | "training_call" | "note_taker_call" | "data_enrichment_log";
-  input_tokens:    number;
-  output_tokens:   number;
-  cost_usd:        number;
-  model:           string;
-  cost_breakdown?: CostBreakdown | null;
+  company_id:        string;
+  app:               "underwriting" | "sales_coach" | "training_coach" | "note_taker" | "data_enrichment";
+  entity_id:         string;
+  entity_type:       "deal" | "live_call" | "training_call" | "note_taker_call" | "data_enrichment_log";
+  input_tokens:      number;
+  output_tokens:     number;
+  cost_usd:          number;
+  model:             string;
+  cost_breakdown?:   CostBreakdown | null;
+  provider_cost_usd?: number;
 }
 
 export async function logUsage(entry: UsageLog): Promise<void> {

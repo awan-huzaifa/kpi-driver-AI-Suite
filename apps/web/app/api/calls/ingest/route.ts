@@ -244,27 +244,32 @@ export async function POST(req: NextRequest) {
     // Fetch per-token charged prices — prefer company override, fall back to global
     const { data: cfgRows } = await admin
       .from("billing_config")
-      .select("claude_input_charged_per_m, claude_output_charged_per_m, company_id")
+      .select("claude_input_charged_per_m, claude_output_charged_per_m, claude_input_cost_per_m, claude_output_cost_per_m, company_id")
       .eq("app", "sales_coach")
       .or(`company_id.eq.${user.company_id},company_id.is.null`);
     const pricingRow = cfgRows?.find(r => r.company_id === user.company_id) ?? cfgRows?.find(r => r.company_id === null);
 
     const chargedInputPerM  = Number(pricingRow?.claude_input_charged_per_m  ?? 3.0);
     const chargedOutputPerM = Number(pricingRow?.claude_output_charged_per_m ?? 15.0);
+    const costInputPerM     = Number(pricingRow?.claude_input_cost_per_m     ?? 3.0);
+    const costOutputPerM    = Number(pricingRow?.claude_output_cost_per_m    ?? 15.0);
     const deductionUsd = (result._usage.inputTokens  / 1_000_000) * chargedInputPerM
                        + (result._usage.outputTokens / 1_000_000) * chargedOutputPerM;
+    const providerCostUsd = (result._usage.inputTokens  / 1_000_000) * costInputPerM
+                          + (result._usage.outputTokens / 1_000_000) * costOutputPerM;
 
-    console.log(`[ingest:billing] in=${result._usage.inputTokens} out=${result._usage.outputTokens} charged=$${deductionUsd.toFixed(5)} (${chargedInputPerM}/1M in · ${chargedOutputPerM}/1M out)`);
+    console.log(`[ingest:billing] in=${result._usage.inputTokens} out=${result._usage.outputTokens} charged=$${deductionUsd.toFixed(5)} cost=$${providerCostUsd.toFixed(5)}`);
 
     void logUsage({
-      company_id:    user.company_id,
-      app:           "sales_coach",
-      entity_id:     call.id,
-      entity_type:   "live_call",
-      input_tokens:  result._usage.inputTokens,
-      output_tokens: result._usage.outputTokens,
-      cost_usd:      deductionUsd,
-      model:         result._usage.model,
+      company_id:       user.company_id,
+      app:              "sales_coach",
+      entity_id:        call.id,
+      entity_type:      "live_call",
+      input_tokens:     result._usage.inputTokens,
+      output_tokens:    result._usage.outputTokens,
+      cost_usd:         deductionUsd,
+      model:            result._usage.model,
+      provider_cost_usd: providerCostUsd,
       cost_breakdown: {
         ai: parseFloat(deductionUsd.toFixed(6)),
       },

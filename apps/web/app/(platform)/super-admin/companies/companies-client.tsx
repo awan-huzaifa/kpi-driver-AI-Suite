@@ -48,6 +48,9 @@ interface Company {
   created_at:          string
   user_count:          number
   logo_url:            string | null
+  total_billed:        number
+  total_cost:          number
+  profit:              number
 }
 
 interface Props {
@@ -217,10 +220,10 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                {['Company', 'GHL Sub-Account ID', 'Stripe Customer ID', 'Wallet', 'Users', 'Created', ''].map((h, i) => (
+                {['Company', 'GHL Sub-Account ID', 'Stripe Customer ID', 'Wallet', 'Total Billed', 'Total Cost', 'Profit', 'Users', 'Created', ''].map((h, i) => (
                   <th key={h || i} style={{
-                    textAlign: i >= 3 && i <= 4 ? 'right' : 'left',
-                    padding: i === 0 ? '10px 22px' : i === 6 ? '10px 22px' : '10px 12px',
+                    textAlign: (i >= 3 && i <= 8) ? 'right' : 'left',
+                    padding: i === 0 ? '10px 22px' : i === 9 ? '10px 22px' : '10px 12px',
                     fontSize: 10, fontWeight: 700, color: C.dimText,
                     textTransform: 'uppercase', letterSpacing: '0.06em',
                   }}>{h}</th>
@@ -257,6 +260,21 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                   <td style={{ padding: '14px 12px', textAlign: 'right' }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: (c.wallet_balance ?? 0) > 0 ? C.green : C.dimText, fontVariantNumeric: 'tabular-nums' }}>
                       ${(c.wallet_balance ?? 0).toFixed(2)}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 12px', textAlign: 'right' }}>
+                    <span style={{ fontSize: 12, color: C.bodyText, fontVariantNumeric: 'tabular-nums' }}>
+                      ${(c.total_billed ?? 0).toFixed(2)}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 12px', textAlign: 'right' }}>
+                    <span style={{ fontSize: 12, color: C.dimText, fontVariantNumeric: 'tabular-nums' }}>
+                      ${(c.total_cost ?? 0).toFixed(2)}
+                    </span>
+                  </td>
+                  <td style={{ padding: '14px 12px', textAlign: 'right' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: (c.profit ?? 0) > 0 ? C.green : C.dimText, fontVariantNumeric: 'tabular-nums' }}>
+                      ${(c.profit ?? 0).toFixed(2)}
                     </span>
                   </td>
                   <td style={{ padding: '14px 12px', textAlign: 'right' }}>

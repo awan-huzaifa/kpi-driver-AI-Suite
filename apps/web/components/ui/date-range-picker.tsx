@@ -3,53 +3,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type DatePeriod = "today" | "yesterday" | "7d" | "30d" | "month" | "all" | "custom";
-
-export const DATE_PRESETS: { value: DatePeriod; label: string }[] = [
-  { value: "today",     label: "Today"        },
-  { value: "yesterday", label: "Yesterday"    },
-  { value: "7d",        label: "Last 7 Days"  },
-  { value: "30d",       label: "Last 30 Days" },
-  { value: "month",     label: "This Month"   },
-  { value: "all",       label: "All Time"     },
-  { value: "custom",    label: "Custom"       },
-];
-
-export function periodBounds(
-  period: DatePeriod,
-  customFrom: string,
-  customTo: string,
-): { from: Date | null; to: Date | null } {
-  const now   = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const DAY   = 86_400_000;
-
-  switch (period) {
-    case "today":     return { from: today, to: null };
-    case "yesterday": return { from: new Date(today.getTime() - DAY), to: today };
-    case "7d":        return { from: new Date(today.getTime() - 7  * DAY), to: null };
-    case "30d":       return { from: new Date(today.getTime() - 30 * DAY), to: null };
-    case "month":     return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: null };
-    case "all":       return { from: null, to: null };
-    case "custom":    return {
-      from: customFrom ? new Date(customFrom)             : null,
-      to:   customTo   ? new Date(`${customTo}T23:59:59`) : null,
-    };
-  }
-}
+import type { DatePeriod } from "@/lib/date-utils";
+import { DATE_PRESETS, periodBounds, fmtDisplay } from "@/lib/date-utils";
+export type { DatePeriod } from "@/lib/date-utils";
+export { DATE_PRESETS, periodBounds, fmtDisplay } from "@/lib/date-utils";
 
 /* ── helpers ────────────────────────────────────────── */
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAY_NAMES   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
-
-function toYMD(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 function parseYMD(s: string): Date | null {
   if (!s) return null;
@@ -58,10 +20,11 @@ function parseYMD(s: string): Date | null {
   return new Date(y, m - 1, d);
 }
 
-export function fmtDisplay(s: string): string {
-  const d = parseYMD(s);
-  if (!d) return "Pick date";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+function toYMD(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 /* ── CalendarPopup ──────────────────────────────────── */

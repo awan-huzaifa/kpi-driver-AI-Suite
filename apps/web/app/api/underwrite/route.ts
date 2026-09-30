@@ -603,15 +603,20 @@ export async function POST(request: NextRequest) {
     if (companyId && dealId) {
       const adminDb = createAdminClient();
 
+      const providerCostUsd = claudeActualCostUsd
+        + rentcastCalls * RENTCAST_COST_USD
+        + axessoCalls   * AXESSO_COST_USD;
+
       void logUsage({
-        company_id:    companyId,
-        app:           "underwriting",
-        entity_id:     dealId,
-        entity_type:   "deal",
-        input_tokens:  totalInput,
-        output_tokens: totalOutput,
-        cost_usd:      deductionUsd,
-        model:         "claude-opus-4-7",
+        company_id:        companyId,
+        app:               "underwriting",
+        entity_id:         dealId,
+        entity_type:       "deal",
+        input_tokens:      totalInput,
+        output_tokens:     totalOutput,
+        cost_usd:          deductionUsd,
+        model:             "claude-opus-4-7",
+        provider_cost_usd: providerCostUsd,
         cost_breakdown: {
           property_api_1: parseFloat(axessoChargedTotal.toFixed(6)),
           property_api_2: parseFloat(rentcastChargedTotal.toFixed(6)),

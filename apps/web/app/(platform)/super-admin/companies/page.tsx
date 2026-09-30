@@ -27,7 +27,7 @@ export default async function SuperAdminCompaniesPage() {
 
   const admin = createAdminClient();
 
-  const [{ data: companies }, { data: userCounts }] = await Promise.all([
+  const [{ data: companies }, { data: userCounts }, { data: profitRows }] = await Promise.all([
     admin
       .from("companies")
       .select("id, name, ghl_sub_account_id, stripe_customer_id, timezone, wallet_balance, created_at, logo_url")
@@ -35,6 +35,7 @@ export default async function SuperAdminCompaniesPage() {
     admin
       .from("users")
       .select("company_id"),
+    admin.rpc("get_all_companies_profit_summary"),
   ]);
 
   // Count users per company
@@ -43,9 +44,22 @@ export default async function SuperAdminCompaniesPage() {
     if (u.company_id) countMap[u.company_id] = (countMap[u.company_id] ?? 0) + 1;
   }
 
+  // Profit summary per company
+  const profitMap: Record<string, { total_billed: number; total_cost: number; profit: number }> = {};
+  for (const r of profitRows ?? []) {
+    profitMap[r.company_id] = {
+      total_billed: Number(r.total_billed ?? 0),
+      total_cost:   Number(r.total_cost   ?? 0),
+      profit:       Number(r.profit       ?? 0),
+    };
+  }
+
   const rows = (companies ?? []).map((c) => ({
     ...c,
-    user_count: countMap[c.id] ?? 0,
+    user_count:   countMap[c.id]            ?? 0,
+    total_billed: profitMap[c.id]?.total_billed ?? 0,
+    total_cost:   profitMap[c.id]?.total_cost   ?? 0,
+    profit:       profitMap[c.id]?.profit       ?? 0,
   }));
 
   return (

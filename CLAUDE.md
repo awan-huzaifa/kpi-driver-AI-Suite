@@ -93,6 +93,19 @@ Supabase Postgres. Migrations in `supabase/migrations/` (`001_subscriptions.sql`
 
 Append a dated, terse entry here whenever a non-trivial change ships, so future sessions don't have to re-derive history from chat logs. Newest entry on top. Keep each entry to a few lines — what shipped and why, not a diff.
 
+### 2026-09-30 — Billing profit tracking (provider_cost_usd)
+
+- Migration `056_provider_cost_usd.sql`: adds `provider_cost_usd numeric(12,6)` to `ai_usage_logs` and `skip_tracing_logs`; adds `de_cost_per_call_usd` to `billing_config` for data enrichment provider rate; creates `get_all_companies_profit_summary()` RPC that unions both tables and returns `(company_id, total_billed, total_cost, profit)`.
+- `lib/ai-usage.ts`: `UsageLog` interface gains optional `provider_cost_usd?: number`.
+- All 6 ingest routes now snapshot provider cost at run time alongside charged price:
+  - `api/calls/ingest`: fetches `claude_input/output_cost_per_m`, computes `providerCostUsd` from tokens × actual rate.
+  - `api/training-coach/ingest`: fetches `assistable_cost_per_min` + claude cost columns.
+  - `api/underwrite/route.ts`: uses existing `claudeActualCostUsd` (hardcoded Anthropic Opus rates) + `RENTCAST_COST_USD` × calls + `AXESSO_COST_USD` × calls.
+  - `api/note-taker/ingest`: fetches `nt_whisper/gpt_input/gpt_output_cost_per_*` columns.
+  - `api/data-enrichment/ingest`: fetches new `de_cost_per_call_usd` column.
+  - `api/skip-tracing/ingest`: fetches `st_*_rate_usd` columns, saves `provider_cost_usd` to `skip_tracing_logs` row directly.
+- Super admin companies page: calls `get_all_companies_profit_summary()` RPC, adds `total_billed`, `total_cost`, `profit` to each row. Client shows 3 new right-aligned columns: Total Billed / Total Cost / Profit (green when positive).
+
 ### 2026-07-07 — Unified sidebar (PlatformSidebar) + date filter standardization
 
 **Unified PlatformSidebar:**

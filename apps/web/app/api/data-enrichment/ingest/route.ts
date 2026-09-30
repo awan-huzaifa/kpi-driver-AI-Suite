@@ -76,17 +76,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Insufficient wallet balance" }, { status: 402 });
   }
 
-  // Fetch charged price per call — prefer company override, fall back to global
+  // Fetch charged + provider cost per call — prefer company override, fall back to global
   const { data: cfgRows } = await admin
     .from("billing_config")
-    .select("de_charged_per_call_usd, company_id")
+    .select("de_charged_per_call_usd, de_cost_per_call_usd, company_id")
     .eq("app", "data_enrichment")
     .or(`company_id.eq.${company.id},company_id.is.null`);
   const pricingRow = (cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null)) as Record<string, unknown> | null;
 
-  const deductionUsd = Number(pricingRow?.de_charged_per_call_usd ?? 0.0018);
+  const deductionUsd    = Number(pricingRow?.de_charged_per_call_usd ?? 0.0018);
+  const providerCostUsd = Number(pricingRow?.de_cost_per_call_usd    ?? 0.0018);
 
-  console.log(`[data-enrichment:billing] charged=$${deductionUsd.toFixed(6)}/call`);
+  console.log(`[data-enrichment:billing] charged=$${deductionUsd.toFixed(6)} cost=$${providerCostUsd.toFixed(6)}/call`);
 
   // Insert — idempotent on external_id
   const { data: log, error: insertErr } = await admin
@@ -123,14 +124,15 @@ export async function POST(req: NextRequest) {
   else void autoTopupIfNeeded(company.id, Number(newBalance));
 
   void logUsage({
-    company_id:    company.id,
-    app:           "data_enrichment",
-    entity_id:     log.id,
-    entity_type:   "data_enrichment_log",
-    input_tokens:  0,
-    output_tokens: 0,
-    cost_usd:      deductionUsd,
-    model:         "axesso",
+    company_id:        company.id,
+    app:               "data_enrichment",
+    entity_id:         log.id,
+    entity_type:       "data_enrichment_log",
+    input_tokens:      0,
+    output_tokens:     0,
+    cost_usd:          deductionUsd,
+    model:             "axesso",
+    provider_cost_usd: providerCostUsd,
   });
 
   console.log(`[data-enrichment:ingest] saved log ${log.id}, ${fields?.length ?? 0} fields, cost $${deductionUsd.toFixed(6)}`);

@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   // Fetch per-flow charged prices — prefer company override, fall back to global
   const { data: cfgRows } = await admin
     .from("billing_config")
-    .select("st_charged_normal_usd, st_charged_advanced_usd, st_charged_apn_usd, st_charged_dnc_usd, company_id")
+    .select("st_charged_normal_usd, st_charged_advanced_usd, st_charged_apn_usd, st_charged_dnc_usd, st_normal_rate_usd, st_advanced_rate_usd, st_apn_rate_usd, st_dnc_rate_usd, company_id")
     .eq("app", "skip_tracing")
     .or(`company_id.eq.${company.id},company_id.is.null`);
   const pr = (cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null)) as Record<string, unknown> | null;
@@ -90,10 +90,15 @@ export async function POST(req: NextRequest) {
     flowType === "dnc"  ? Number(pr?.st_charged_dnc_usd      ?? 0.02) :
     isAdvanced          ? Number(pr?.st_charged_advanced_usd ?? 0.04) :
                           Number(pr?.st_charged_normal_usd   ?? 0.02);
+  const providerCostUsd =
+    flowType === "apn"  ? Number(pr?.st_apn_rate_usd      ?? 0.10) :
+    flowType === "dnc"  ? Number(pr?.st_dnc_rate_usd      ?? 0.02) :
+    isAdvanced          ? Number(pr?.st_advanced_rate_usd ?? 0.04) :
+                          Number(pr?.st_normal_rate_usd   ?? 0.02);
 
   const deductionUsd = chargedUsdPerHit;  // per hit, not per credit — one webhook = one hit
 
-  console.log(`[skip-tracing:billing] flow=${flowType} advanced=${isAdvanced} charged=$${chargedUsdPerHit.toFixed(5)}/hit total=$${deductionUsd.toFixed(5)}`);
+  console.log(`[skip-tracing:billing] flow=${flowType} advanced=${isAdvanced} charged=$${chargedUsdPerHit.toFixed(5)} cost=$${providerCostUsd.toFixed(5)}`);
 
   // Wallet pre-check only when credits will be deducted
   if (creditsDeducted > 0 && (company.wallet_balance ?? 0) <= 0) {
@@ -103,17 +108,18 @@ export async function POST(req: NextRequest) {
 
   // Build log row — common fields
   const logRow: Record<string, unknown> = {
-    company_id:       company.id,
-    contact_id:       contact_id   ?? null,
-    contact_name:     contact_name,
-    flow_type:        flowType,
+    company_id:        company.id,
+    contact_id:        contact_id   ?? null,
+    contact_name:      contact_name,
+    flow_type:         flowType,
     hit,
-    credits_deducted: creditsDeducted,
-    cost_usd:         deductionUsd,
-    persons_count:    personsCount,
-    lead_source:      lead_source,
-    crm_link:         crm_link,
-    payload:          body,
+    credits_deducted:  creditsDeducted,
+    cost_usd:          deductionUsd,
+    provider_cost_usd: providerCostUsd,
+    persons_count:     personsCount,
+    lead_source:       lead_source,
+    crm_link:          crm_link,
+    payload:           body,
   };
 
   // Extract type-specific indexed fields

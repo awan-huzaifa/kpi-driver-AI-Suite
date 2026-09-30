@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   // Fetch per-component charged prices — prefer company override, fall back to global
   const { data: cfgRows } = await admin
     .from("billing_config")
-    .select("nt_whisper_charged_per_min, nt_gpt_input_charged_per_m, nt_gpt_output_charged_per_m, company_id")
+    .select("nt_whisper_charged_per_min, nt_gpt_input_charged_per_m, nt_gpt_output_charged_per_m, nt_whisper_cost_per_min, nt_gpt_input_cost_per_m, nt_gpt_output_cost_per_m, company_id")
     .eq("app", "note_taker")
     .or(`company_id.eq.${company.id},company_id.is.null`);
   const pricingRow = cfgRows?.find(r => r.company_id === company.id) ?? cfgRows?.find(r => r.company_id === null);
@@ -94,6 +94,9 @@ export async function POST(req: NextRequest) {
   const chargedWhisperPerMin  = Number(pricingRow?.nt_whisper_charged_per_min  ?? 0.006);
   const chargedGptInputPerM   = Number(pricingRow?.nt_gpt_input_charged_per_m  ?? 0.75);
   const chargedGptOutputPerM  = Number(pricingRow?.nt_gpt_output_charged_per_m ?? 4.50);
+  const costWhisperPerMin     = Number(pricingRow?.nt_whisper_cost_per_min     ?? 0.006);
+  const costGptInputPerM      = Number(pricingRow?.nt_gpt_input_cost_per_m     ?? 0.75);
+  const costGptOutputPerM     = Number(pricingRow?.nt_gpt_output_cost_per_m    ?? 4.50);
 
   const inTokens       = Math.max(0, input_tokens  ?? 0);
   const outTokens      = Math.max(0, output_tokens ?? 0);
@@ -101,8 +104,11 @@ export async function POST(req: NextRequest) {
   const gptCharged     = (inTokens  / 1_000_000) * chargedGptInputPerM
                        + (outTokens / 1_000_000) * chargedGptOutputPerM;
   const deductionUsd   = whisperCharged + gptCharged;
+  const providerCostUsd = ((duration_sec ?? 0) / 60) * costWhisperPerMin
+                        + (inTokens  / 1_000_000) * costGptInputPerM
+                        + (outTokens / 1_000_000) * costGptOutputPerM;
 
-  console.log(`[note-taker:billing] whisper=$${whisperCharged.toFixed(5)} gpt=$${gptCharged.toFixed(5)} total=$${deductionUsd.toFixed(5)}`);
+  console.log(`[note-taker:billing] charged=$${deductionUsd.toFixed(5)} cost=$${providerCostUsd.toFixed(5)}`);
 
   // Insert note_taker_call — idempotent on external_call_id
   const { data: call, error: insertErr } = await admin
@@ -139,14 +145,15 @@ export async function POST(req: NextRequest) {
 
   if (deductionUsd > 0) {
     void logUsage({
-      company_id:    company.id,
-      app:           "note_taker",
-      entity_id:     call.id,
-      entity_type:   "note_taker_call",
-      input_tokens:  inTokens,
-      output_tokens: outTokens,
-      cost_usd:      deductionUsd,
-      model:         MODEL_NAME,
+      company_id:        company.id,
+      app:               "note_taker",
+      entity_id:         call.id,
+      entity_type:       "note_taker_call",
+      input_tokens:      inTokens,
+      output_tokens:     outTokens,
+      cost_usd:          deductionUsd,
+      model:             MODEL_NAME,
+      provider_cost_usd: providerCostUsd,
       cost_breakdown: {
         ai:            parseFloat(gptCharged.toFixed(6)),
         transcription: parseFloat(whisperCharged.toFixed(6)),
