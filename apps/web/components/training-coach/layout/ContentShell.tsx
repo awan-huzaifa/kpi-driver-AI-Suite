@@ -27,7 +27,8 @@ export default function ContentShell({ children }: { children: React.ReactNode }
 
   return (
     <main
-      style={{ flex: 1, marginLeft: 248, minHeight: "100vh", position: "relative", overflow: "hidden" }}
+      className="main-content"
+      style={{ flex: 1, minHeight: "100vh", position: "relative", overflow: "hidden" }}
       onMouseMove={(e) => {
         const { left, top } = e.currentTarget.getBoundingClientRect();
         mouseX.set(e.clientX - left);

@@ -10,7 +10,7 @@ export default async function TrainingCoachPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, access_role, company_id")
+    .select("id, access_role, company_id, notify_billing")
     .eq("id", user.id)
     .single();
 
@@ -47,6 +47,7 @@ export default async function TrainingCoachPage() {
       companies={companies}
       accessRole={profile?.access_role ?? "user"}
       currentUserId={profile?.id}
+      showCost={profile?.access_role === "super_admin" || (profile?.access_role === "admin" && (profile?.notify_billing ?? false))}
     />
   );
 }

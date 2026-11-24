@@ -69,6 +69,8 @@ export interface PropertyDetails {
   taxAssessedValue: number | null;
   lastSalePrice: number | null;
   lastSaleDate: string | null; // ISO date
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 // ─── Axesso: Active listings ──────────────────────────────────────────────────

@@ -68,3 +68,10 @@ export async function updateCompanyAdmin(id: string, data: {
   if (error) throw new Error(error.message);
   revalidatePath("/super-admin/companies");
 }
+
+export async function setCompanyReportsEnabled(id: string, enabled: boolean) {
+  await requireSuperAdmin();
+  const admin = createAdminClient();
+  const { error } = await admin.from("companies").update({ reports_enabled: enabled }).eq("id", id);
+  if (error) throw new Error(error.message);
+}

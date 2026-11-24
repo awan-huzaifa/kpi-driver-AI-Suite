@@ -51,6 +51,7 @@ interface Company {
   total_billed:        number
   total_cost:          number
   profit:              number
+
 }
 
 interface Props {
@@ -263,12 +264,12 @@ export default function CompaniesClient({ companies: initial, currentUser, planI
                     </span>
                   </td>
                   <td style={{ padding: '14px 12px', textAlign: 'right' }}>
-                    <span style={{ fontSize: 12, color: C.bodyText, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: C.white, fontVariantNumeric: 'tabular-nums' }}>
                       ${(c.total_billed ?? 0).toFixed(2)}
                     </span>
                   </td>
                   <td style={{ padding: '14px 12px', textAlign: 'right' }}>
-                    <span style={{ fontSize: 12, color: C.dimText, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontSize: 12, color: C.red, fontVariantNumeric: 'tabular-nums' }}>
                       ${(c.total_cost ?? 0).toFixed(2)}
                     </span>
                   </td>

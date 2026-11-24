@@ -6,6 +6,23 @@ import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, extractTeamBullets, scRepTempla
 
 export const runtime = "nodejs";
 
+interface ReportMeta {
+  company_id:        string;
+  recipient_user_id: string | null;
+  recipient_email:   string;
+  app:               string;
+  variant:           string;
+  subject:           string;
+  html_content:      string;
+  period_label:      string;
+  period_from:       string;
+  period_to:         string;
+}
+
+function saveReport(admin: ReturnType<typeof createAdminClient>, meta: ReportMeta) {
+  void admin.from("sent_reports").insert(meta);
+}
+
 async function cleanBulletsForTeam(
   strengths: string[],
   actions: string[],
@@ -30,7 +47,7 @@ Coaching actions to rewrite:
 ${JSON.stringify(actions)}`
 
     const msg = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+      model: 'claude-sonnet-5-5',
       max_tokens: 1024,
       messages: [{ role: 'user', content: prompt }],
     })
@@ -124,14 +141,11 @@ export async function GET(req: Request) {
             for (const u of admins) {
               const email = emailMap.get(u.id)
               if (!email) continue
+              const subject = `Sales Coach ${typeLabel} Team Report — ${period.label}`
               try {
-                await getResend().emails.send({
-                  from:    FROM_EMAIL,
-                  to:      email,
-                  subject: `Sales Coach ${typeLabel} Team Report — ${period.label}`,
-                  html,
-                })
+                await getResend().emails.send({ from: FROM_EMAIL, to: email, subject, html })
                 totalSent++
+                saveReport(admin, { company_id: company.id, recipient_user_id: u.id, recipient_email: email, app: "sales_coach", variant: "team", subject, html_content: html, period_label: period.label, period_from: period.from, period_to: period.to })
               } catch (e) {
                 console.error(`[email-reports] SC team (${agentType}) send failed:`, e)
               }
@@ -146,30 +160,24 @@ export async function GET(req: Request) {
             const email = emailMap.get(u.id);
             if (!email) continue;
             const repHtml = scRepTemplate(u.full_name ?? "Agent", company.name, period, repCalls as any, reportLabel);
+            const repSubject = `Your Sales Coach Report — ${period.label}`;
             try {
-              await getResend().emails.send({
-                from:    FROM_EMAIL,
-                to:      email,
-                subject: `Your Sales Coach Report — ${period.label}`,
-                html:    repHtml,
-              });
+              await getResend().emails.send({ from: FROM_EMAIL, to: email, subject: repSubject, html: repHtml });
               totalSent++;
+              saveReport(admin, { company_id: company.id, recipient_user_id: u.id, recipient_email: email, app: "sales_coach", variant: "rep", subject: repSubject, html_content: repHtml, period_label: period.label, period_from: period.from, period_to: period.to })
             } catch (e) {
               console.error("[email-reports] SC rep send failed:", e);
             }
             // Send copy to admins so they can see each rep's individual report
             for (const a of admins) {
-              if (a.id === u.id) continue; // already got their own copy above
+              if (a.id === u.id) continue;
               const adminEmail = emailMap.get(a.id);
               if (!adminEmail) continue;
+              const copySubject = `[Team] ${u.full_name ?? "Agent"} — Sales Coach Report — ${period.label}`;
               try {
-                await getResend().emails.send({
-                  from:    FROM_EMAIL,
-                  to:      adminEmail,
-                  subject: `[Team] ${u.full_name ?? "Agent"} — Sales Coach Report — ${period.label}`,
-                  html:    repHtml,
-                });
+                await getResend().emails.send({ from: FROM_EMAIL, to: adminEmail, subject: copySubject, html: repHtml });
                 totalSent++;
+                saveReport(admin, { company_id: company.id, recipient_user_id: a.id, recipient_email: adminEmail, app: "sales_coach", variant: "rep_copy", subject: copySubject, html_content: repHtml, period_label: period.label, period_from: period.from, period_to: period.to })
               } catch (e) {
                 console.error("[email-reports] SC rep→admin copy failed:", e);
               }
@@ -192,14 +200,12 @@ export async function GET(req: Request) {
           for (const u of admins) {
             const email = emailMap.get(u.id);
             if (!email) continue;
+            const tcTeamHtml = tcTeamTemplate(company.name, period, tcCalls as any, reportLabel);
+            const tcTeamSubject = `Training Coach Team Report — ${period.label}`;
             try {
-              await getResend().emails.send({
-                from:    FROM_EMAIL,
-                to:      email,
-                subject: `Training Coach Team Report — ${period.label}`,
-                html:    tcTeamTemplate(company.name, period, tcCalls as any, reportLabel),
-              });
+              await getResend().emails.send({ from: FROM_EMAIL, to: email, subject: tcTeamSubject, html: tcTeamHtml });
               totalSent++;
+              saveReport(admin, { company_id: company.id, recipient_user_id: u.id, recipient_email: email, app: "training_coach", variant: "team", subject: tcTeamSubject, html_content: tcTeamHtml, period_label: period.label, period_from: period.from, period_to: period.to })
             } catch (e) {
               console.error("[email-reports] TC team send failed:", e);
             }
@@ -213,14 +219,11 @@ export async function GET(req: Request) {
             const email = emailMap.get(u.id);
             if (!email) continue;
             const repHtml = tcRepTemplate(u.full_name ?? "Agent", company.name, period, repCalls as any, reportLabel);
+            const tcRepSubject = `Your Training Report — ${period.label}`;
             try {
-              await getResend().emails.send({
-                from:    FROM_EMAIL,
-                to:      email,
-                subject: `Your Training Report — ${period.label}`,
-                html:    repHtml,
-              });
+              await getResend().emails.send({ from: FROM_EMAIL, to: email, subject: tcRepSubject, html: repHtml });
               totalSent++;
+              saveReport(admin, { company_id: company.id, recipient_user_id: u.id, recipient_email: email, app: "training_coach", variant: "rep", subject: tcRepSubject, html_content: repHtml, period_label: period.label, period_from: period.from, period_to: period.to })
             } catch (e) {
               console.error("[email-reports] TC rep send failed:", e);
             }
@@ -229,14 +232,11 @@ export async function GET(req: Request) {
               if (a.id === u.id) continue;
               const adminEmail = emailMap.get(a.id);
               if (!adminEmail) continue;
+              const tcCopySubject = `[Team] ${u.full_name ?? "Agent"} — Training Report — ${period.label}`;
               try {
-                await getResend().emails.send({
-                  from:    FROM_EMAIL,
-                  to:      adminEmail,
-                  subject: `[Team] ${u.full_name ?? "Agent"} — Training Report — ${period.label}`,
-                  html:    repHtml,
-                });
+                await getResend().emails.send({ from: FROM_EMAIL, to: adminEmail, subject: tcCopySubject, html: repHtml });
                 totalSent++;
+                saveReport(admin, { company_id: company.id, recipient_user_id: a.id, recipient_email: adminEmail, app: "training_coach", variant: "rep_copy", subject: tcCopySubject, html_content: repHtml, period_label: period.label, period_from: period.from, period_to: period.to })
               } catch (e) {
                 console.error("[email-reports] TC rep→admin copy failed:", e);
               }
@@ -265,14 +265,12 @@ export async function GET(req: Request) {
         for (const u of admins) {
           const email = emailMap.get(u.id);
           if (!email) continue;
+          const uwTeamHtml = uwTeamTemplate(company.name, period, dealsWithNames as any, reportLabel);
+          const uwTeamSubject = `Deal Underwriting Team Report — ${period.label}`;
           try {
-            await getResend().emails.send({
-              from:    FROM_EMAIL,
-              to:      email,
-              subject: `Deal Underwriting Team Report — ${period.label}`,
-              html:    uwTeamTemplate(company.name, period, dealsWithNames as any, reportLabel),
-            });
+            await getResend().emails.send({ from: FROM_EMAIL, to: email, subject: uwTeamSubject, html: uwTeamHtml });
             totalSent++;
+            saveReport(admin, { company_id: company.id, recipient_user_id: u.id, recipient_email: email, app: "underwriting", variant: "team", subject: uwTeamSubject, html_content: uwTeamHtml, period_label: period.label, period_from: period.from, period_to: period.to })
           } catch (e) {
             console.error("[email-reports] UW team send failed:", e);
           }
@@ -292,14 +290,11 @@ export async function GET(req: Request) {
           const email = emailMap.get(userId);
           if (!email) continue;
           const repHtml = uwTemplate(u.full_name ?? "User", company.name, period, userDeals as any, reportLabel);
+          const uwRepSubject = `Deal Underwriting Report — ${period.label}`;
           try {
-            await getResend().emails.send({
-              from:    FROM_EMAIL,
-              to:      email,
-              subject: `Deal Underwriting Report — ${period.label}`,
-              html:    repHtml,
-            });
+            await getResend().emails.send({ from: FROM_EMAIL, to: email, subject: uwRepSubject, html: repHtml });
             totalSent++;
+            saveReport(admin, { company_id: company.id, recipient_user_id: u.id, recipient_email: email, app: "underwriting", variant: "rep", subject: uwRepSubject, html_content: repHtml, period_label: period.label, period_from: period.from, period_to: period.to })
           } catch (e) {
             console.error("[email-reports] UW rep send failed:", e);
           }
@@ -308,14 +303,11 @@ export async function GET(req: Request) {
             if (a.id === u.id) continue;
             const adminEmail = emailMap.get(a.id);
             if (!adminEmail) continue;
+            const uwCopySubject = `[Team] ${u.full_name ?? "User"} — Deal Underwriting Report — ${period.label}`;
             try {
-              await getResend().emails.send({
-                from:    FROM_EMAIL,
-                to:      adminEmail,
-                subject: `[Team] ${u.full_name ?? "User"} — Deal Underwriting Report — ${period.label}`,
-                html:    repHtml,
-              });
+              await getResend().emails.send({ from: FROM_EMAIL, to: adminEmail, subject: uwCopySubject, html: repHtml });
               totalSent++;
+              saveReport(admin, { company_id: company.id, recipient_user_id: a.id, recipient_email: adminEmail, app: "underwriting", variant: "rep_copy", subject: uwCopySubject, html_content: repHtml, period_label: period.label, period_from: period.from, period_to: period.to })
             } catch (e) {
               console.error("[email-reports] UW rep→admin copy failed:", e);
             }

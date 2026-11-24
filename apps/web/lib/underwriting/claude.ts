@@ -16,11 +16,12 @@ import type {
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY_DEAL_UNDERWRITER, maxRetries: 5 });
 
-const MODEL: Anthropic.Model = "claude-opus-4-7";
+const MODEL: Anthropic.Model = "claude-opus-5-5";
 
 export type CallTokens = { inputTokens: number; outputTokens: number };
 
-function extractJSON(text: string): string {
+function extractJSON(text: string | undefined, label: string): string {
+  if (!text) throw new Error(`Claude ${label}: response contained no text block`);
   const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   return match ? match[1] : text.trim();
 }
@@ -108,28 +109,17 @@ IMPORTANT — data conflicts: The property details (beds, baths, sqft, year buil
     textBlock2,
   ];
 
-  console.log("\n" + "═".repeat(60));
-  console.log("CLAUDE CALL 1 — assessPropertyCondition");
-  console.log("═".repeat(60));
-  console.log("[CALL 1] SYSTEM PROMPT:\n", system);
-  console.log("[CALL 1] USER TEXT BLOCK 1:\n", textBlock1.text);
-  console.log("[CALL 1] USER TEXT BLOCK 2:\n", textBlock2.text);
-  console.log(`[CALL 1] PHOTO SOURCE: ${photoSource}`);
-  console.log("[CALL 1] MODEL:", MODEL, "| max_tokens: 2048");
-
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: 4096,
     system,
     messages: [{ role: "user", content: userContent }],
   });
 
-  const text = (response.content[0] as Anthropic.TextBlock).text;
-  console.log("[CALL 1] RAW RESPONSE:\n", text);
-  console.log("[CALL 1] USAGE:", JSON.stringify(response.usage));
+  const text = (response.content.find(b => b.type === "text") as Anthropic.TextBlock | undefined)?.text;
+  console.log(`[CALL 1] stop=${response.stop_reason} in=${response.usage.input_tokens} out=${response.usage.output_tokens}`);
 
-  const parsed = JSON.parse(extractJSON(text)) as { score: number; summary: string; lineItems: { category: string; notes: string }[] };
-  console.log("[CALL 1] PARSED OUTPUT:", JSON.stringify(parsed, null, 2));
+  const parsed = JSON.parse(extractJSON(text, "Call 1 (condition)")) as { score: number; summary: string; lineItems: { category: string; notes: string }[] };
 
   return { score: parsed.score, summary: parsed.summary, lineItems: parsed.lineItems, _tokens: { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens } };
 }
@@ -187,46 +177,21 @@ Use status and days-on-market as judgment signals, not rejection criteria: a lis
   );
   const compBlocks = compBlockArrays.flat();
 
-  console.log("\n" + "═".repeat(60));
-  console.log("CLAUDE CALL 2 — validateAndCategorizeComps");
-  console.log("═".repeat(60));
-  console.log("[CALL 2] SYSTEM PROMPT:\n", system);
-  console.log("[CALL 2] SUBJECT BLOCK:\n", subjectBlock.text);
-  console.log(`[CALL 2] TOTAL COMPS SENT: ${comps.length}`);
-  comps.forEach((c, i) => {
-    console.log(`[CALL 2] COMP #${i + 1}:`, {
-      address: c.address,
-      listPrice: c.salePrice,
-      pricePerSqft: Math.round(c.pricePerSqft),
-      sqft: c.sqft,
-      beds: c.beds,
-      baths: c.baths,
-      listingStatus: c.listingStatus,
-      daysOnMarket: c.daysOnMarket,
-      correlation: c.correlation,
-      photoCount: c.photos.length,
-      photoUrls: c.photos,
-    });
-  });
-  console.log("[CALL 2] MODEL:", MODEL, "| max_tokens: 2048");
-
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 2048,
+    max_tokens: 4096,
     system,
     messages: [{ role: "user", content: [subjectBlock, ...compBlocks] }],
   });
 
-  const text = (response.content[0] as Anthropic.TextBlock).text;
-  console.log("[CALL 2] RAW RESPONSE:\n", text);
-  console.log("[CALL 2] USAGE:", JSON.stringify(response.usage));
+  const text = (response.content.find(b => b.type === "text") as Anthropic.TextBlock | undefined)?.text;
+  console.log(`[CALL 2] stop=${response.stop_reason} in=${response.usage.input_tokens} out=${response.usage.output_tokens}`);
 
-  const parsed = JSON.parse(extractJSON(text)) as {
+  const parsed = JSON.parse(extractJSON(text, "Call 2 (comps)")) as {
     validatedComps: { compIndex: number; category: CompCategory }[];
     rejectedComps: { compIndex: number; reason: string }[];
     analystNotes: string;
   };
-  console.log("[CALL 2] PARSED OUTPUT:", JSON.stringify(parsed, null, 2));
 
   const rejectedIndices = new Set(parsed.rejectedComps.map((r) => r.compIndex));
 
@@ -238,13 +203,6 @@ Use status and days-on-market as judgment signals, not rejection criteria: a lis
       return { ...c, category: match?.category ?? null };
     })
     .filter((c): c is NormalizedComp => c !== null);
-
-  console.log("[CALL 2] FINAL VALIDATED COMPS:", JSON.stringify(
-    validatedComps.map((c) => ({ address: c.address, category: c.category, salePrice: c.salePrice, pricePerSqft: c.pricePerSqft })),
-    null, 2
-  ));
-  console.log("[CALL 2] REJECTED COMPS:", JSON.stringify(parsed.rejectedComps, null, 2));
-  console.log("[CALL 2] ANALYST NOTES:", parsed.analystNotes);
 
   return {
     validatedComps,
@@ -301,13 +259,6 @@ reasoning should be 2-3 sentences explaining how you weighed the AVM against the
     })),
   };
 
-  console.log("\n" + "═".repeat(60));
-  console.log("CLAUDE CALL 3 — synthesizeARV");
-  console.log("═".repeat(60));
-  console.log("[CALL 3] SYSTEM PROMPT:\n", system);
-  console.log("[CALL 3] INPUT BUNDLE:\n", JSON.stringify(bundle, null, 2));
-  console.log("[CALL 3] MODEL:", MODEL, "| max_tokens: 1024");
-
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 1024,
@@ -315,17 +266,15 @@ reasoning should be 2-3 sentences explaining how you weighed the AVM against the
     messages: [{ role: "user", content: JSON.stringify(bundle) }],
   });
 
-  const text = (response.content[0] as Anthropic.TextBlock).text;
-  console.log("[CALL 3] RAW RESPONSE:\n", text);
-  console.log("[CALL 3] USAGE:", JSON.stringify(response.usage));
+  const text = (response.content.find(b => b.type === "text") as Anthropic.TextBlock | undefined)?.text;
+  console.log(`[CALL 3] stop=${response.stop_reason} in=${response.usage.input_tokens} out=${response.usage.output_tokens}`);
 
-  const parsed = JSON.parse(extractJSON(text)) as {
+  const parsed = JSON.parse(extractJSON(text, "Call 3 (ARV)")) as {
     arv: number;
     arvLow: number;
     arvHigh: number;
     reasoning: string;
   };
-  console.log("[CALL 3] PARSED OUTPUT:", JSON.stringify(parsed, null, 2));
 
   return {
     arv: parsed.arv,
@@ -390,26 +339,17 @@ If the workflow flags include "arv_unavailable": no comps, AVM estimate, or Zest
     ...(input.property.notes ? { agentNotes: input.property.notes } : {}),
   };
 
-  console.log("\n" + "═".repeat(60));
-  console.log("CLAUDE CALL 4 — generateUnderwritingReport");
-  console.log("═".repeat(60));
-  console.log("[CALL 4] SYSTEM PROMPT:\n", system);
-  console.log("[CALL 4] INPUT BUNDLE:\n", JSON.stringify(bundle, null, 2));
-  console.log("[CALL 4] COMP BREAKDOWN → arv:", arvComps.length, "| turnkey:", turnkeyComps.length, "| as_is:", asIsComps.length);
-  console.log("[CALL 4] MODEL:", MODEL, "| max_tokens: 4096");
-
   const response = await anthropic.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     system,
     messages: [{ role: "user", content: JSON.stringify(bundle) }],
   });
 
-  const text = (response.content[0] as Anthropic.TextBlock).text;
-  console.log("[CALL 4] RAW RESPONSE:\n", text);
-  console.log("[CALL 4] USAGE:", JSON.stringify(response.usage));
+  const text = (response.content.find(b => b.type === "text") as Anthropic.TextBlock | undefined)?.text;
+  console.log(`[CALL 4] stop=${response.stop_reason} in=${response.usage.input_tokens} out=${response.usage.output_tokens}`);
 
-  const claudeOutput = JSON.parse(extractJSON(text)) as {
+  const claudeOutput = JSON.parse(extractJSON(text, "Call 4 (report)")) as {
     executiveSummary: string;
     propertyNarrative: string;
     marketNarrative: string;
@@ -419,7 +359,6 @@ If the workflow flags include "arv_unavailable": no comps, AVM estimate, or Zest
     confidenceScore: number;
     additionalFlags?: string[];
   };
-  console.log("[CALL 4] PARSED OUTPUT:", JSON.stringify(claudeOutput, null, 2));
 
   const finalReport: UnderwritingReport = {
     address: input.property.address,
@@ -439,9 +378,6 @@ If the workflow flags include "arv_unavailable": no comps, AVM estimate, or Zest
     recommendation: claudeOutput.recommendation,
     confidenceScore: claudeOutput.confidenceScore,
   };
-
-  console.log("[CALL 4] FINAL REPORT FLAGS:", finalReport.flags);
-  console.log("[CALL 4] RECOMMENDATION:", finalReport.recommendation, "| CONFIDENCE:", finalReport.confidenceScore);
 
   return { ...finalReport, _tokens: { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens } };
 }

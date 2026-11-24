@@ -5,10 +5,11 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { CreditCard, Plus, Trash2, Check, Loader2, ArrowUpRight, CheckCircle2, AlertCircle, RefreshCw, Mic, Building2, GraduationCap, NotebookPen, Database, Search, ArrowDownLeft, ArrowUpRight as ArrowUp } from 'lucide-react'
 import { C } from '@/components/platform/brand'
-import type { AppSpendRow, WalletTxn } from './billing-client'
+import type { AppSpendRow, WalletTxn, UsageSummary } from './billing-client'
 import type { UsageLogRow } from './usage-tab'
 import type { Access } from '@/components/platform/PlatformShell'
 import type { TopUpOption } from '@kpidriver/stripe/topup'
+import DateRangePicker, { periodBounds, type DatePeriod } from '@/components/ui/date-range-picker'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -53,15 +54,38 @@ interface Props {
   autoTopup:    AutoTopup
   access:       Access
   usageLogs:    UsageLogRow[]
+  usageSummary: UsageSummary
   walletTxns:   WalletTxn[]
 }
 
-export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access, usageLogs, walletTxns }: Props) {
+export default function WalletTab({ balance: initialBalance, appSpend, topUpOptions, autoTopup, access, usageLogs, usageSummary, walletTxns }: Props) {
   const [balance, setBalance]           = useState(initialBalance)
   const [toppingUp, setToppingUp]       = useState<string | null>(null)
   const [topupMessage, setTopupMessage] = useState<string | null>(null)
   const [topupError, setTopupError]     = useState<string | null>(null)
   const [pendingPriceId, setPendingPriceId] = useState<string | null>(null)
+  const [statsPeriod, setStatsPeriod]   = useState<DatePeriod>('30d')
+  const [statsFrom,   setStatsFrom]     = useState('')
+  const [statsTo,     setStatsTo]       = useState('')
+
+  const filteredStats = useMemo(() => {
+    if (statsPeriod === 'all') return null // use RPC summary for all-time
+    const { from, to } = periodBounds(statsPeriod, statsFrom, statsTo)
+    const rows = usageLogs.filter(r => {
+      const d = new Date(r.created_at)
+      if (from && d < from) return false
+      if (to   && d > to)   return false
+      return true
+    })
+    return {
+      totalCost:         rows.reduce((s, r) => s + r.cost_usd, 0),
+      totalRuns:         rows.length,
+      totalInputTokens:  rows.reduce((s, r) => s + r.input_tokens, 0),
+      totalOutputTokens: rows.reduce((s, r) => s + r.output_tokens, 0),
+    }
+  }, [usageLogs, statsPeriod, statsFrom, statsTo])
+
+  const displayStats = filteredStats ?? usageSummary
 
   async function handleTopUp(priceId: string) {
     setToppingUp(priceId)
@@ -203,29 +227,35 @@ export default function WalletTab({ balance: initialBalance, appSpend, topUpOpti
       <PaymentMethodsCard />
 
       {/* Usage summary stats */}
-      {(() => {
-        const totalCost   = usageLogs.reduce((s, r) => s + r.cost_usd, 0)
-        const totalInput  = usageLogs.reduce((s, r) => s + r.input_tokens, 0)
-        const totalOutput = usageLogs.reduce((s, r) => s + r.output_tokens, 0)
-        return (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            {[
-              { label: 'Total Cost', value: '$' + totalCost.toFixed(4), color: C.green },
-              { label: 'Workflow Runs', value: usageLogs.length.toLocaleString(), color: C.white },
-              { label: 'Tokens (In / Out)', value: `${totalInput.toLocaleString()} / ${totalOutput.toLocaleString()}`, color: C.white },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '16px 20px' }}>
-                <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 8px' }}>
-                  {label}
-                </p>
-                <p style={{ fontSize: 22, fontWeight: 900, color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
-                  {value}
-                </p>
-              </div>
-            ))}
-          </div>
-        )
-      })()}
+      <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: '16px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: 0 }}>Usage Overview</p>
+          <DateRangePicker
+            period={statsPeriod}
+            customFrom={statsFrom}
+            customTo={statsTo}
+            onPeriod={setStatsPeriod}
+            onCustomFrom={setStatsFrom}
+            onCustomTo={setStatsTo}
+          />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          {[
+            { label: 'Total Cost',        value: '$' + displayStats.totalCost.toFixed(4),                                                                                         color: C.green },
+            { label: 'Workflow Runs',     value: displayStats.totalRuns.toLocaleString(),                                                                                          color: C.white },
+            { label: 'Tokens (In / Out)', value: `${displayStats.totalInputTokens.toLocaleString()} / ${displayStats.totalOutputTokens.toLocaleString()}`,                        color: C.white },
+          ].map(({ label, value, color }) => (
+            <div key={label} style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
+              <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.dimText, margin: '0 0 8px' }}>
+                {label}
+              </p>
+              <p style={{ fontSize: 22, fontWeight: 900, color, margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
 
       <AppSpendCard appSpend={appSpend} access={access} />
       <TransactionHistoryCard txns={walletTxns} />

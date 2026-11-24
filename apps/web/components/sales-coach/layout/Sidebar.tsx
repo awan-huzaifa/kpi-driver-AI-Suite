@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard, Phone, Trophy, BarChart3, Settings,
-  LogOut, Building2, Users, ShieldCheck, Home,
+  LogOut, Building2, Users, ShieldCheck, Home, FileText,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { C } from "@/components/platform/brand";
@@ -18,6 +18,10 @@ const NAV_MAIN = [
   { href: "/sales-coach/leaderboard",icon: Trophy,          label: "Leaderboard" },
   { href: "/sales-coach/analytics",  icon: BarChart3,       label: "Analytics"   },
   { href: "/sales-coach/settings",   icon: Settings,        label: "Settings"    },
+];
+
+const NAV_ADMIN_MAIN = [
+  { href: "/sales-coach/reports", icon: FileText, label: "Reports" },
 ];
 
 const NAV_SUPER_ADMIN = [
@@ -92,6 +96,10 @@ export default function Sidebar({ user, accessRole }: Props) {
 
         {NAV_MAIN.map((n) => (
           <SidebarNavItem key={n.href} href={n.href} icon={n.icon} label={n.label} pillId="sc-pill" exact={n.href === "/sales-coach"} />
+        ))}
+
+        {(accessRole === "admin" || accessRole === "super_admin") && NAV_ADMIN_MAIN.map((n) => (
+          <SidebarNavItem key={n.href} href={n.href} icon={n.icon} label={n.label} pillId="sc-pill" />
         ))}
 
         {adminNav && (

@@ -34,7 +34,7 @@ export default async function UnderwritingLayout({ children }: { children: React
         accessRole={profile?.access_role}
       />
       {/* Offset content from fixed sidebar; preserve UW's h-screen overflow-hidden layout */}
-      <div style={{ marginLeft: 248, height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div className="main-content" style={{ height: "100vh", overflow: "hidden", display: "flex", flexDirection: "column" }}>
         <ContentShell>{children}</ContentShell>
       </div>
     </div>

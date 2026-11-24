@@ -60,6 +60,7 @@ interface Props {
   logs:       SkipLog[];
   companies:  { id: string; name: string }[];
   accessRole: string;
+  showCost?:  boolean;
 }
 
 /* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -129,7 +130,7 @@ function StatChip({ label, value, color }: { label: string; value: string | numb
 
 /* â”€â”€ Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () => void; accessRole: string }) {
+function DetailModal({ log, onClose, accessRole, showCost = false }: { log: SkipLog; onClose: () => void; accessRole: string; showCost?: boolean }) {
   const persons     = (log.payload.persons as Person[] | undefined) ?? [];
   const displayType = getDisplayType(log);
   const color       = FLOW_COLORS[displayType];
@@ -180,7 +181,7 @@ function DetailModal({ log, onClose, accessRole }: { log: SkipLog; onClose: () =
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {accessRole !== "user" && (
+            {showCost && (
               <span style={{ fontSize: 12, color: C.dimText }}>${log.cost_usd.toFixed(4)}</span>
             )}
             {log.crm_link && (
@@ -442,7 +443,7 @@ function PersonCard({ person }: { person: Person }) {
 
 /* â”€â”€ Main component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-export default function SkipTracingClient({ logs, companies, accessRole }: Props) {
+export default function SkipTracingClient({ logs, companies, accessRole, showCost = false }: Props) {
   const [search,    setSearch]    = useState("");
   const [companyId, setCompanyId] = useState<string>("all");
   const [flowType,  setFlowType]  = useState<"all" | "apn" | "dnc" | "skiptrace" | "address_skiptrace">("all");
@@ -542,10 +543,10 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 }}
-        style={{ display: "grid", gridTemplateColumns: accessRole !== "user" ? "repeat(2, 1fr)" : "repeat(1, 1fr)", gap: 12, marginBottom: 24 }}
+        style={{ display: "grid", gridTemplateColumns: showCost ? "repeat(2, 1fr)" : "repeat(1, 1fr)", gap: 12, marginBottom: 24 }}
       >
         <StatChip label="TOTAL LOOKUPS" value={filtered.length} />
-        {accessRole !== "user" && <StatChip label="COST (BILLED)" value={`$${totalCost.toFixed(2)}`} color={C.blue} />}
+        {showCost && <StatChip label="COST (BILLED)" value={`$${totalCost.toFixed(2)}`} color={C.blue} />}
       </motion.div>
 
       {/* Filter bar */}
@@ -647,7 +648,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
-              {["Date", "Contact", "Type", "Result", "Context", "Lead Source", "CRM", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Contact", "Type", "Result", "Context", "Lead Source", "CRM", ...(showCost ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{ padding: "10px 14px", textAlign: "center", fontSize: 10, fontWeight: 800, color: "#e2e8f0", letterSpacing: "0.08em", textTransform: "uppercase" }}>
                   {h}
                 </th>
@@ -745,7 +746,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
                           <span style={{ fontSize: 12, color: "#334155" }}>—</span>
                         )}
                       </td>
-                      {accessRole !== "user" && (
+                      {showCost && (
                         <td style={{ padding: "11px 14px", fontSize: 12, fontWeight: 700, color: "#FCAF17", textAlign: "center" }}>
                           ${log.cost_usd.toFixed(4)}
                         </td>
@@ -796,7 +797,7 @@ export default function SkipTracingClient({ logs, companies, accessRole }: Props
 
       {/* Detail modal */}
       <AnimatePresence>
-        {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
+        {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} showCost={showCost} />}
       </AnimatePresence>
 
       {exportOpen && (

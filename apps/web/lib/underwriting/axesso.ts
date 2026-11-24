@@ -22,12 +22,6 @@ export async function searchProperty(address: string): Promise<PropertyDetails> 
   const url = new URL(`${BASE_URL}/search-by-address`);
   url.searchParams.set("address", address);
 
-  console.log("\n" + "═".repeat(60));
-  console.log("AXESSO — searchProperty");
-  console.log("═".repeat(60));
-  console.log("[AXESSO searchProperty] REQUEST URL:", url.toString());
-  console.log("[AXESSO searchProperty] INPUT address:", address);
-
   const res = await fetch(url.toString(), {
     method: "GET",
     headers: defaultHeaders,
@@ -38,7 +32,6 @@ export async function searchProperty(address: string): Promise<PropertyDetails> 
   }
 
   const data = await res.json();
-  console.log("[AXESSO searchProperty] RAW RESPONSE:", JSON.stringify(data, null, 2));
 
   const property: PropertyDetails = {
     zpid: data.zpid,
@@ -81,13 +74,9 @@ export async function searchProperty(address: string): Promise<PropertyDetails> 
     photos: data.originalPhotos?.map((p: any) => p.mixedSources?.jpeg?.[0]?.url ?? p.url).filter(Boolean).slice(0, 10) ?? [],
     neighborhood: data.address?.neighborhood ?? data.adTargets?.hood,
     subdivision: data.address?.subdivision ?? null,
+    latitude:  data.latitude  ?? data.location?.latitude  ?? null,
+    longitude: data.longitude ?? data.location?.longitude ?? null,
   };
-
-  console.log("[AXESSO searchProperty] MAPPED PROPERTY:", JSON.stringify(property, null, 2));
-  console.log("[AXESSO searchProperty] KEY FIELDS → zpid:", property.zpid, "| sqft:", property.sqft, "| beds:", property.beds, "| baths:", property.baths, "| yearBuilt:", property.yearBuilt);
-  console.log("[AXESSO searchProperty] ARV FACTORS → constructionMaterials:", property.constructionMaterials, "| hasPrivatePool:", property.hasPrivatePool, "| hasGarage:", property.hasGarage, "| hasOffStreetParking:", property.hasOffStreetParking);
-  console.log("[AXESSO searchProperty] FORECLOSURE FLAGS → isBankOwned:", property.isBankOwned, "| isPreforeclosure:", property.isPreforeclosure, "| isAnyForeclosure:", property.isAnyForeclosure, "| isFSBO:", property.isFSBO);
-  console.log("[AXESSO searchProperty] PHOTOS:", property.photos.length, "urls →", property.photos);
 
   return property;
 }
@@ -95,25 +84,14 @@ export async function searchProperty(address: string): Promise<PropertyDetails> 
 // ─── fetchPropertyPhotos (private helper) ─────────────────────────────────────
 async function fetchPropertyPhotos(zpid: string): Promise<string[]> {
   try {
-    console.log(`[AXESSO fetchPropertyPhotos] Fetching photos for zpid: ${zpid}`);
-    const res = await fetch(
-      `${BASE_URL}/photos?zpid=${zpid}`,
-      { headers: defaultHeaders }
-    );
-    if (!res.ok) {
-      console.log(`[AXESSO fetchPropertyPhotos] zpid ${zpid} — response not ok: ${res.status}`);
-      return [];
-    }
+    const res = await fetch(`${BASE_URL}/photos?zpid=${zpid}`, { headers: defaultHeaders });
+    if (!res.ok) return [];
     const data = await res.json();
-    const photos = data.photos ?? [];
-    const urls = photos
+    return (data.photos ?? [])
       .map((photo: any) => photo.mixedSources?.jpeg?.[0]?.url)
       .filter(Boolean)
       .slice(0, 10);
-    console.log(`[AXESSO fetchPropertyPhotos] zpid ${zpid} — ${urls.length} photos fetched`);
-    return urls;
-  } catch (err) {
-    console.log(`[AXESSO fetchPropertyPhotos] zpid ${zpid} — error:`, err);
+  } catch {
     return [];
   }
 }
@@ -122,16 +100,11 @@ async function fetchPropertyPhotos(zpid: string): Promise<string[]> {
 // RentCast comps come back with no photos and no zpid. This does the 2-hop
 // lookup: address → zpid (via searchProperty) → photos (via fetchPropertyPhotos).
 export async function fetchPhotosByAddress(address: string): Promise<string[]> {
-  console.log(`[AXESSO fetchPhotosByAddress] Resolving zpid for: ${address}`);
   try {
     const property = await searchProperty(address);
-    if (!property.zpid) {
-      console.log(`[AXESSO fetchPhotosByAddress] No zpid found for: ${address}`);
-      return [];
-    }
+    if (!property.zpid) return [];
     return await fetchPropertyPhotos(String(property.zpid));
-  } catch (err) {
-    console.log(`[AXESSO fetchPhotosByAddress] ${address} — error:`, err);
+  } catch {
     return [];
   }
 }

@@ -32,6 +32,7 @@ interface Props {
   logs:       EnrichmentLog[];
   companies:  { id: string; name: string }[];
   accessRole: AccessRole;
+  showCost?:  boolean;
 }
 
 function fmt(dt: string) {
@@ -114,7 +115,7 @@ function CopyButton({ value }: { value: string }) {
 }
 
 /* ── Detail Modal ─────────────────────────────────────────────────── */
-function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose: () => void; accessRole: AccessRole }) {
+function DetailModal({ log, onClose, accessRole, showCost = false }: { log: EnrichmentLog; onClose: () => void; accessRole: AccessRole; showCost?: boolean }) {
   return (
     <AnimatePresence>
       <motion.div
@@ -259,7 +260,7 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
                   </div>
                 </div>
               )}
-              {accessRole !== "user" && (
+              {showCost && (
                 <div style={{
                   display: "flex", alignItems: "center", gap: 8,
                   background: "rgba(252,175,23,0.06)", border: "1px solid rgba(252,175,23,0.15)",
@@ -348,7 +349,7 @@ function DetailModal({ log, onClose, accessRole }: { log: EnrichmentLog; onClose
 
 /* ── Main component ───────────────────────────────────────────────── */
 
-export default function DataEnrichmentClient({ logs, companies, accessRole }: Props) {
+export default function DataEnrichmentClient({ logs, companies, accessRole, showCost = false }: Props) {
   const searchParams = useSearchParams();
   const [period,     setPeriod]     = useState<DatePeriod>("month");
   const [customFrom, setCustomFrom] = useState("");
@@ -468,13 +469,15 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
               <p style={{ fontSize: 10, fontWeight: 700, color: C.dimText, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 2px" }}>Fields Enriched</p>
               <p style={{ fontSize: 20, fontWeight: 900, color: C.green, margin: 0 }}>{totalFields}</p>
             </div>
-            <div style={{
-              background: "rgba(252,175,23,0.06)", border: "1px solid rgba(252,175,23,0.15)",
-              borderRadius: 12, padding: "10px 16px", textAlign: "right",
-            }}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: C.dimText, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 2px" }}>Total Cost</p>
-              <p style={{ fontSize: 20, fontWeight: 900, color: "#FCAF17", margin: 0 }}>{fmtCost(totalCost)}</p>
-            </div>
+            {showCost && (
+              <div style={{
+                background: "rgba(252,175,23,0.06)", border: "1px solid rgba(252,175,23,0.15)",
+                borderRadius: 12, padding: "10px 16px", textAlign: "right",
+              }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: C.dimText, textTransform: "uppercase", letterSpacing: "0.07em", margin: "0 0 2px" }}>Total Cost</p>
+                <p style={{ fontSize: 20, fontWeight: 900, color: "#FCAF17", margin: 0 }}>{fmtCost(totalCost)}</p>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
@@ -560,7 +563,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.015)" }}>
-              {["Date", "Contact", "Phone", "Lead Source", "Fields", ...(accessRole !== "user" ? ["Cost"] : []), "CRM"].map((h, i) => (
+              {["Date", "Contact", "Phone", "Lead Source", "Fields", ...(showCost ? ["Cost"] : []), "CRM"].map((h, i) => (
                 <th key={h} style={{
                   padding: "11px 16px", textAlign: "center",
                   fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
@@ -659,7 +662,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
                   </td>
 
                   {/* Cost */}
-                  {accessRole !== "user" && (
+                  {showCost && (
                     <td style={{ padding: "13px 16px", textAlign: "center" }}>
                       <span style={{ fontSize: 12, fontWeight: 700, color: "#FCAF17" }}>
                         {fmtCost(l.cost_usd ?? 0)}
@@ -736,7 +739,7 @@ export default function DataEnrichmentClient({ logs, companies, accessRole }: Pr
         </div>
       </motion.div>
 
-      {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
+      {selected && <DetailModal log={selected} onClose={() => setSelected(null)} accessRole={accessRole} showCost={showCost} />}
 
       {exportOpen && (
         <ExportModal

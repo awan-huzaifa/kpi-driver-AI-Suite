@@ -7,6 +7,7 @@ import {
   NotebookPen, PhoneIncoming, PhoneOutgoing, Phone,
   X, ChevronDown, Search, Coins, ExternalLink, Copy, Check,
 } from "lucide-react";
+import AudioPlayer from "@/components/ui/AudioPlayer";
 import { C } from "@/components/platform/brand";
 import DateRangePicker, { periodBounds, type DatePeriod } from "@/components/ui/date-range-picker";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
@@ -19,15 +20,20 @@ interface NoteCall {
   call_direction:  string | null;
   to_number:       string | null;
   from_number:     string | null;
+  contact_name:    string | null;
   contact_phone:   string | null;
   agent_phone:     string | null;
   agent_name:      string | null;
+  agent_type:      string | null;
+  duration_sec:    number | null;
+  stage:           string | null;
   lead_source:     string | null;
   crm_link:        string | null;
   custom_fields:   { key: string; value: unknown }[];
-  ai_summary:      string | null;
-  normal_summary:  string | null;
-  transcript:      string | null;
+  ai_summary?:     string | null;
+  normal_summary?: string | null;
+  transcript?:     string | null;
+  recording_url:   string | null;
   input_tokens:    number;
   output_tokens:   number;
   cost_usd:        number;
@@ -35,9 +41,11 @@ interface NoteCall {
 }
 
 interface Props {
-  calls:      NoteCall[];
-  companies:  { id: string; name: string }[];
-  accessRole: AccessRole;
+  calls:       NoteCall[];
+  totalCalls:  number;
+  companies:   { id: string; name: string }[];
+  accessRole:  AccessRole;
+  showCost?:   boolean;
 }
 
 const DIRECTIONS = [
@@ -63,6 +71,13 @@ function fmt(dt: string) {
 
 function fmtCost(c: number) {
   return `$${c.toFixed(4)}`;
+}
+
+function fmtDuration(sec: number | null | undefined) {
+  if (!sec || isNaN(sec)) return "—";
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 function DirectionIcon({ dir }: { dir: string | null }) {
@@ -120,8 +135,28 @@ function DirectionBadge({ dir }: { dir: string | null }) {
 
 /* ── Detail Modal ─────────────────────────────────────────────────── */
 
-function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: () => void; accessRole: AccessRole }) {
+function DetailModal({ call, onClose, accessRole, showCost }: { call: NoteCall; onClose: () => void; accessRole: AccessRole; showCost: boolean }) {
   const [showTranscript, setShowTranscript] = useState(false);
+  const [details, setDetails] = useState<{ transcript: string | null; ai_summary: string | null; normal_summary: string | null } | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  useEffect(() => { loadDetails(); }, []);
+
+  async function loadDetails() {
+    if (details !== null) return;
+    setDetailsLoading(true);
+    try {
+      const res = await fetch(`/api/note-taker/${call.id}/transcript`);
+      const json = await res.json();
+      setDetails({ transcript: json.transcript ?? null, ai_summary: json.ai_summary ?? null, normal_summary: json.normal_summary ?? null });
+    } catch { setDetails({ transcript: null, ai_summary: null, normal_summary: null }); }
+    finally { setDetailsLoading(false); }
+  }
+
+  function handleTranscriptToggle() {
+    setShowTranscript(v => !v);
+  }
+
   return (
     <AnimatePresence>
       <motion.div
@@ -200,13 +235,15 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
 
           {/* Meta row */}
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24,
+            display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24,
           }}>
             {[
-              { label: "Agent",         value: call.agent_name    ?? "—"                    },
-              { label: "Agent Phone",   value: call.agent_phone   ?? "—"                    },
-              { label: "Direction",     value: <DirectionBadge dir={call.call_direction} /> },
+              { label: "Contact",       value: call.contact_name  ?? "—"                    },
               { label: "Contact Phone", value: call.contact_phone ?? "—"                    },
+              { label: "Agent",         value: call.agent_name    ?? "—"                    },
+              { label: "Agent Type",    value: call.agent_type ? call.agent_type.toUpperCase() : "—" },
+              { label: "Direction",     value: <DirectionBadge dir={call.call_direction} /> },
+              { label: "Duration",      value: fmtDuration(call.duration_sec)               },
             ].map(({ label, value }) => (
               <div key={label} style={{
                 background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)",
@@ -227,7 +264,7 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
             {[
               { label: "Input Tokens",  value: call.input_tokens.toLocaleString()  },
               { label: "Output Tokens", value: call.output_tokens.toLocaleString() },
-              ...(accessRole !== "user" ? [{ label: "AI Cost", value: fmtCost(call.cost_usd) }] : []),
+              ...(showCost ? [{ label: "AI Cost", value: fmtCost(call.cost_usd) }] : []),
             ].map(({ label, value }) => (
               <div key={label} style={{
                 flex: 1, background: "rgba(48,125,192,0.06)", border: "1px solid rgba(48,125,192,0.15)",
@@ -241,8 +278,15 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
             ))}
           </div>
 
+          {/* Recording */}
+          {call.recording_url && (
+            <div style={{ marginBottom: 20 }}>
+              <AudioPlayer url={call.recording_url} />
+            </div>
+          )}
+
           {/* AI Summary */}
-          {call.ai_summary && (
+          {(details?.ai_summary || detailsLoading) && (
             <div style={{ marginBottom: 20 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: C.green, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
                 AI Summary
@@ -252,14 +296,14 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
                 borderRadius: 12, padding: "16px 18px",
               }}>
                 <p style={{ fontSize: 13, fontWeight: 500, color: "#cbd5e1", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
-                  {call.ai_summary}
+                  {detailsLoading ? "Loading…" : details?.ai_summary}
                 </p>
               </div>
             </div>
           )}
 
           {/* Normal Summary */}
-          {call.normal_summary && (
+          {(details?.normal_summary || detailsLoading) && (
             <div style={{ marginBottom: call.custom_fields?.length ? 20 : 0 }}>
               <p style={{ fontSize: 11, fontWeight: 700, color: C.dimText, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
                 Call Summary
@@ -269,7 +313,7 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
                 borderRadius: 12, padding: "16px 18px",
               }}>
                 <p style={{ fontSize: 13, fontWeight: 500, color: "#94a3b8", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
-                  {call.normal_summary}
+                  {detailsLoading ? "Loading…" : details?.normal_summary}
                 </p>
               </div>
             </div>
@@ -323,42 +367,40 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
           )}
 
           {/* Transcript */}
-          {call.transcript && (
-            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.52 }}
-              style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
-              <button
-                onClick={() => setShowTranscript(v => !v)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  background: "none", border: "none", cursor: "pointer",
-                  fontSize: 11, fontWeight: 700, color: "#475569",
-                  textTransform: "uppercase", letterSpacing: "0.08em",
-                  transition: "color 0.15s",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.52 }}
+            style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+            <button
+              onClick={handleTranscriptToggle}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: 11, fontWeight: 700, color: "#475569",
+                textTransform: "uppercase", letterSpacing: "0.08em",
+                transition: "color 0.15s",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
+            >
+              <ChevronDown size={13} style={{ transform: showTranscript ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+              {detailsLoading ? "Loading…" : "Transcript"}
+            </button>
+            {showTranscript && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                style={{ overflow: "hidden" }}
               >
-                <ChevronDown size={13} style={{ transform: showTranscript ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
-                Transcript
-              </button>
-              {showTranscript && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  style={{ overflow: "hidden" }}
-                >
-                  <div style={{
-                    marginTop: 10, padding: "14px 16px", borderRadius: 12,
-                    fontSize: 12, color: "#64748b", lineHeight: 1.8, whiteSpace: "pre-wrap",
-                    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
-                    maxHeight: 280, overflowY: "auto",
-                  }}>
-                    {call.transcript}
-                  </div>
-                </motion.div>
-              )}
-            </motion.div>
-          )}
+                <div style={{
+                  marginTop: 10, padding: "14px 16px", borderRadius: 12,
+                  fontSize: 12, color: "#64748b", lineHeight: 1.8, whiteSpace: "pre-wrap",
+                  background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
+                  maxHeight: 280, overflowY: "auto",
+                }}>
+                  {details?.transcript || "No transcript available."}
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
@@ -367,7 +409,7 @@ function DetailModal({ call, onClose, accessRole }: { call: NoteCall; onClose: (
 
 /* ── Main component ───────────────────────────────────────────────── */
 
-export default function NoteTakerClient({ calls, companies, accessRole }: Props) {
+export default function NoteTakerClient({ calls, totalCalls, companies, accessRole, showCost = false }: Props) {
   const searchParams = useSearchParams();
   const [period,     setPeriod]     = useState<DatePeriod>("month");
   const [customFrom, setCustomFrom] = useState("");
@@ -429,13 +471,19 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
       if (leadSourceFilter !== "all" && c.lead_source !== leadSourceFilter) return false;
       if (search) {
         const q = search.toLowerCase();
-        if (
-          !c.agent_name?.toLowerCase().includes(q) &&
-          !c.from_number?.toLowerCase().includes(q) &&
-          !c.to_number?.toLowerCase().includes(q) &&
-          !c.ai_summary?.toLowerCase().includes(q) &&
-          !c.normal_summary?.toLowerCase().includes(q)
-        ) return false;
+        const qDigits = search.replace(/\D/g, "");
+        const phoneMatch = qDigits.length >= 4 && (
+          (c.contact_phone ?? "").replace(/\D/g, "").includes(qDigits) ||
+          (c.from_number  ?? "").replace(/\D/g, "").includes(qDigits) ||
+          (c.to_number    ?? "").replace(/\D/g, "").includes(qDigits)
+        );
+        const nameMatch = c.contact_name?.toLowerCase().includes(q);
+        const cfMatch = c.custom_fields?.some(f => {
+          const key = f.key.toLowerCase();
+          const val = String(f.value ?? "").toLowerCase();
+          return (key.includes("email") || key.includes("contact_id") || key.includes("id")) && val.includes(q);
+        });
+        if (!nameMatch && !phoneMatch && !cfMatch) return false;
       }
       return true;
     });
@@ -457,18 +505,31 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         transition={{ duration: 0.35 }}
         style={{ marginBottom: 28 }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <NotebookPen size={16} style={{ color: C.blue }} />
-          <p style={{ fontSize: 11, fontWeight: 700, color: C.blue, margin: 0, letterSpacing: "0.09em", textTransform: "uppercase" }}>
-            AI Note Taker
-          </p>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <NotebookPen size={16} style={{ color: C.blue }} />
+              <p style={{ fontSize: 11, fontWeight: 700, color: C.blue, margin: 0, letterSpacing: "0.09em", textTransform: "uppercase" }}>
+                AI Note Taker
+              </p>
+            </div>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: C.white, letterSpacing: "-0.02em", margin: 0 }}>
+              Notes
+            </h1>
+            <p style={{ fontSize: 13, color: C.bodyText, marginTop: 6 }}>
+              All Call Notes. Click Any Row To View The Full Transcript.
+            </p>
+          </div>
+          <div style={{
+            background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.07)",
+            borderRadius: 12, padding: "10px 16px", textAlign: "center", minWidth: 80, flexShrink: 0,
+          }}>
+            <p style={{ fontSize: 20, fontWeight: 900, color: C.white, margin: "0 0 2px", letterSpacing: "-0.02em" }}>
+              {filtered.length.toLocaleString()} / {totalCalls.toLocaleString()}
+            </p>
+            <p style={{ fontSize: 10, color: "#475569", margin: 0, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>Showing</p>
+          </div>
         </div>
-        <h1 style={{ fontSize: 28, fontWeight: 900, color: C.white, letterSpacing: "-0.02em", margin: 0 }}>
-          Notes
-        </h1>
-        <p style={{ fontSize: 13, color: C.bodyText, marginTop: 6 }}>
-          All Call Notes. Click Any Row To View The Full Transcript.
-        </p>
       </motion.div>
 
       {/* Filter card */}
@@ -565,7 +626,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
             />
           </div>
 
-          {accessRole !== "user" && (
+          {showCost && (
             <div style={{
               display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
               padding: "7px 14px", borderRadius: 8,
@@ -603,7 +664,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date", "Agent", "Direction", "Lead Source", "Agent Phone", "Contact Phone", "Fields", "CRM", ...(accessRole !== "user" ? ["Cost"] : [])].map((h) => (
+              {["Date", "Contact", "Agent", "Direction", "Fields", "Duration", "Stage", "Lead Source", "CRM", ...(showCost ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "12px 16px",
                   fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
@@ -631,17 +692,91 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                 onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(48,125,192,0.05)")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
               >
-                <td style={{ padding: "12px 16px", whiteSpace: "nowrap", textAlign: "center" }}>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", margin: 0 }}>{fmtDate(c.created_at)}</p>
-                  <p style={{ fontSize: 11, color: "#475569", margin: "2px 0 0" }}>{fmtTime(c.created_at)}</p>
+                {/* Date */}
+                <td style={{ padding: "12px 14px", textAlign: "center", whiteSpace: "nowrap" }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "#94a3b8", margin: "0 0 1px" }}>{fmtDate(c.created_at)}</p>
+                  <p style={{ fontSize: 10, fontWeight: 500, color: "#475569", margin: 0 }}>{fmtTime(c.created_at)}</p>
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 600, color: c.agent_name ? C.text : C.dimText, whiteSpace: "nowrap", textAlign: "center" }}>
-                  {c.agent_name ?? "—"}
+
+                {/* Contact */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>
+                    {c.contact_name ?? "Unknown"}
+                  </p>
+                  <p style={{ fontSize: 11, fontFamily: "monospace", color: "#475569", margin: 0 }}>
+                    {c.contact_phone ?? "—"}
+                  </p>
                 </td>
-                <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                  <DirectionBadge dir={c.call_direction} />
+
+                {/* Agent */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>
+                    {c.agent_name ?? "—"}
+                  </p>
+                  {c.agent_type && c.agent_type !== "none" && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 5,
+                      color: C.blue, background: "rgba(48,125,192,0.12)",
+                      border: "1px solid rgba(48,125,192,0.25)", textTransform: "uppercase",
+                    }}>
+                      {c.agent_type.toUpperCase()}
+                    </span>
+                  )}
                 </td>
-                <td style={{ padding: "12px 16px", textAlign: "center" }}>
+
+                {/* Direction */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                    ...(c.call_direction === "outbound"
+                      ? { color: "#43B749", background: "rgba(67,183,73,0.1)", border: "1px solid rgba(67,183,73,0.2)" }
+                      : { color: "#307DC0", background: "rgba(48,125,192,0.1)", border: "1px solid rgba(48,125,192,0.2)" }),
+                  }}>
+                    {c.call_direction === "outbound" ? <PhoneOutgoing size={10} /> : <PhoneIncoming size={10} />}
+                    {c.call_direction === "outbound" ? "OUT" : "IN"}
+                  </span>
+                </td>
+
+                {/* Fields */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                  {c.custom_fields?.length > 0 ? (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                      color: C.blue, background: "rgba(48,125,192,0.1)",
+                      border: "1px solid rgba(48,125,192,0.2)",
+                    }}>
+                      {c.custom_fields.length}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                  )}
+                </td>
+
+                {/* Duration */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "monospace", color: "#94a3b8" }}>
+                    {fmtDuration(c.duration_sec)}
+                  </span>
+                </td>
+
+                {/* Stage */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                  {c.stage ? (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                      color: "#94a3b8", background: "rgba(148,163,184,0.08)",
+                      border: "1px solid rgba(148,163,184,0.18)", whiteSpace: "nowrap",
+                    }}>
+                      {c.stage}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 12, color: "#334155" }}>—</span>
+                  )}
+                </td>
+
+                {/* Lead Source */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
                   {c.lead_source ? (
                     <span style={{
                       fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
@@ -654,18 +789,9 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                     <span style={{ fontSize: 12, color: "#334155" }}>—</span>
                   )}
                 </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
-                  {c.agent_phone ?? "—"}
-                </td>
-                <td style={{ padding: "12px 16px", fontSize: 12, color: C.bodyText, fontFamily: "monospace", textAlign: "center" }}>
-                  {c.contact_phone ?? "—"}
-                </td>
-                <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                  <span style={{ fontSize: 13, fontWeight: 800, color: C.blue }}>
-                    {c.custom_fields?.length ?? 0}
-                  </span>
-                </td>
-                <td style={{ padding: "12px 16px", textAlign: "center" }}>
+
+                {/* CRM */}
+                <td style={{ padding: "12px 14px", textAlign: "center" }}>
                   {c.crm_link ? (
                     <a
                       href={c.crm_link}
@@ -685,8 +811,10 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
                     <span style={{ fontSize: 12, color: "#334155" }}>—</span>
                   )}
                 </td>
-                {accessRole !== "user" && (
-                  <td style={{ padding: "12px 16px", fontSize: 12, fontWeight: 700, color: "#FCAF17", whiteSpace: "nowrap", textAlign: "center" }}>
+
+                {/* Cost */}
+                {showCost && (
+                  <td style={{ padding: "12px 14px", fontSize: 12, fontWeight: 700, color: "#FCAF17", whiteSpace: "nowrap", textAlign: "center" }}>
                     {fmtCost(c.cost_usd)}
                   </td>
                 )}
@@ -733,7 +861,7 @@ export default function NoteTakerClient({ calls, companies, accessRole }: Props)
       </motion.div>
 
       {/* Detail modal */}
-      {selected && <DetailModal call={selected} onClose={() => setSelected(null)} accessRole={accessRole} />}
+      {selected && <DetailModal call={selected} onClose={() => setSelected(null)} accessRole={accessRole} showCost={showCost} />}
       {exportOpen && (
         <ExportModal
           onClose={() => setExportOpen(false)}

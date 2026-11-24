@@ -68,6 +68,16 @@ button, [role="button"] {
   cursor: none;
 }
 
+/* Restore native cursor on touch devices (phones/tablets) */
+@media (pointer: coarse) {
+  *, *::before, *::after {
+    cursor: auto !important;
+  }
+  button, [role="button"] {
+    cursor: pointer !important;
+  }
+}
+
 /* ── Primary button — sharp, glowing, brand green ──── */
 .btn-primary {
   display: inline-flex;
@@ -144,6 +154,16 @@ button, [role="button"] {
 ::-webkit-scrollbar-track      { background: transparent; }
 ::-webkit-scrollbar-thumb      { background: rgba(255,255,255,0.1); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover{ background: rgba(255,255,255,0.18); }
+
+/* ── Sidebar offset — desktop full, mobile zero ─────── */
+.main-content {
+  margin-left: 248px;
+}
+@media (max-width: 767px) {
+  .main-content {
+    margin-left: 0;
+  }
+}
 
 /* ── Sales Coach utilities ──────────────────────────── */
 .glass {

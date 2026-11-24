@@ -10,7 +10,7 @@ export default async function DataEnrichmentPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, access_role, company_id")
+    .select("id, access_role, company_id, notify_billing")
     .eq("id", user.id)
     .single();
 
@@ -24,7 +24,7 @@ export default async function DataEnrichmentPage() {
 
   if (profile?.access_role !== "super_admin") {
     if (!profile?.company_id) {
-      return <DataEnrichmentClient logs={[]} companies={[]} accessRole={profile?.access_role ?? "user"} />;
+      return <DataEnrichmentClient logs={[]} companies={[]} accessRole={profile?.access_role ?? "user"} showCost={false} />;
     }
     query = query.eq("company_id", profile.company_id);
   }
@@ -42,6 +42,7 @@ export default async function DataEnrichmentPage() {
       logs={logs ?? []}
       companies={companies}
       accessRole={profile?.access_role ?? "user"}
+      showCost={profile?.access_role === "super_admin" || (profile?.access_role === "admin" && (profile?.notify_billing ?? false))}
     />
   );
 }

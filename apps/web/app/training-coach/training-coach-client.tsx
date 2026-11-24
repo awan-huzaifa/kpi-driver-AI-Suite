@@ -58,6 +58,7 @@ interface TrainingCall {
   recording_url: string | null;
   evaluation:    Evaluation | null;
   created_at:    string;
+  cost_usd:      number;
   agent:         { full_name: string | null; agent_type: string } | null;
   ai_agent:      { agent_name: string } | null;
 }
@@ -65,6 +66,7 @@ interface TrainingCall {
 interface Props {
   calls:          TrainingCall[];
   companies:      { id: string; name: string }[];
+  showCost?:      boolean;
   accessRole:     AccessRole;
   currentUserId?: string;
 }
@@ -410,7 +412,7 @@ function meetsMinDuration(sec: number, minMinutes: typeof DURATIONS[number]["val
   return sec >= Number(minMinutes) * 60;
 }
 
-export default function TrainingCoachClient({ calls, companies, accessRole, currentUserId }: Props) {
+export default function TrainingCoachClient({ calls, companies, accessRole, currentUserId, showCost = false }: Props) {
   const searchParams = useSearchParams();
   const [selected,  setSelected]  = useState<TrainingCall | null>(null);
 
@@ -499,12 +501,26 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
   return (
     <div className="px-8 py-8">
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
         <div>
-          <h1 className="text-xl font-bold gradient-text">Training Calls</h1>
-          <p className="text-xs mt-0.5" style={{ color: "#475569" }}>{calls.length} Calls Total</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 6 }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: 7,
+              background: "rgba(48,125,192,0.15)", border: "1px solid rgba(48,125,192,0.25)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <GraduationCap size={12} style={{ color: "#307DC0" }} />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#307DC0", textTransform: "uppercase", letterSpacing: "0.09em" }}>Training Coach</span>
+          </div>
+          <h1 style={{ fontSize: 28, fontWeight: 900, color: "#fff", letterSpacing: "-0.02em", margin: "0 0 4px" }}>
+            Call Log
+          </h1>
+          <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
+            {calls.length} Calls Total. Click Any Row To View Scoring Details.
+          </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
           <DateRangePicker
             period={period}
             customFrom={customFrom}
@@ -598,19 +614,23 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
           <TableHeader>
             <TableRow>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>DATE</TableHead>
-              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AGENT</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AI AGENT</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>AGENT</TableHead>
+              <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>DIRECTION</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>DURATION</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>SCORE</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>SCORABLE</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>REASON</TableHead>
               <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>RESULT</TableHead>
+              {showCost && (
+                <TableHead className="font-extrabold tracking-wide text-center" style={{ color: "#e2e8f0" }}>COST</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 && (
               <TableRow>
-                <TableCell className="text-center py-16" style={{ color: "#334155" }} colSpan={8}>
+                <TableCell className="text-center py-16" style={{ color: "#334155" }} colSpan={showCost ? 10 : 9}>
                   <GraduationCap size={32} className="mx-auto mb-2 opacity-20" />
                   <p className="text-sm">No Training Calls Found</p>
                 </TableCell>
@@ -623,15 +643,25 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
                   <p className="m-0" style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{fmtTime(c.created_at)}</p>
                 </TableCell>
                 <TableCell className="text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-sm font-medium text-white">{c.agent?.full_name ?? "Unknown"}</span>
+                  <span className="text-xs" style={{ color: "#94a3b8" }}>{c.ai_agent?.agent_name ?? "Unknown"}</span>
+                </TableCell>
+                <TableCell className="text-center">
+                  <div className="flex flex-col items-center gap-1">
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: "0 0 2px" }}>{c.agent?.full_name ?? "Unknown"}</span>
                     {c.agent?.agent_type && c.agent.agent_type !== "none" && (
                       <Badge variant={c.agent.agent_type as any} />
                     )}
                   </div>
                 </TableCell>
                 <TableCell className="text-center">
-                  <span className="text-xs" style={{ color: "#94a3b8" }}>{c.ai_agent?.agent_name ?? "Unknown"}</span>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
+                    color: "#43B749", background: "rgba(67,183,73,0.1)", border: "1px solid rgba(67,183,73,0.2)",
+                  }}>
+                    <PhoneOutgoing size={10} />
+                    OUT
+                  </span>
                 </TableCell>
                 <TableCell className="text-center">
                   <span className="text-xs font-mono" style={{ color: "#64748b" }}>{fmtDuration(c.duration_sec)}</span>
@@ -665,6 +695,13 @@ export default function TrainingCoachClient({ calls, companies, accessRole, curr
                     </span>
                   ); })()}
                 </TableCell>
+                {showCost && (
+                  <TableCell className="text-center">
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#FCAF17" }}>
+                      {c.cost_usd > 0 ? `$${c.cost_usd.toFixed(4)}` : "—"}
+                    </span>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>

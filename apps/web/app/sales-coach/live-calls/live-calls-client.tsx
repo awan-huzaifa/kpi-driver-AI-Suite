@@ -18,28 +18,76 @@ import type { AccessRole } from "@/types/database";
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
-interface CoachingAction { type: "behavioral" | "tactical" | "strategic"; action: string; }
+// ── V2 evaluation shape ───────────────────────────────────────────
+interface CriterionResult {
+  id: string; weight: number;
+  band: "mastery" | "proficient" | "developing" | "fail";
+  earned: number; na: boolean; na_reason: string | null;
+  evidence: { speaker: string; t: string; quote: string }[];
+}
+interface PenaltyV2  { code: string;  points: number; flag: string;  evidence: string; }
+interface CoachingV2 { worked: string; fix: string;   try_this_line: string; }
+// ── V1 evaluation shape (kept for backward compat with old calls) ─
+interface CoachingAction  { type: "behavioral" | "tactical" | "strategic"; action: string; }
 interface EvidenceSnippet { quote: string; why_it_matters: string; }
-interface Penalty { type: string; points: number; reason: string; evidence: string; }
-interface Bonus   { type: string; points: number; reason: string; evidence: string; }
+interface PenaltyV1       { type: string; points: number; reason: string; evidence: string; }
 
 interface Evaluation {
-  reason:                string | null;
-  call_type:             string | null;
-  opportunity_level:     "low" | "medium" | "high" | null;
-  rubric_version:        string | null;
-  score_band:            string | null;
-  category_scores:       Record<string, number> | null;
-  penalties:             Penalty[];
-  bonuses:               Bonus[];
-  strengths:             string[];
-  missed_opportunities:  string[];
-  coaching_actions:      CoachingAction[];
-  score_reasoning:       string | null;
-  evidence_snippets:     EvidenceSnippet[];
-  confidence:            number | null;
-  manager_review_needed: boolean;
+  // ── Fields present in both V1 and V2 ──
+  rubric_version?: string | null;
+  score_band?:     string | null;
   meta?: { call_id?: string | null; lead_id?: string | null; call_date?: string | null; lead_source?: string | null; known_outcome?: string | null; };
+  // ── V2-only fields ──
+  from_block?:       string | null;
+  to_block?:         string | null;
+  tw_applied?:       boolean;
+  disposition_match?: boolean;
+  core_score?:       number | null;
+  from_score?:       number | null;
+  to_score?:         number | null;
+  raw_score?:        number | null;
+  critical_miss?:    { applied: boolean; block: string | null; deduction: number } | null;
+  criteria?:         CriterionResult[];
+  metrics?:          { talk_ratio: number | null; longest_monologue_s: number | null; open_questions: number | null; interruptions: number | null; silence_after_number_s: number | null; known_info_reasked: number | null; } | null;
+  coaching?:         CoachingV2 | null;
+  penalties?:        (PenaltyV2 | PenaltyV1)[];
+  auto_fail?:        { code: string; evidence: string } | null;
+  flags?:            string[];
+  // ── V1-only fields (old calls) ──
+  reason?:                string | null;
+  call_type?:             string | null;
+  opportunity_level?:     "low" | "medium" | "high" | null;
+  category_scores?:       Record<string, number> | null;
+  strengths?:             string[];
+  missed_opportunities?:  string[];
+  coaching_actions?:      CoachingAction[];
+  score_reasoning?:       string | null;
+  evidence_snippets?:     EvidenceSnippet[];
+  confidence?:            number | null;
+  manager_review_needed?: boolean;
+}
+
+const FROM_NAMES: Record<string, string> = {
+  S01:"Cold Engagement", S02:"Intent Diagnosis", S03:"AI Continuity",
+  S04:"Follow-Up Continuity", S05:"Appointment Reinforcement", S06:"No-Show Recovery",
+  S07:"Trigger Probe", S08:"Silence Diagnosis", S09:"Expectation Re-Test",
+  S10:"Trust Repair", S11:"Cancellation Diagnosis", S12:"Decision Map",
+  S13:"Expectation Testing", S14:"Blocker Diagnosis", S15:"Terms Walkthrough",
+  S16:"Escalation Discipline", S17:"Evidence-Based Re-Trade", S18:"Relationship Expansion",
+};
+const TO_NAMES: Record<string, string> = {
+  TW:"Decision-Maker Route", T1:"Handoff Execution", T2:"Defined Next Step",
+  T3:"Nurture Agreement", T4:"Clean Exit", T5:"Offer Delivery",
+  T6:"Concession Discipline", T7:"Commitment Lock", T8:"Retention",
+};
+
+function bandStyle(band: string) {
+  switch (band) {
+    case "mastery":    return { color: "#43B749", bg: "rgba(67,183,73,0.12)",   border: "rgba(67,183,73,0.25)"   };
+    case "proficient": return { color: "#307DC0", bg: "rgba(48,125,192,0.12)",  border: "rgba(48,125,192,0.25)"  };
+    case "developing": return { color: "#FCAF17", bg: "rgba(252,175,23,0.12)",  border: "rgba(252,175,23,0.25)"  };
+    default:           return { color: "#ED1F24", bg: "rgba(237,31,36,0.12)",   border: "rgba(237,31,36,0.25)"   };
+  }
 }
 
 interface LiveCall {
@@ -55,9 +103,10 @@ interface LiveCall {
   scorable:      boolean;
   score:         number | null;
   call_result:   string | null;
-  transcript:    string | null;
+  transcript?:   string | null;
   recording_url: string | null;
   crm_link:      string | null;
+  cost_usd:      number;
   evaluation:    Evaluation | null;
   created_at:    string;
   agent:         { full_name: string | null; agent_type: string; access_role: string } | null;
@@ -65,8 +114,10 @@ interface LiveCall {
 
 interface Props {
   calls:                 LiveCall[];
+  totalCalls:            number;
   companies:             { id: string; name: string }[];
   accessRole:            AccessRole;
+  showCost?:             boolean;
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -135,8 +186,23 @@ const CATEGORY_MAX: Record<string, number> = {
 
 function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void }) {
   const [showTranscript, setShowTranscript] = useState(false);
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
   const ev = call.evaluation;
   const sc = scoreColor(call.score);
+
+  async function handleTranscriptToggle() {
+    if (!showTranscript && transcript === null) {
+      setTranscriptLoading(true);
+      try {
+        const res = await fetch(`/api/calls/${call.id}/transcript`);
+        const json = await res.json();
+        setTranscript(json.transcript ?? "");
+      } catch { setTranscript(""); }
+      finally { setTranscriptLoading(false); }
+    }
+    setShowTranscript(v => !v);
+  }
 
   return (
     <AnimatePresence>
@@ -224,6 +290,21 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
                         Manager Review
                       </span>
                     )}
+                    {ev?.auto_fail && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#ED1F24", background: "rgba(237,31,36,0.1)", border: "1px solid rgba(237,31,36,0.2)" }}>
+                        AUTO-FAIL · {ev.auto_fail.code}
+                      </span>
+                    )}
+                    {ev?.flags?.includes("CRITICAL_MISS") && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#FCAF17", background: "rgba(252,175,23,0.1)", border: "1px solid rgba(252,175,23,0.2)" }}>
+                        Critical Miss
+                      </span>
+                    )}
+                    {ev?.flags?.includes("DISPOSITION_MISMATCH") && (
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 6, color: "#FCAF17", background: "rgba(252,175,23,0.1)", border: "1px solid rgba(252,175,23,0.2)" }}>
+                        Disposition Mismatch
+                      </span>
+                    )}
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
                     {[
@@ -280,53 +361,193 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
           {/* ── Modal body ── */}
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px", display: "flex", flexDirection: "column", gap: 20 }}>
 
-            {/* Meta pills row */}
+            {/* Meta pills row — always visible */}
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.12 }}
               style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
               {[
-                { label: "Stage",       value: call.call_stage  ?? "—" },
-                { label: "Result",      value: call.call_result ?? "—" },
-                { label: "Agent Type",  value: call.agent?.agent_type
+                { label: "Stage",      value: call.call_stage  ?? "—" },
+                { label: "Result",     value: call.call_result ?? "—" },
+                { label: "Agent Type", value: call.agent?.agent_type
                     ? call.agent.agent_type === "none"
                       ? (call.agent.access_role === "admin" || call.agent.access_role === "super_admin" ? "Admin" : "User")
                       : call.agent.agent_type === "dispo_fus" ? "DISPO FUS" : call.agent.agent_type.toUpperCase()
                     : "—" },
-                { label: "Opportunity", value: ev?.opportunity_level  ?? "—" },
-                { label: "Call Type",   value: ev?.call_type          ?? "—" },
-                { label: "Confidence",  value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
+                // V2 fields
+                ...(ev?.from_block ? [
+                  { label: "FROM Block", value: `${ev.from_block} · ${FROM_NAMES[ev.from_block] ?? ""}` },
+                  { label: "TO Block",   value: ev.to_block ? `${ev.to_block} · ${TO_NAMES[ev.to_block] ?? ""}` : "—" },
+                  { label: "Score Band", value: ev.score_band ?? "—" },
+                ] : [
+                  // V1 fallback
+                  { label: "Opportunity", value: ev?.opportunity_level ?? "—" },
+                  { label: "Call Type",   value: ev?.call_type         ?? "—" },
+                  { label: "Confidence",  value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
+                ]),
               ].map(({ label, value }) => (
                 <div key={label} style={{
                   padding: "10px 14px", borderRadius: 12,
                   background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)",
                 }}>
                   <p style={{ fontSize: 9, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>{label}</p>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", margin: 0, textTransform: "capitalize" }}>{value}</p>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{value}</p>
                 </div>
               ))}
             </motion.div>
 
-            {/* Score reasoning */}
-            {ev?.score_reasoning && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.18 }}
-                style={{
-                padding: "14px 16px", borderRadius: 12, borderLeft: "3px solid rgba(48,125,192,0.4)",
-                background: "rgba(48,125,192,0.04)", border: "1px solid rgba(48,125,192,0.1)",
-              }}>
-                <p style={{ fontSize: 10, fontWeight: 700, color: "#307DC0", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Score Reasoning</p>
-                <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.7, margin: 0, fontStyle: "italic" }}>"{ev.score_reasoning}"</p>
+            {/* V2 — Score breakdown bar */}
+            {call.scorable && ev?.core_score != null && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.16 }}>
+                <SectionHeader icon={Target} label="Score Breakdown" color="#307DC0" />
+                <div style={{ display: "grid", gridTemplateColumns: "3fr 1fr 1fr", gap: 8, marginTop: 10 }}>
+                  {[
+                    { label: "Agent Core", score: ev.core_score, max: 60 },
+                    { label: "FROM",       score: ev.from_score ?? 0, max: ev.tw_applied ? 0 : 20 },
+                    { label: ev.tw_applied ? "TW (replaces FROM+TO)" : "TO", score: ev.to_score ?? 0, max: ev.tw_applied ? 40 : 20 },
+                  ].filter(s => s.max > 0).map(({ label, score, max }) => {
+                    const pct = Math.min(100, Math.round(((score ?? 0) / max) * 100));
+                    const sc2 = scoreColor(pct);
+                    return (
+                      <div key={label}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: "#94a3b8" }}>{label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: sc2.color, fontVariantNumeric: "tabular-nums" }}>
+                            {(score ?? 0).toFixed(1)}<span style={{ color: "#334155", fontWeight: 400 }}>/{max}</span>
+                          </span>
+                        </div>
+                        <div style={{ height: 5, borderRadius: 99, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+                          <motion.div
+                            initial={{ width: 0 }} animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.7, ease: "easeOut" }}
+                            style={{ height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${sc2.color}, rgba(${sc2.rgb},0.5))` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </motion.div>
             )}
 
             {/* Not scorable notice */}
             {!call.scorable && (
               <div style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
-                <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{ev?.reason ?? "This Call Was Not Scored."}</p>
+                <p style={{ fontSize: 12, color: "#475569", margin: 0 }}>{ev?.reason ?? "This call was not scored."}</p>
               </div>
             )}
 
-            {/* Category scores */}
+            {/* V2 — Criteria breakdown */}
+            {call.scorable && (ev?.criteria?.length ?? 0) > 0 && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.22 }}>
+                <SectionHeader icon={Target} label="Criteria" color="#307DC0" />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+                  {ev!.criteria!.map((c) => {
+                    const bs = c.na ? { color: "#475569", bg: "rgba(71,85,105,0.1)", border: "rgba(71,85,105,0.2)" } : bandStyle(c.band);
+                    const pct = c.na ? 0 : Math.min(100, Math.round((c.earned / c.weight) * 100));
+                    const sc2 = scoreColor(pct);
+                    return (
+                      <div key={c.id} style={{
+                        padding: "9px 12px", borderRadius: 10,
+                        background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
+                        display: "flex", alignItems: "center", gap: 10,
+                      }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 5, flexShrink: 0,
+                          fontVariantNumeric: "tabular-nums", letterSpacing: "0.04em",
+                          color: bs.color, background: bs.bg, border: `1px solid ${bs.border}`,
+                        }}>
+                          {c.id}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                            <span style={{ fontSize: 11, color: "#94a3b8", fontWeight: 500, textTransform: "capitalize" }}>
+                              {c.na ? "N/A" : c.band}
+                            </span>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: c.na ? "#334155" : sc2.color, fontVariantNumeric: "tabular-nums" }}>
+                              {c.na ? "—" : `${c.earned.toFixed(1)}/${c.weight}`}
+                            </span>
+                          </div>
+                          {!c.na && (
+                            <div style={{ height: 3, borderRadius: 99, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+                              <div style={{ width: `${pct}%`, height: "100%", borderRadius: 99, background: sc2.color, transition: "width 0.6s ease" }} />
+                            </div>
+                          )}
+                        </div>
+                        {c.evidence?.[0] && (
+                          <span style={{ fontSize: 10, color: "#334155", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
+                            "{c.evidence[0].quote}"
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* V2 — Coaching */}
+            {call.scorable && ev?.coaching && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.30 }}>
+                <SectionHeader icon={Mic} label="Coaching Actions" color="#94a3b8" />
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 10 }}>
+                  {[
+                    { tag: "Worked",        color: "#43B749", bg: "rgba(67,183,73,0.08)",   border: "rgba(67,183,73,0.2)",   text: ev.coaching.worked        },
+                    { tag: "Fix",           color: "#ED1F24", bg: "rgba(237,31,36,0.08)",   border: "rgba(237,31,36,0.2)",   text: ev.coaching.fix           },
+                    { tag: "Try This Line", color: "#307DC0", bg: "rgba(48,125,192,0.08)",  border: "rgba(48,125,192,0.2)",  text: ev.coaching.try_this_line },
+                  ].map(({ tag, color, bg, border, text }) => text && (
+                    <div key={tag} style={{ padding: "12px 14px", borderRadius: 12, display: "flex", flexDirection: "column", gap: 8, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 5, alignSelf: "flex-start", textTransform: "uppercase", letterSpacing: "0.07em", color, background: bg, border: `1px solid ${border}` }}>
+                        {tag}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>
+                        {tag === "Try This Line" ? <em>"{text}"</em> : text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Penalties — handle both V1 and V2 shapes */}
+            {call.scorable && (ev?.penalties?.length ?? 0) > 0 && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.36 }}>
+                <SectionHeader label="Penalties" color="#ED1F24" />
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
+                  {ev!.penalties!.map((p, i) => {
+                    const isV2 = "code" in p;
+                    const pAny = p as unknown as Record<string, string | number>;
+                    const label = isV2 ? String(pAny.code  ?? "") : String(pAny.type   ?? "");
+                    const desc  = isV2 ? String(pAny.flag  ?? "") : String(pAny.reason ?? "");
+                    return (
+                      <div key={i} style={{
+                        display: "flex", alignItems: "flex-start", gap: 10,
+                        padding: "10px 14px", borderRadius: 10,
+                        background: "rgba(237,31,36,0.04)", border: "1px solid rgba(237,31,36,0.12)",
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: "#ED1F24", background: "rgba(237,31,36,0.12)", borderRadius: 6, padding: "2px 7px", flexShrink: 0 }}>
+                          −{Math.abs(p.points)}pts
+                        </span>
+                        <span style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>
+                          <strong style={{ color: "#cbd5e1" }}>{label}</strong>{desc ? ` — ${desc}` : ""}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+
+            {/* V1 fallback — Score Reasoning */}
+            {ev?.score_reasoning && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.40 }}
+                style={{ padding: "14px 16px", borderRadius: 12, background: "rgba(48,125,192,0.04)", border: "1px solid rgba(48,125,192,0.1)" }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: "#307DC0", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 6px" }}>Score Reasoning</p>
+                <p style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.7, margin: 0, fontStyle: "italic" }}>"{ev.score_reasoning}"</p>
+              </motion.div>
+            )}
+
+            {/* V1 fallback — Category Scores */}
             {call.scorable && ev?.category_scores && Object.keys(ev.category_scores).length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.24 }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.44 }}>
                 <SectionHeader icon={Target} label="Category Scores" color="#307DC0" />
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 32px", marginTop: 12 }}>
                   {Object.entries(ev.category_scores).map(([name, score], i) => {
@@ -342,14 +563,9 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
                           </span>
                         </div>
                         <div style={{ height: 5, borderRadius: 99, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
+                          <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
                             transition={{ duration: 0.7, delay: 0.1 + i * 0.04, ease: "easeOut" }}
-                            style={{
-                              height: "100%", borderRadius: 99,
-                              background: `linear-gradient(90deg, ${sc2.color}, rgba(${sc2.rgb},0.5))`,
-                            }}
+                            style={{ height: "100%", borderRadius: 99, background: `linear-gradient(90deg, ${sc2.color}, rgba(${sc2.rgb},0.5))` }}
                           />
                         </div>
                       </div>
@@ -359,23 +575,17 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
               </motion.div>
             )}
 
-            {/* Strengths + Missed in 2 cols */}
+            {/* V1 fallback — Strengths + Missed */}
             {call.scorable && ((ev?.strengths?.length ?? 0) > 0 || (ev?.missed_opportunities?.length ?? 0) > 0) && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.30 }}
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.48 }}
                 style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 {(ev?.strengths?.length ?? 0) > 0 && (
                   <div>
                     <SectionHeader icon={TrendingUp} label="Strengths" color="#43B749" />
                     <ul style={{ listStyle: "none", padding: 0, margin: "10px 0 0", display: "flex", flexDirection: "column", gap: 6 }}>
-                      {ev!.strengths.map((s, i) => (
-                        <li key={i} style={{
-                          fontSize: 12, color: "#94a3b8", lineHeight: 1.6,
-                          padding: "8px 12px", borderRadius: 9,
-                          background: "rgba(67,183,73,0.05)", border: "1px solid rgba(67,183,73,0.12)",
-                          display: "flex", gap: 8,
-                        }}>
-                          <span style={{ color: "#43B749", flexShrink: 0, marginTop: 2 }}>✓</span>
-                          {s}
+                      {ev!.strengths!.map((s, i) => (
+                        <li key={i} style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6, padding: "8px 12px", borderRadius: 9, background: "rgba(67,183,73,0.05)", border: "1px solid rgba(67,183,73,0.12)", display: "flex", gap: 8 }}>
+                          <span style={{ color: "#43B749", flexShrink: 0, marginTop: 2 }}>✓</span>{s}
                         </li>
                       ))}
                     </ul>
@@ -385,15 +595,9 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
                   <div>
                     <SectionHeader icon={TrendingDown} label="Missed Opportunities" color="#FCAF17" />
                     <ul style={{ listStyle: "none", padding: 0, margin: "10px 0 0", display: "flex", flexDirection: "column", gap: 6 }}>
-                      {ev!.missed_opportunities.map((s, i) => (
-                        <li key={i} style={{
-                          fontSize: 12, color: "#94a3b8", lineHeight: 1.6,
-                          padding: "8px 12px", borderRadius: 9,
-                          background: "rgba(252,175,23,0.05)", border: "1px solid rgba(252,175,23,0.12)",
-                          display: "flex", gap: 8,
-                        }}>
-                          <span style={{ color: "#FCAF17", flexShrink: 0, marginTop: 2 }}>!</span>
-                          {s}
+                      {ev!.missed_opportunities!.map((s, i) => (
+                        <li key={i} style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6, padding: "8px 12px", borderRadius: 9, background: "rgba(252,175,23,0.05)", border: "1px solid rgba(252,175,23,0.12)", display: "flex", gap: 8 }}>
+                          <span style={{ color: "#FCAF17", flexShrink: 0, marginTop: 2 }}>!</span>{s}
                         </li>
                       ))}
                     </ul>
@@ -402,25 +606,18 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
               </motion.div>
             )}
 
-            {/* Coaching actions */}
+            {/* V1 fallback — Coaching Actions */}
             {call.scorable && (ev?.coaching_actions?.length ?? 0) > 0 && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.36 }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.52 }}>
                 <SectionHeader icon={Mic} label="Coaching Actions" color="#94a3b8" />
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 10 }}>
-                  {ev!.coaching_actions.map((a, i) => {
+                  {ev!.coaching_actions!.map((a, i) => {
                     const tc = a.type === "behavioral" ? { color: "#307DC0", bg: "rgba(48,125,192,0.08)", border: "rgba(48,125,192,0.2)" }
                              : a.type === "tactical"   ? { color: "#FCAF17", bg: "rgba(252,175,23,0.06)",  border: "rgba(252,175,23,0.2)"  }
                              :                           { color: "#43B749", bg: "rgba(67,183,73,0.06)",   border: "rgba(67,183,73,0.2)"   };
                     return (
-                      <div key={i} style={{
-                        padding: "12px 14px", borderRadius: 12, display: "flex", flexDirection: "column", gap: 8,
-                        background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)",
-                      }}>
-                        <span style={{
-                          fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 5, alignSelf: "flex-start",
-                          textTransform: "uppercase", letterSpacing: "0.07em",
-                          color: tc.color, background: tc.bg, border: `1px solid ${tc.border}`,
-                        }}>
+                      <div key={i} style={{ padding: "12px 14px", borderRadius: 12, display: "flex", flexDirection: "column", gap: 8, background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 5, alignSelf: "flex-start", textTransform: "uppercase", letterSpacing: "0.07em", color: tc.color, background: tc.bg, border: `1px solid ${tc.border}` }}>
                           {a.type}
                         </span>
                         <span style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>{a.action}</span>
@@ -431,41 +628,13 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
               </motion.div>
             )}
 
-            {/* Penalties */}
-            {call.scorable && (ev?.penalties?.length ?? 0) > 0 && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.42 }}>
-                <SectionHeader label="Penalties" color="#ED1F24" />
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
-                  {ev!.penalties.map((p, i) => (
-                    <div key={i} style={{
-                      display: "flex", alignItems: "flex-start", gap: 10,
-                      padding: "10px 14px", borderRadius: 10,
-                      background: "rgba(237,31,36,0.04)", border: "1px solid rgba(237,31,36,0.12)",
-                    }}>
-                      <span style={{
-                        fontSize: 11, fontWeight: 800, color: "#ED1F24",
-                        background: "rgba(237,31,36,0.12)", borderRadius: 6,
-                        padding: "2px 7px", flexShrink: 0,
-                      }}>−{p.points}pts</span>
-                      <span style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>
-                        <strong style={{ color: "#cbd5e1" }}>{p.type}</strong> — {p.reason}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Evidence snippets */}
+            {/* V1 fallback — Evidence snippets */}
             {call.scorable && (ev?.evidence_snippets?.length ?? 0) > 0 && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.48 }}>
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.56 }}>
                 <SectionHeader label="Evidence" color="#64748b" />
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                  {ev!.evidence_snippets.map((e, i) => (
-                    <div key={i} style={{
-                      padding: "12px 14px", borderRadius: 12,
-                      background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)",
-                    }}>
+                  {ev!.evidence_snippets!.map((e, i) => (
+                    <div key={i} style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.05)" }}>
                       <p style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.6, margin: "0 0 6px", fontStyle: "italic" }}>"{e.quote}"</p>
                       <p style={{ fontSize: 11, color: "#475569", lineHeight: 1.5, margin: 0 }}>{e.why_it_matters}</p>
                     </div>
@@ -475,42 +644,40 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
             )}
 
             {/* Transcript */}
-            {call.transcript && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.52 }}
-                style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
-                <button
-                  onClick={() => setShowTranscript(v => !v)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6,
-                    background: "none", border: "none", cursor: "pointer",
-                    fontSize: 11, fontWeight: 700, color: "#475569",
-                    textTransform: "uppercase", letterSpacing: "0.08em",
-                    transition: "color 0.15s",
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.52 }}
+              style={{ borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
+              <button
+                onClick={handleTranscriptToggle}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6,
+                  background: "none", border: "none", cursor: "pointer",
+                  fontSize: 11, fontWeight: 700, color: "#475569",
+                  textTransform: "uppercase", letterSpacing: "0.08em",
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#94a3b8")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}
+              >
+                <ChevronDown size={13} style={{ transform: showTranscript ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
+                {transcriptLoading ? "Loading…" : "Transcript"}
+              </button>
+              {showTranscript && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  style={{ overflow: "hidden" }}
                 >
-                  <ChevronDown size={13} style={{ transform: showTranscript ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />
-                  Transcript
-                </button>
-                {showTranscript && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    style={{ overflow: "hidden" }}
-                  >
-                    <div style={{
-                      marginTop: 10, padding: "14px 16px", borderRadius: 12,
-                      fontSize: 12, color: "#64748b", lineHeight: 1.8, whiteSpace: "pre-wrap",
-                      background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
-                      maxHeight: 280, overflowY: "auto",
-                    }}>
-                      {call.transcript}
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            )}
+                  <div style={{
+                    marginTop: 10, padding: "14px 16px", borderRadius: 12,
+                    fontSize: 12, color: "#64748b", lineHeight: 1.8, whiteSpace: "pre-wrap",
+                    background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)",
+                    maxHeight: 280, overflowY: "auto",
+                  }}>
+                    {transcript || "No transcript available."}
+                  </div>
+                </motion.div>
+              )}
+            </motion.div>
           </div>
         </motion.div>
       </motion.div>
@@ -529,7 +696,7 @@ function SectionHeader({ icon: Icon, label, color }: { icon?: React.ElementType;
 
 /* ── Main component ──────────────────────────────────────────────── */
 
-export default function LiveCallsClient({ calls, companies, accessRole }: Props) {
+export default function LiveCallsClient({ calls, totalCalls, companies, accessRole, showCost = false }: Props) {
   const searchParams = useSearchParams();
   const [selected,   setSelected]   = useState<LiveCall | null>(null);
 
@@ -582,7 +749,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
     { label: "Strengths",            getValue: r => r.evaluation?.strengths?.join("; ") },
     { label: "Missed Opportunities", getValue: r => r.evaluation?.missed_opportunities?.join("; ") },
     { label: "Coaching Actions",     getValue: r => r.evaluation?.coaching_actions?.map(a => `[${a.type}] ${a.action}`).join(" | ") },
-    { label: "Penalties",            getValue: r => r.evaluation?.penalties?.map(p => `${p.type} -${p.points}pts: ${p.reason}`).join(" | ") },
+    { label: "Penalties",            getValue: r => r.evaluation?.penalties?.map(p => { const a = p as unknown as Record<string,unknown>; return "code" in p ? `${a.code} -${p.points}pts` : `${a.type} -${p.points}pts: ${a.reason}`; }).join(" | ") },
     { label: "Transcript",           getValue: r => r.transcript },
   ];
 
@@ -661,7 +828,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
               Call Log
             </h1>
             <p style={{ fontSize: 13, color: "#64748b", margin: 0 }}>
-              {calls.length} Calls Total. Click Any Row To View Scoring Details.
+              {totalCalls.toLocaleString()} Calls Total. Click Any Row To View Scoring Details.
             </p>
           </div>
 
@@ -669,7 +836,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
             {/* Summary stats */}
             <div style={{ display: "flex", gap: 10 }}>
               {[
-                { label: "Showing",    value: String(filtered.length),          color: "#fff"     },
+                { label: "Showing",    value: `${filtered.length.toLocaleString()} / ${totalCalls.toLocaleString()}`, color: "#fff" },
                 { label: "Avg Score",  value: avgScore !== null ? String(avgScore) : "—", color: avgScore !== null ? scoreColor(avgScore).color : "#475569" },
                 { label: "Scorable",   value: `${filtered.filter(c => c.scorable).length}`, color: "#43B749" },
               ].map(({ label, value, color }) => (
@@ -798,7 +965,7 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ background: "rgba(255,255,255,0.015)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {["Date", "Contact", "Agent", "Direction", "Duration", "Score", "Result", "Stage", "Lead Source", "CRM Link"].map((h) => (
+              {["Date", "Contact", "Agent", "Direction", "Duration", "Score", "Result", "Stage", "Lead Source", "CRM Link", ...(showCost ? ["Cost"] : [])].map((h) => (
                 <th key={h} style={{
                   padding: "11px 14px", textAlign: "center",
                   fontSize: 10, fontWeight: 800, color: "#e2e8f0",
@@ -958,6 +1125,15 @@ export default function LiveCallsClient({ calls, companies, accessRole }: Props)
                       <span style={{ fontSize: 12, color: "#334155" }}>—</span>
                     )}
                   </td>
+
+                  {/* Cost */}
+                  {showCost && (
+                    <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#FCAF17" }}>
+                        {c.cost_usd > 0 ? `$${c.cost_usd.toFixed(4)}` : "—"}
+                      </span>
+                    </td>
+                  )}
 
                   {/* Arrow */}
                   <td style={{ padding: "12px 10px", width: 28 }}>

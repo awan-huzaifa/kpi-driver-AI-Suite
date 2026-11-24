@@ -7,6 +7,11 @@ export default function CustomCursor() {
   const ringRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Touch devices have no mouse — skip entirely and restore default cursor
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      document.body.style.cursor = "";
+      return;
+    }
     let mouseX = -100, mouseY = -100;
     let ringX  = -100, ringY  = -100;
     let rafId: number;

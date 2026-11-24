@@ -5,6 +5,7 @@ import { logUsage } from "@/lib/ai-usage";
 import { autoTopupIfNeeded } from "@/lib/wallet";
 import { searchProperty, fetchPhotosByAddress } from "@/lib/underwriting/axesso";
 import { searchComps } from "@/lib/underwriting/rentcast";
+import { fetchRetailComps, fetchInvestorComps } from "@/lib/underwriting/investorbase";
 import { calcRepairCosts, calcRepairCostsKnown, calcRepairCostsScope, calcMaxOffer, calcARVAdjustments, ARV_LOW_FACTOR, ARV_HIGH_FACTOR } from "@/lib/underwriting/calculations";
 import {
   assessPropertyCondition,
@@ -203,8 +204,9 @@ export async function POST(request: NextRequest) {
   let dealId: string | null = null;
 
   // Per-API call counters — incremented at each actual call site
-  let axessoCalls  = 0;
-  let rentcastCalls = 0;
+  let axessoCalls       = 0;
+  let rentcastCalls     = 0;
+  let investorbaseCalls = 0;
 
   try {
     // ── STEP 1: Create new deal OR reset existing deal for re-run ───────────
@@ -307,26 +309,86 @@ export async function POST(request: NextRequest) {
       workflowFlags.push("rentcast_unavailable");
     }
 
+    // ── STEP 4: InvestorBase — retail comps + investor comps (parallel, fresh deals only) ──
+    let ibRetailComps:   NormalizedComp[] = [];
+    let ibInvestorComps: NormalizedComp[] = [];
+
+    if (baseComps === null) {
+      // Only run on fresh deals — re-runs reuse stored comps
+      const [retailResult, investorResult] = await Promise.allSettled([
+        fetchRetailComps(address, {
+          maxRadiusMiles: 2,
+          maxDaysBack:    180,
+          bedsMin:        property.beds   > 0 ? Math.max(1, property.beds   - 1) : undefined,
+          bedsMax:        property.beds   > 0 ? property.beds   + 1              : undefined,
+          sqftMin:        property.sqft   > 0 ? Math.round(property.sqft * 0.75) : undefined,
+          sqftMax:        property.sqft   > 0 ? Math.round(property.sqft * 1.25) : undefined,
+        }),
+        fetchInvestorComps(
+          property.latitude  ?? 0,
+          property.longitude ?? 0,
+          { beds: property.beds, baths: property.baths, sqft: property.sqft }
+        ),
+      ]);
+
+      investorbaseCalls = 2;
+
+      if (retailResult.status === "fulfilled") {
+        ibRetailComps = retailResult.value;
+        console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`[STEP 4] INVESTORBASE retail comps: ${ibRetailComps.length}`);
+      } else {
+        console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`[STEP 4] INVESTORBASE retail-comps FAILED (non-fatal):`, retailResult.reason);
+        workflowFlags.push("investorbase_retail_unavailable");
+      }
+
+      if (investorResult.status === "fulfilled") {
+        ibInvestorComps = investorResult.value;
+        console.log(`[STEP 4] INVESTORBASE investor comps: ${ibInvestorComps.length}`);
+      } else {
+        console.log(`[STEP 4] INVESTORBASE investor-comps FAILED (non-fatal):`, investorResult.reason);
+        workflowFlags.push("investorbase_investor_unavailable");
+      }
+
+      console.log(`[STEP 4] INVESTORBASE SUMMARY — retail: ${ibRetailComps.length} | investor: ${ibInvestorComps.length}`);
+    } else {
+      console.log(`[STEP 4] INVESTORBASE skipped — re-run uses stored comps`);
+    }
+
     let normalizedComps: NormalizedComp[];
 
     if (baseComps !== null) {
       // Re-run: reuse the stored comps the user chose to keep.
-      // Preserve user-set categories (locked); null means "let Claude decide".
       normalizedComps = baseComps.map((c) => ({ ...c }));
-      console.log(`[STEP 3] RE-RUN — using ${normalizedComps.length} stored base comps (RentCast comps discarded, AVM refreshed above)`);
-    } else if (rentcastComps.length > 0) {
-      // ── STEP 4: Resolve comp photos via Axesso (address → zpid → photos), in parallel ─
-      const photosByComp = await Promise.all(rentcastComps.map((c) => fetchPhotosByAddress(c.address)));
-      axessoCalls += rentcastComps.length;
-      normalizedComps = rentcastComps.map((c, i) => ({ ...c, photos: photosByComp[i] }));
-      console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log(`[STEP 4] PHOTOS RESOLVED for ${normalizedComps.length} RentCast comps via Axesso`,
-        JSON.stringify(normalizedComps.map((c) => ({ address: c.address, photoCount: c.photos.length })), null, 2));
+      console.log(`[STEP 3] RE-RUN — using ${normalizedComps.length} stored base comps (all API comps discarded, AVM refreshed above)`);
     } else {
-      normalizedComps = [];
+      // ── STEP 5: Resolve photos for all comps via Axesso in parallel ──────────
+      const allCompsForPhotos = [...rentcastComps, ...ibRetailComps, ...ibInvestorComps];
+
+      if (allCompsForPhotos.length > 0) {
+        const photoResults = await Promise.all(allCompsForPhotos.map((c) => fetchPhotosByAddress(c.address)));
+        axessoCalls += allCompsForPhotos.length;
+
+        const rentcastWithPhotos   = rentcastComps.map((c, i) => ({ ...c, photos: photoResults[i] }));
+        const ibRetailWithPhotos   = ibRetailComps.map((c, i) => ({ ...c, photos: photoResults[rentcastComps.length + i] }));
+        const ibInvestorWithPhotos = ibInvestorComps.map((c, i) => ({ ...c, photos: photoResults[rentcastComps.length + ibRetailComps.length + i] }));
+
+        normalizedComps = [...rentcastWithPhotos, ...ibRetailWithPhotos, ...ibInvestorWithPhotos];
+
+        console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`[STEP 5] PHOTOS RESOLVED via Axesso — total comps: ${normalizedComps.length}`);
+        console.log(`[STEP 5]   RentCast: ${rentcastWithPhotos.length} | IB retail: ${ibRetailWithPhotos.length} | IB investor: ${ibInvestorWithPhotos.length}`);
+        console.log(`[STEP 5]   Photo counts:`, JSON.stringify(
+          normalizedComps.map((c) => ({ address: c.address, photos: c.photos.length })), null, 2
+        ));
+      } else {
+        normalizedComps = [];
+        console.log(`[STEP 5] No comps from any source — skipping Axesso photo fetch`);
+      }
     }
 
-    // ── STEP 5: Resolve manual comps ─────────────────────────────────────────
+    // ── STEP 6: Resolve manual comps ─────────────────────────────────────────
     // Count manual comps that will call Axesso (those missing salePrice or sqft)
     axessoCalls += manualCompsInput.filter(
       c => !(c.salePrice != null && c.sqft != null && c.sqft > 0)
@@ -335,10 +397,10 @@ export async function POST(request: NextRequest) {
       ? await Promise.all(manualCompsInput.map(resolveManualComp))
       : [];
     if (resolvedManualComps.length > 0) {
-      console.log(`[STEP 5] MANUAL COMPS resolved (${resolvedManualComps.length}):`, JSON.stringify(resolvedManualComps.map(c => ({ address: c.address, category: c.category, salePrice: c.salePrice })), null, 2));
+      console.log(`[STEP 6] MANUAL COMPS resolved (${resolvedManualComps.length}):`, JSON.stringify(resolvedManualComps.map(c => ({ address: c.address, category: c.category, salePrice: c.salePrice })), null, 2));
     }
 
-    // ── STEP 6: Merge + split for Claude ─────────────────────────────────────
+    // ── STEP 7: Merge + split for Claude ─────────────────────────────────────
     const allComps = [...normalizedComps, ...resolvedManualComps];
     // Comps where user pre-assigned a category bypass Claude entirely
     const lockedComps  = allComps.filter((c) => c.category !== null);
@@ -346,15 +408,16 @@ export async function POST(request: NextRequest) {
 
     if (allComps.length === 0) workflowFlags.push("no_comps_available");
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log(`[STEP 6] allComps: ${allComps.length} | forClaude: ${compsForClaude.length} | locked: ${lockedComps.length}`);
-    console.log("[STEP 6] USER INPUTS → condition:", condition, "| multiplier:", marketMultiplier, "| extraItems:", JSON.stringify(extraItems));
+    console.log(`[STEP 7] allComps: ${allComps.length} | forClaude: ${compsForClaude.length} | locked: ${lockedComps.length}`);
+    console.log(`[STEP 7]   RentCast: ${rentcastComps.length} | IB retail: ${ibRetailComps.length} | IB investor: ${ibInvestorComps.length} | manual: ${resolvedManualComps.length}`);
+    console.log("[STEP 7] USER INPUTS → condition:", condition, "| multiplier:", marketMultiplier, "| extraItems:", JSON.stringify(extraItems));
 
-    // ── STEP 7: Claude Call 1 — Property condition assessment (photos + notes) ─
+    // ── STEP 8: Claude Call 1 — Property condition assessment (photos + notes) ─
     const { _tokens: call1Tokens, ...conditionAssessment } = await assessPropertyCondition(property, condition, propertyPhotos);
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[STEP 7] CLAUDE CALL 1 — CONDITION ASSESSMENT", JSON.stringify(conditionAssessment, null, 2));
+    console.log("[STEP 8] CLAUDE CALL 1 — CONDITION ASSESSMENT", JSON.stringify(conditionAssessment, null, 2));
 
-    // ── STEP 8: Calculate repair costs — branch on repair mode ───────────────
+    // ── STEP 9: Calculate repair costs — branch on repair mode ───────────────
     const arvAdjustment = calcARVAdjustments(property);
 
     let repairCosts: RepairCosts;
@@ -367,11 +430,11 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[STEP 8] REPAIR MODE:", repairMode);
-    console.log("[STEP 8] ARV ADJUSTMENT:", arvAdjustment);
-    console.log("[STEP 8] REPAIR COSTS", JSON.stringify(repairCosts, null, 2));
+    console.log("[STEP 9] REPAIR MODE:", repairMode);
+    console.log("[STEP 9] ARV ADJUSTMENT:", arvAdjustment);
+    console.log("[STEP 9] REPAIR COSTS", JSON.stringify(repairCosts, null, 2));
 
-    // ── STEP 9: Claude Call 2 — Comp validation and categorization ───────────
+    // ── STEP 10: Claude Call 2 — Comp validation and categorization ──────────
     // Only comps with category=null go to Claude. Locked comps (user-specified
     // type) are merged back in after without Claude touching their category.
     let validatedComps: NormalizedComp[] = [];
@@ -384,7 +447,7 @@ export async function POST(request: NextRequest) {
       compValidation = rawValidation;
       validatedComps = [...compValidation.validatedComps, ...lockedComps];
       console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("[STEP 9] CLAUDE CALL 2 — COMP CATEGORIZATION");
+      console.log("[STEP 10] CLAUDE CALL 2 — COMP CATEGORIZATION");
       console.log("  Analyst notes:", compValidation.analystNotes);
       console.log("  Rejected:", JSON.stringify(compValidation.rejectedComps));
       console.log("  Claude-validated:", compValidation.validatedComps.length, "| locked:", lockedComps.length);
@@ -394,14 +457,14 @@ export async function POST(request: NextRequest) {
       validatedComps = lockedComps;
       compValidation = { validatedComps: lockedComps, rejectedComps: [], analystNotes: "All comps were user-specified with locked categories." };
       console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("[STEP 9] SKIPPED — all comps are user-locked");
+      console.log("[STEP 10] SKIPPED — all comps are user-locked");
     } else {
       compValidation = { validatedComps: [], rejectedComps: [], analystNotes: "No comparable properties available for this address." };
       console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-      console.log("[STEP 9] SKIPPED — no comps to categorize");
+      console.log("[STEP 10] SKIPPED — no comps to categorize");
     }
 
-    // ── STEP 10: Claude Call 3 — ARV synthesis (RentCast AVM + arv comps) ────
+    // ── STEP 11: Claude Call 3 — ARV synthesis (RentCast AVM + arv comps) ────
     const arvCompsForSynthesis = validatedComps.filter((c) => c.category === "arv");
 
     let arvResult: ARVResult;
@@ -453,13 +516,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[STEP 10] ARV RESULT", JSON.stringify(arvResult, null, 2));
+    console.log("[STEP 11] ARV RESULT", JSON.stringify(arvResult, null, 2));
 
     const maxOfferResult = calcMaxOffer(arvResult.arv, repairCosts, investorProfitPct, assignmentFee);
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[STEP 11] MAX OFFER RESULT", JSON.stringify(maxOfferResult, null, 2));
+    console.log("[STEP 12] MAX OFFER RESULT", JSON.stringify(maxOfferResult, null, 2));
 
-    // ── STEP 12: Claude Call 4 — Final underwriting report ───────────────────
+    // ── STEP 13: Claude Call 4 — Final underwriting report ───────────────────
     // For "known_cost" mode, derive condition grade from Claude's visual score
     // rather than the placeholder 'fair' used during repair calculation.
     const reportConditionGrade: ConditionGrade = repairMode === "known_cost"
@@ -478,7 +541,7 @@ export async function POST(request: NextRequest) {
       flags: workflowFlags,
     });
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("[STEP 12] CLAUDE CALL 4 — FINAL REPORT");
+    console.log("[STEP 13] CLAUDE CALL 4 — FINAL REPORT");
     console.log("  Recommendation:", report.recommendation, "| Confidence:", report.confidenceScore);
     console.log("  Executive summary:", report.executiveSummary);
     console.log("  Red flags:", report.redFlags);
@@ -499,8 +562,9 @@ export async function POST(request: NextRequest) {
       .or(`company_id.eq.${companyId},company_id.is.null`);
     const pricingRow = uwCfgRows?.find(r => r.company_id === companyId) ?? uwCfgRows?.find(r => r.company_id === null);
 
-    const RENTCAST_COST_USD = Number(pricingRow?.rentcast_cost_usd ?? 0.074);
-    const AXESSO_COST_USD   = Number(pricingRow?.axesso_cost_usd   ?? 0.0018);
+    const RENTCAST_COST_USD     = Number(pricingRow?.rentcast_cost_usd ?? 0.074);
+    const AXESSO_COST_USD       = Number(pricingRow?.axesso_cost_usd   ?? 0.0018);
+    const INVESTORBASE_COST_USD = 0.02; // flat estimate per API call pair
     // Charged prices — what gets deducted from the company wallet
     const chargedRentcast    = Number(pricingRow?.rentcast_charged_usd        ?? RENTCAST_COST_USD);
     const chargedAxesso      = Number(pricingRow?.axesso_charged_usd           ?? AXESSO_COST_USD);
@@ -509,11 +573,12 @@ export async function POST(request: NextRequest) {
 
     const totalInput  = call1Tokens.inputTokens  + (call2Tokens?.inputTokens  ?? 0) + (call3Tokens?.inputTokens  ?? 0) + call4Tokens.inputTokens;
     const totalOutput = call1Tokens.outputTokens + (call2Tokens?.outputTokens ?? 0) + (call3Tokens?.outputTokens ?? 0) + call4Tokens.outputTokens;
-    const claudeActualCostUsd  = totalInput * INPUT_COST_PER_TOKEN + totalOutput * OUTPUT_COST_PER_TOKEN;
-    const claudeChargedUsd     = (totalInput / 1_000_000) * chargedInputPerM + (totalOutput / 1_000_000) * chargedOutputPerM;
-    const rentcastChargedTotal = rentcastCalls * chargedRentcast;
-    const axessoChargedTotal   = axessoCalls   * chargedAxesso;
-    const deductionUsd         = claudeChargedUsd + rentcastChargedTotal + axessoChargedTotal;
+    const claudeActualCostUsd    = totalInput * INPUT_COST_PER_TOKEN + totalOutput * OUTPUT_COST_PER_TOKEN;
+    const claudeChargedUsd       = (totalInput / 1_000_000) * chargedInputPerM + (totalOutput / 1_000_000) * chargedOutputPerM;
+    const rentcastChargedTotal   = rentcastCalls     * chargedRentcast;
+    const axessoChargedTotal     = axessoCalls       * chargedAxesso;
+    const investorbaseChargedTotal = investorbaseCalls * INVESTORBASE_COST_USD;
+    const deductionUsd           = claudeChargedUsd + rentcastChargedTotal + axessoChargedTotal + investorbaseChargedTotal;
 
     const usageSummary = {
       call1_condition: call1Tokens,
@@ -524,7 +589,7 @@ export async function POST(request: NextRequest) {
       estimatedCostUsd: deductionUsd,
     };
     console.log("\n" + "=".repeat(60));
-    console.log("USAGE SUMMARY — ALL CLAUDE CALLS THIS RUN");
+    console.log("USAGE SUMMARY — ALL CALLS THIS RUN");
     console.log("=".repeat(60));
     console.log(`  Call 1 (condition): in=${call1Tokens.inputTokens.toLocaleString()}  out=${call1Tokens.outputTokens.toLocaleString()}`);
     console.log(`  Call 2 (comps):     in=${(call2Tokens?.inputTokens ?? 0).toLocaleString()}  out=${(call2Tokens?.outputTokens ?? 0).toLocaleString()}${!call2Tokens ? "  [skipped — all comps locked]" : ""}`);
@@ -536,10 +601,11 @@ export async function POST(request: NextRequest) {
     console.log(`  CLAUDE CHARGED:     $${claudeChargedUsd.toFixed(4)} USD  ($${chargedInputPerM}/1M in · $${chargedOutputPerM}/1M out)`);
     console.log(`  RENTCAST:           ${rentcastCalls} call(s) × $${chargedRentcast.toFixed(4)} = $${rentcastChargedTotal.toFixed(4)} USD`);
     console.log(`  AXESSO:             ${axessoCalls} call(s) × $${chargedAxesso.toFixed(4)} = $${axessoChargedTotal.toFixed(4)} USD`);
+    console.log(`  INVESTORBASE:       ${investorbaseCalls} call(s) × $${INVESTORBASE_COST_USD.toFixed(4)} = $${investorbaseChargedTotal.toFixed(4)} USD`);
     console.log(`  TOTAL DEDUCTION:    $${deductionUsd.toFixed(4)} USD`);
     console.log("=".repeat(60) + "\n");
 
-    // ── STEP 13: Save completed report to underwriting_reports ──────────────
+    // ── STEP 14: Save completed report to underwriting_reports ──────────────
     const finishAdminDb = createAdminClient();
     const { error: reportError } = await finishAdminDb
       .from("underwriting_reports")
@@ -583,7 +649,7 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to save report: ${reportError.message}`);
     }
 
-    // ── STEP 14: Update deal status to completed ─────────────────────────────
+    // ── STEP 15: Update deal status to completed ─────────────────────────────
     const { error: dealUpdateError } = await finishAdminDb
       .from("deals")
       .update({
@@ -599,13 +665,14 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to update deal status: ${dealUpdateError.message}`);
     }
 
-    // ── STEP 15: Log aggregated AI usage + deduct from company wallet ────────
+    // ── STEP 16: Log aggregated AI usage + deduct from company wallet ────────
     if (companyId && dealId) {
       const adminDb = createAdminClient();
 
       const providerCostUsd = claudeActualCostUsd
-        + rentcastCalls * RENTCAST_COST_USD
-        + axessoCalls   * AXESSO_COST_USD;
+        + rentcastCalls     * RENTCAST_COST_USD
+        + axessoCalls       * AXESSO_COST_USD
+        + investorbaseCalls * INVESTORBASE_COST_USD;
 
       void logUsage({
         company_id:        companyId,
@@ -636,7 +703,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── STEP 16: Return final report to frontend ─────────────────────────────
+    // ── STEP 17: Return final report to frontend ─────────────────────────────
     return NextResponse.json<UnderwriteResponse>({ dealId: dealId!, report: report as UnderwritingReport, usageSummary });
 
   } catch (err) {

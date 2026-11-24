@@ -16,9 +16,10 @@ function verifySecret(header: string | null): boolean {
 }
 
 interface IngestPayload {
-  agent_name:     string;  // rep's full name, exact match against users.full_name
+  agent_name:     string;  // rep's full name, matched against users.full_name
   location_id:    string;  // GHL location ID, matched against companies.ghl_sub_account_id
-  agent_phone?:   string;  // stored for reference only — no longer used to find the user
+  contact_id?:    string;  // GHL contact ID — used to compute system facts SF1–SF3
+  agent_phone?:   string;  // stored for reference only
   contact_name?:  string;
   contact_phone?: string;
   direction:      "inbound" | "outbound";
@@ -32,6 +33,7 @@ interface IngestPayload {
   call_date?:     string;
   lead_source?:   string;
   known_outcome?: string;
+  disposition?:   string;  // rep's stated outcome — used for DISPOSITION_MISMATCH flag
 }
 
 export async function POST(req: NextRequest) {
@@ -55,15 +57,15 @@ export async function POST(req: NextRequest) {
   }
 
   const {
-    agent_name, location_id, agent_phone, contact_name, contact_phone,
+    agent_name, location_id, contact_id, agent_phone, contact_name, contact_phone,
     direction, duration_sec, transcript,
     recording_url, crm_link,
-    stage, call_id, lead_id, call_date, lead_source, known_outcome,
+    stage, call_id, lead_id, call_date, lead_source, known_outcome, disposition,
   } = body;
 
   console.log("[ingest] payload:", {
-    agent_name, location_id, agent_phone, contact_name, contact_phone, direction, duration_sec,
-    stage, call_id, lead_id, call_date, lead_source, known_outcome,
+    agent_name, location_id, contact_id, agent_phone, contact_name, contact_phone, direction, duration_sec,
+    stage, call_id, lead_id, call_date, lead_source, known_outcome, disposition,
     recording_url, crm_link,
     transcript_length: transcript?.length ?? 0,
     transcript_preview: transcript?.slice(0, 200),
@@ -132,7 +134,44 @@ export async function POST(req: NextRequest) {
     console.log("[ingest] wallet balance ok:", company.wallet_balance);
   }
 
-  // 5. Score the call
+  // 5. Compute system facts from prior call history (requires contact_id)
+  const systemFacts = { SF1: false, SF2: false, SF3: false, SF4: false };
+  if (contact_id && company.id && isScorable) {
+    // Fetch prior scorable calls for this contact (user_id + evaluation JSONB)
+    const { data: priorCalls } = await admin
+      .from("live_calls")
+      .select("user_id, evaluation")
+      .eq("company_id", company.id)
+      .eq("contact_id", contact_id)
+      .eq("scorable", true)
+      .gt("duration_sec", 30);
+
+    if (priorCalls && priorCalls.length > 0) {
+      systemFacts.SF1 = true;
+
+      // SF3: any prior call ended with an offer block (T5/T6/T7)
+      systemFacts.SF3 = priorCalls.some(c => {
+        const toBlock = (c.evaluation as Record<string, unknown> | null)?.to_block as string | undefined;
+        return ["T5", "T6", "T7"].includes(toBlock ?? "");
+      });
+
+      // SF2: any prior call was made by an ACQ rep — check user_ids
+      const priorUserIds = [...new Set(priorCalls.map(c => c.user_id).filter(Boolean))];
+      if (priorUserIds.length > 0) {
+        const { data: acqUsers } = await admin
+          .from("users")
+          .select("id")
+          .in("id", priorUserIds)
+          .eq("agent_type", "acq");
+        systemFacts.SF2 = (acqUsers?.length ?? 0) > 0;
+      }
+    }
+    console.log("[ingest] system facts:", systemFacts, "from", priorCalls?.length ?? 0, "prior calls for contact:", contact_id);
+  } else {
+    console.log("[ingest] skipping system facts —", !contact_id ? "no contact_id in payload" : "not a scorable agent type");
+  }
+
+  // 6. Score the call
   console.log("[ingest] scoring call — agent_type:", user.agent_type);
   let result: ScoreResult;
   try {
@@ -144,54 +183,86 @@ export async function POST(req: NextRequest) {
       lead_source:       lead_source,
       known_outcome:     known_outcome,
       opportunity_stage: stage,
+      stage_at_dial:     stage ?? undefined,
+      system_facts:      systemFacts,
+      disposition:       disposition ?? undefined,
     });
     console.log("[ingest] score result:", {
-      scorable:             result.scorable,
-      score:                result.score,
-      score_band:           result.score_band,
-      call_stage:           result.call_stage,
-      call_type:            result.call_type,
-      opportunity_level:    result.opportunity_level,
-      confidence:           result.confidence,
-      manager_review_needed: result.manager_review_needed,
+      scorable:   result.scorable,
+      score:      result.score,
+      score_band: result.score_band,
+      call_stage: result.call_stage,
+      from_block: result.from_block,
+      to_block:   result.to_block,
+      flags:      result.flags,
     });
   } catch (e) {
     console.error("[ingest] scoring error:", e);
     result = {
-      scorable:              false,
-      reason:                `Scoring failed: ${e instanceof Error ? e.message : "unknown error"}`,
-      call_id:               call_id ?? null,
-      lead_id:               lead_id ?? null,
-      rep_name:              user.full_name ?? null,
-      user_role:             user.agent_type,
-      call_stage:            stage ?? null,
-      call_type:             null,
-      call_result:           null,
-      opportunity_level:     null,
-      rubric_version:        null,
-      score:                 null,
-      score_band:            null,
-      category_scores:       null,
-      penalties:             [],
-      bonuses:               [],
-      strengths:             [],
-      missed_opportunities:  [],
-      coaching_actions:      [],
-      score_reasoning:       null,
-      evidence_snippets:     [],
-      confidence:            null,
-      manager_review_needed: false,
-      _usage:                { inputTokens: 0, outputTokens: 0, costUsd: 0, model: "" },
+      scorable:         false,
+      ns_code:          "NS-5",
+      call_id:          call_id ?? null,
+      lead_id:          lead_id ?? null,
+      rep_name:         user.full_name ?? null,
+      agent_type:       user.agent_type,
+      call_stage:       stage ?? null,
+      call_result:      `Scoring failed: ${e instanceof Error ? e.message : "unknown error"}`,
+      from_block:       null,
+      to_block:         null,
+      tw_applied:       false,
+      disposition_match: false,
+      rubric_version:   null,
+      criteria:         [],
+      metrics: { talk_ratio: null, longest_monologue_s: null, open_questions: null, interruptions: null, silence_after_number_s: null, known_info_reasked: null },
+      core_score:       null,
+      from_score:       null,
+      to_score:         null,
+      raw_score:        null,
+      critical_miss:    { applied: false, block: null, deduction: 0 },
+      penalties:        [],
+      auto_fail:        null,
+      score:            null,
+      score_band:       null,
+      flags:            [],
+      coaching:         null,
+      _usage:           { inputTokens: 0, outputTokens: 0, costUsd: 0, model: "" },
     };
   }
 
-  // 6. Save to live_calls
+  // 6. Calculate cost before insert (so it can be stored on the row)
+  let deductionUsd   = 0;
+  let providerCostUsd = 0;
+  let chargedInputPerM  = 3.0;
+  let chargedOutputPerM = 15.0;
+  let costInputPerM     = 3.0;
+  let costOutputPerM    = 15.0;
+
+  if (isScorable && user.company_id) {
+    const { data: cfgRows } = await admin
+      .from("billing_config")
+      .select("claude_input_charged_per_m, claude_output_charged_per_m, claude_input_cost_per_m, claude_output_cost_per_m, company_id")
+      .eq("app", "sales_coach")
+      .or(`company_id.eq.${user.company_id},company_id.is.null`);
+    const pricingRow = cfgRows?.find(r => r.company_id === user.company_id) ?? cfgRows?.find(r => r.company_id === null);
+
+    chargedInputPerM  = Number(pricingRow?.claude_input_charged_per_m  ?? 3.0);
+    chargedOutputPerM = Number(pricingRow?.claude_output_charged_per_m ?? 15.0);
+    costInputPerM     = Number(pricingRow?.claude_input_cost_per_m     ?? 3.0);
+    costOutputPerM    = Number(pricingRow?.claude_output_cost_per_m    ?? 15.0);
+    deductionUsd   = (result._usage.inputTokens  / 1_000_000) * chargedInputPerM
+                   + (result._usage.outputTokens / 1_000_000) * chargedOutputPerM;
+    providerCostUsd = (result._usage.inputTokens  / 1_000_000) * costInputPerM
+                    + (result._usage.outputTokens / 1_000_000) * costOutputPerM;
+  }
+
+  // 7. Save to live_calls
   console.log("[ingest] inserting into live_calls...");
   const { data: call, error: insertErr } = await admin
     .from("live_calls")
     .insert({
       user_id:       user.id,
       company_id:    user.company_id,
+      contact_id:    contact_id    ?? null,
       contact_name:  contact_name  ?? null,
       contact_phone: contact_phone ?? null,
       agent_phone:   agent_phone   ?? null,
@@ -204,27 +275,30 @@ export async function POST(req: NextRequest) {
       transcript,
       recording_url: recording_url ?? null,
       crm_link:      crm_link      ?? null,
+      cost_usd:      deductionUsd,
       evaluation: {
-        reason:                result.reason,
-        call_type:             result.call_type,
-        opportunity_level:     result.opportunity_level,
-        rubric_version:        result.rubric_version,
-        score_band:            result.score_band,
-        category_scores:       result.category_scores,
-        penalties:             result.penalties,
-        bonuses:               result.bonuses,
-        strengths:             result.strengths,
-        missed_opportunities:  result.missed_opportunities,
-        coaching_actions:      result.coaching_actions,
-        score_reasoning:       result.score_reasoning,
-        evidence_snippets:     result.evidence_snippets,
-        confidence:            result.confidence,
-        manager_review_needed: result.manager_review_needed,
+        rubric_version:   result.rubric_version,
+        from_block:       result.from_block,
+        to_block:         result.to_block,
+        tw_applied:       result.tw_applied,
+        disposition_match: result.disposition_match,
+        score_band:       result.score_band,
+        core_score:       result.core_score,
+        from_score:       result.from_score,
+        to_score:         result.to_score,
+        raw_score:        result.raw_score,
+        critical_miss:    result.critical_miss,
+        penalties:        result.penalties,
+        auto_fail:        result.auto_fail,
+        flags:            result.flags,
+        criteria:         result.criteria,
+        metrics:          result.metrics,
+        coaching:         result.coaching,
         meta: {
-          call_id:      call_id      ?? null,
-          lead_id:      lead_id      ?? null,
-          call_date:    call_date    ?? null,
-          lead_source:  lead_source  ?? null,
+          call_id:      call_id       ?? null,
+          lead_id:      lead_id       ?? null,
+          call_date:    call_date     ?? null,
+          lead_source:  lead_source   ?? null,
           known_outcome: known_outcome ?? null,
         },
       },
@@ -241,23 +315,6 @@ export async function POST(req: NextRequest) {
   console.log("[ingest] ────────────────────────────────────────────────");
 
   if (isScorable && user.company_id) {
-    // Fetch per-token charged prices — prefer company override, fall back to global
-    const { data: cfgRows } = await admin
-      .from("billing_config")
-      .select("claude_input_charged_per_m, claude_output_charged_per_m, claude_input_cost_per_m, claude_output_cost_per_m, company_id")
-      .eq("app", "sales_coach")
-      .or(`company_id.eq.${user.company_id},company_id.is.null`);
-    const pricingRow = cfgRows?.find(r => r.company_id === user.company_id) ?? cfgRows?.find(r => r.company_id === null);
-
-    const chargedInputPerM  = Number(pricingRow?.claude_input_charged_per_m  ?? 3.0);
-    const chargedOutputPerM = Number(pricingRow?.claude_output_charged_per_m ?? 15.0);
-    const costInputPerM     = Number(pricingRow?.claude_input_cost_per_m     ?? 3.0);
-    const costOutputPerM    = Number(pricingRow?.claude_output_cost_per_m    ?? 15.0);
-    const deductionUsd = (result._usage.inputTokens  / 1_000_000) * chargedInputPerM
-                       + (result._usage.outputTokens / 1_000_000) * chargedOutputPerM;
-    const providerCostUsd = (result._usage.inputTokens  / 1_000_000) * costInputPerM
-                          + (result._usage.outputTokens / 1_000_000) * costOutputPerM;
-
     console.log(`[ingest:billing] in=${result._usage.inputTokens} out=${result._usage.outputTokens} charged=$${deductionUsd.toFixed(5)} cost=$${providerCostUsd.toFixed(5)}`);
 
     void logUsage({
@@ -289,12 +346,12 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(
     {
-      success:  true,
-      call_id:  call.id,
-      scorable: result.scorable,
-      score:    result.score,
+      success:    true,
+      call_id:    call.id,
+      scorable:   result.scorable,
+      score:      result.score,
       score_band: result.score_band,
-      manager_review_needed: result.manager_review_needed,
+      flags:      result.flags,
     },
     { status: 200 }
   );

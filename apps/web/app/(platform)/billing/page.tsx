@@ -22,7 +22,7 @@ export default async function BillingPage() {
   const companyId = profile?.company_id ?? null
   const admin = createAdminClient()
 
-  const [{ data: sub }, { data: companyRow }, { data: appSpend }, { data: usageLogs }, { data: skipTracingTxns }, { data: walletTxns }] = await Promise.all([
+  const [{ data: sub }, { data: companyRow }, { data: appSpend }, { data: usageLogs }, { data: skipTracingTxns }, { data: walletTxns }, { data: usageSummaryRows }] = await Promise.all([
     supabase.from('subscriptions').select('plan_id, status').eq('user_id', user.id).single(),
 
     companyId
@@ -56,6 +56,10 @@ export default async function BillingPage() {
           .eq('type', 'topup')
           .order('created_at', { ascending: false })
           .limit(50)
+      : Promise.resolve({ data: [], error: null }),
+
+    companyId
+      ? admin.rpc('get_company_usage_summary', { p_company_id: companyId })
       : Promise.resolve({ data: [], error: null }),
   ])
 
@@ -99,6 +103,18 @@ export default async function BillingPage() {
   const allUsageLogs = [...(usageLogs ?? []), ...skipTracingRows]
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
+  // Aggregate the two RPC rows (ai_usage_logs row + skip_tracing row)
+  const summaryRows = (usageSummaryRows ?? []) as Array<{
+    total_cost: string; total_runs: string; total_input_tokens: string; total_output_tokens: string;
+    skip_tracing_cost: string; skip_tracing_runs: string;
+  }>
+  const usageSummary = {
+    totalCost:         summaryRows.reduce((s, r) => s + Number(r.total_cost)          + Number(r.skip_tracing_cost),  0),
+    totalRuns:         summaryRows.reduce((s, r) => s + Number(r.total_runs)          + Number(r.skip_tracing_runs),  0),
+    totalInputTokens:  summaryRows.reduce((s, r) => s + Number(r.total_input_tokens),  0),
+    totalOutputTokens: summaryRows.reduce((s, r) => s + Number(r.total_output_tokens), 0),
+  }
+
   const planId   = sub?.plan_id as PlanId | null
   const isActive = sub?.status === 'active' || sub?.status === 'trialing'
 
@@ -120,6 +136,7 @@ export default async function BillingPage() {
       appSpend={appSpend ?? []}
       topUpOptions={TOP_UP_OPTIONS}
       usageLogs={allUsageLogs}
+      usageSummary={usageSummary}
       dealAddresses={dealAddresses}
       dealRunNumbers={dealRunNumbers}
       autoTopup={{

@@ -9,7 +9,8 @@ export default function PlatformContentArea({ children }: { children: React.Reac
 
   return (
     <div
-      style={{ flex: 1, marginLeft: 248, display: 'flex', flexDirection: 'column', position: 'relative' }}
+      className="main-content"
+      style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}
       onMouseMove={(e) => {
         const { left, top } = e.currentTarget.getBoundingClientRect()
         mouseX.set(e.clientX - left)

@@ -21,6 +21,7 @@ const PUBLIC_PATHS = [
   '/api/data-enrichment/ingest',
   '/api/skip-tracing/ingest',
   '/api/kpi/ingest',
+  '/api/kpi/native-ingest',
   '/api/email-reports/cron',
 ]
 

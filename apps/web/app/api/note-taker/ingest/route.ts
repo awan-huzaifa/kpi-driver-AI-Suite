@@ -30,13 +30,16 @@ interface NoteTakerPayload {
   output_tokens:  number | null;
   duration_sec?:  number | null;  // call duration for Whisper transcription cost
   agent_name?:    string | null;  // rep who made the call
+  contact_name?:  string | null;  // contact's name from GHL
   call_id?:       string | null;  // optional idempotency key
   lead_source?:   string | null;  // e.g. "Facebook", "Google", "Cold List"
   contact_Phone?: string | null;  // contact's phone number from GHL webhook
   agent_phone?:   string | null;  // agent's phone (To if inbound, From if outbound)
-  crm_link?:      string | null;  // URL to the contact in GHL/CRM
-  customFields?:  { key: string; value: unknown }[];
-  transcript?:    string | null;  // full call transcript
+  crm_link?:       string | null;  // URL to the contact in GHL/CRM
+  stage?:          string | null;  // GHL opportunity stage
+  customFields?:   { key: string; value: unknown }[];
+  transcript?:     string | null;  // full call transcript
+  recording_url?:  string | null;  // call recording URL
 }
 
 export async function POST(req: NextRequest) {
@@ -54,7 +57,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { location_id, call_direction, to, from, summary, normal_summary, input_tokens, output_tokens, duration_sec, agent_name, call_id, lead_source, contact_Phone, agent_phone, crm_link, customFields, transcript } = body;
+  const { location_id, call_direction, to, from, summary, normal_summary, input_tokens, output_tokens, duration_sec, agent_name, contact_name, call_id, lead_source, contact_Phone, agent_phone, crm_link, stage, customFields, transcript, recording_url } = body;
 
   if (!location_id) {
     return NextResponse.json({ error: "Missing required field: location_id" }, { status: 400 });
@@ -75,6 +78,19 @@ export async function POST(req: NextRequest) {
   }
   if (!company) {
     return NextResponse.json({ error: `No company found for location_id ${location_id}` }, { status: 404 });
+  }
+
+  // Resolve agent_type from users table (best-effort, same pattern as Sales Coach)
+  let agentType: string | null = null;
+  if (agent_name) {
+    const { data: userRow } = await admin
+      .from("users")
+      .select("agent_type")
+      .eq("company_id", company.id)
+      .eq("is_active", true)
+      .ilike("full_name", agent_name.trim())
+      .maybeSingle();
+    agentType = userRow?.agent_type ?? null;
   }
 
   // Wallet pre-check
@@ -121,13 +137,18 @@ export async function POST(req: NextRequest) {
       from_number:     from,
       ai_summary:      summary,
       normal_summary,
-      agent_name:      agent_name ?? null,
-      lead_source:     lead_source ?? null,
+      contact_name:    contact_name  ?? null,
+      agent_name:      agent_name    ?? null,
+      agent_type:      agentType,
+      duration_sec:    duration_sec  ?? null,
+      lead_source:     lead_source   ?? null,
       contact_phone:   contact_Phone ?? null,
       agent_phone:     agent_phone   ?? null,
       crm_link:        crm_link      ?? null,
+      stage:           stage         ?? null,
       custom_fields:   customFields  ?? [],
       transcript:      transcript    ?? null,
+      recording_url:   recording_url ?? null,
       input_tokens:    inTokens,
       output_tokens:   outTokens,
       cost_usd:        deductionUsd,

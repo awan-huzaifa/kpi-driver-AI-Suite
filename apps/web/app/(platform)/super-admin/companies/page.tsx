@@ -56,10 +56,10 @@ export default async function SuperAdminCompaniesPage() {
 
   const rows = (companies ?? []).map((c) => ({
     ...c,
-    user_count:   countMap[c.id]            ?? 0,
-    total_billed: profitMap[c.id]?.total_billed ?? 0,
-    total_cost:   profitMap[c.id]?.total_cost   ?? 0,
-    profit:       profitMap[c.id]?.profit       ?? 0,
+    user_count:      countMap[c.id]               ?? 0,
+    total_billed:    profitMap[c.id]?.total_billed ?? 0,
+    total_cost:      profitMap[c.id]?.total_cost   ?? 0,
+    profit:          profitMap[c.id]?.profit       ?? 0,
   }));
 
   return (

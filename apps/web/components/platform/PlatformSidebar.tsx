@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Home, Users, CreditCard, Settings,
-  ChevronDown, Lock, LogOut, ShieldCheck, SlidersHorizontal,
+  ChevronDown, Lock, LogOut, ShieldCheck, SlidersHorizontal, Menu, X,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { C } from './brand'
@@ -203,14 +203,27 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
   const pathname     = usePathname()
   const router       = useRouter()
   const [settingsOpen,    setSettingsOpen]    = useState(false)
-  const [companyLogoUrl,  setCompanyLogoUrl]  = useState<string | null>(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('kpi-company-logo') : null
-  )
-  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('kpi-avatar-url') : null
-  )
+  const [mobileOpen,      setMobileOpen]      = useState(false)
+  const [isMobile,        setIsMobile]        = useState(false)
+  const [companyLogoUrl,  setCompanyLogoUrl]  = useState<string | null>(null)
+  const [avatarUrl,       setAvatarUrl]       = useState<string | null>(null)
 
   useEffect(() => {
+    function checkMobile() { setIsMobile(window.innerWidth < 768) }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Close drawer on route change
+  useEffect(() => { setMobileOpen(false) }, [pathname])
+
+  useEffect(() => {
+    const cachedLogo   = localStorage.getItem('kpi-company-logo')
+    const cachedAvatar = localStorage.getItem('kpi-avatar-url')
+    if (cachedLogo)   setCompanyLogoUrl(cachedLogo)
+    if (cachedAvatar) setAvatarUrl(cachedAvatar)
+
     const supabase = createClient()
     supabase.auth.getUser().then(({ data: { user: u } }) => {
       if (!u) return
@@ -266,6 +279,31 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
   })
 
   return (
+    <>
+    {/* Mobile backdrop */}
+    {isMobile && mobileOpen && (
+      <div
+        onClick={() => setMobileOpen(false)}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 39 }}
+      />
+    )}
+
+    {/* Mobile hamburger */}
+    {isMobile && (
+      <button
+        onClick={() => setMobileOpen(v => !v)}
+        style={{
+          position: 'fixed', top: 10, left: 10, zIndex: 50,
+          width: 38, height: 38, borderRadius: 9,
+          background: 'rgba(13,28,42,0.95)', border: `1px solid rgba(48,125,192,0.35)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: C.blue, cursor: 'pointer',
+        }}
+      >
+        {mobileOpen ? <X size={18} /> : <Menu size={18} />}
+      </button>
+    )}
+
     <aside style={{
       position: 'fixed', top: 0, left: 0, bottom: 0,
       width: 248,
@@ -273,6 +311,8 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
       borderRight: `1px solid ${C.border}`,
       display: 'flex', flexDirection: 'column',
       zIndex: 40, overflowY: 'auto',
+      transform: isMobile && !mobileOpen ? 'translateX(-100%)' : 'translateX(0)',
+      transition: 'transform 0.28s ease',
     }}>
 
       {/* Logo */}
@@ -465,5 +505,6 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
         </button>
       </div>
     </aside>
+    </>
   )
 }

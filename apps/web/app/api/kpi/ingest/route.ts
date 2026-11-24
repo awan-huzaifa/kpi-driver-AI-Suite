@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { lookupEvent } from "@/lib/kpi/webhook-registry";
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
 
 function verifySecret(header: string | null): boolean {
-  const secret = process.env.WEBHOOK_SECRET;
+  const secret = process.env.KPI_WEBHOOK_SECRET;
   if (!secret || !header) return false;
   try {
     return crypto.timingSafeEqual(Buffer.from(header), Buffer.from(secret));
@@ -12,255 +15,333 @@ function verifySecret(header: string | null): boolean {
   }
 }
 
-// Convert a raw GHL label to snake_case kpi_name when no config row exists.
-// "Appointment Set" → "appointment_set", "Live Transfer Successful" → "live_transfer_successful"
-function toSnakeCase(label: string): string {
-  return label
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+// ── Standard field helpers ─────────────────────────────────────────────────────
+
+interface StandardFields {
+  full_name:    string | null;
+  email:        string | null;
+  date_created: string | null;
+  contact_type: string | null;
 }
 
-// Default rep attribution field when no kpi_pipeline_config row exists for this KPI.
-function defaultRepField(kpiType: string): string {
-  if (kpiType === "DISPO" || kpiType === "Owned & Rentals") return "dispo_manager";
-  if (kpiType === "additional") return "ghl_user_name";
-  return "acq_manager"; // ACQ default
-}
-
-interface KpiIngestPayload {
-  // ── Company ─────────────────────────────────────────────────────────────────
-  location_id:              string;
-
-  // ── KPI classification ───────────────────────────────────────────────────────
-  kpi:                      string;  // raw GHL label (e.g. "Appointment Set") → normalised to kpi_name
-  kpi_type:                 string;  // "ACQ" | "DISPO" | "Owned & Rentals" | "additional"
-  occurred_at:              string;  // ISO 8601
-
-  // ── Contact ──────────────────────────────────────────────────────────────────
-  contact_id:               string;
-  contact_name?:            string;
-  contact_email?:           string;
-  contact_phone?:           string;
-  contact_address?:         string;
-  contact_type?:            string;
-  crm_link?:                string;
-
-  // ── Lead context ─────────────────────────────────────────────────────────────
-  lead_source?:             string;
-  campaign?:                string;
-  stage?:                   string;
-  quality?:                 string;
-
-  // ── Rep names (raw GHL strings) ───────────────────────────────────────────────
-  agent_name?:              string;
-  ghl_user_name?:           string;
-  acq_manager?:             string;
-  acq_lead_manager?:        string;
-  dispo_manager?:           string;
-  dispo_lead_manager?:      string;
-  transaction_coordinator?: string;
-
-  // ── Deal / strategy ───────────────────────────────────────────────────────────
-  initial_exit_strategy?:   string;
-  final_exit_strategy?:     string;
-
-  // ── Appointment ───────────────────────────────────────────────────────────────
-  appointment_at?:          string;
-
-  // ── DISPO-specific ────────────────────────────────────────────────────────────
-  address_interested_in?:   string;
-  potential_buyer_state?:   string;
-  potential_buyer_city?:    string;
-  current_showing_address?: string;
-  current_showing_phone?:   string;
-
-  // ── Financial ─────────────────────────────────────────────────────────────────
-  potential_profit?:        string | number;
-  marketing_price?:         string | number;
-  reduction?:               string | number;
-
-  // ── Idempotency ───────────────────────────────────────────────────────────────
-  external_id?:             string;
-
-  // ── Overflow ──────────────────────────────────────────────────────────────────
-  [key: string]: unknown;
-}
-
-const KNOWN_FIELDS = new Set([
-  "location_id", "kpi", "kpi_type", "occurred_at",
-  "contact_id", "contact_name", "contact_email", "contact_phone", "contact_address", "contact_type", "crm_link",
-  "lead_source", "campaign", "stage", "quality",
-  "agent_name", "ghl_user_name", "acq_manager", "acq_lead_manager", "dispo_manager", "dispo_lead_manager", "transaction_coordinator",
-  "initial_exit_strategy", "final_exit_strategy",
-  "appointment_at",
-  "address_interested_in", "potential_buyer_state", "potential_buyer_city", "current_showing_address", "current_showing_phone",
-  "potential_profit", "marketing_price", "reduction",
-  "external_id",
-]);
-
-function toNumericOrNull(v: string | number | undefined): number | null {
-  if (v === undefined || v === null || v === "") return null;
-  const n = typeof v === "number" ? v : parseFloat(v);
-  return isNaN(n) ? null : n;
-}
+// ── Handler ────────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
-  console.log("[kpi:ingest] ── incoming request ────────────────────────");
+  console.log("[kpi:ingest] ── incoming request ──────────────────────────────");
 
-  // 1. Auth
-  const secret = req.headers.get("x-webhook-secret");
-  if (!verifySecret(secret)) {
+  if (!verifySecret(req.headers.get("x-webhook-secret"))) {
     console.warn("[kpi:ingest] unauthorized — bad or missing x-webhook-secret");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 2. Parse body
-  let body: KpiIngestPayload;
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { location_id, kpi, kpi_type, occurred_at, contact_id } = body;
+  // Standard webhook: location and contact come from top-level body fields
+  const location   = body.location as Record<string, unknown> | undefined;
+  const location_id = location?.id as string | undefined;
+  const contact_id  = body.contact_id as string | undefined;
 
-  if (!location_id || !kpi || !kpi_type || !occurred_at || !contact_id) {
-    console.warn("[kpi:ingest] missing required fields", {
-      location_id: !!location_id, kpi: !!kpi, kpi_type: !!kpi_type, occurred_at: !!occurred_at, contact_id: !!contact_id,
+  // All custom fields (including the type discriminator) live in customData
+  const customData = (body.customData ?? {}) as Record<string, unknown>;
+  const eventType  = customData.type as string | undefined;
+
+  // Standard fields available to all handlers
+  const std: StandardFields = {
+    full_name:    (body.full_name    as string | null | undefined) ?? null,
+    email:        (body.email        as string | null | undefined) ?? null,
+    date_created: (body.date_created as string | null | undefined) ?? null,
+    contact_type: (body.contact_type as string | null | undefined) ?? null,
+  };
+
+  console.log(`[kpi:ingest] type=${eventType ?? "(missing)"} location=${location_id ?? "(missing)"} contact=${contact_id ?? "(missing)"}`);
+
+  if (!eventType) {
+    return NextResponse.json({ error: "Missing required field: customData.type" }, { status: 400 });
+  }
+  if (!location_id) {
+    return NextResponse.json({ error: "Missing required field: location.id" }, { status: 400 });
+  }
+  if (!contact_id) {
+    return NextResponse.json({ error: "Missing required field: contact_id" }, { status: 400 });
+  }
+
+  // Unknown types are saved for visibility — never silently dropped
+  const registryEntry = lookupEvent(eventType);
+  if (!registryEntry) {
+    console.warn(`[kpi:ingest] unrecognised type "${eventType}" — saving to kpi_unknown_events`);
+    const admin = createAdminClient();
+    await admin.from("kpi_unknown_events").insert({
+      location_id,
+      event_type: eventType,
+      payload:    body,
     });
-    return NextResponse.json(
-      { error: "Missing required fields: location_id, kpi, kpi_type, occurred_at, contact_id" },
-      { status: 400 }
-    );
+    return NextResponse.json({ received: true, handled: false, reason: "unknown_type" }, { status: 200 });
   }
 
   const admin = createAdminClient();
 
-  // 3. Resolve company
-  const { data: company, error: companyErr } = await admin
+  // Resolve company
+  const { data: company } = await admin
     .from("companies")
     .select("id")
     .eq("ghl_sub_account_id", location_id)
     .maybeSingle();
 
-  if (companyErr) {
-    console.error("[kpi:ingest] company lookup error:", companyErr.message);
-    return NextResponse.json({ error: "Database error" }, { status: 500 });
-  }
   if (!company) {
-    console.warn("[kpi:ingest] no company for location_id:", location_id);
-    return NextResponse.json({ error: `No company found for location ID ${location_id}` }, { status: 404 });
+    console.warn(`[kpi:ingest] no company for location_id=${location_id}`);
+    return NextResponse.json({ error: `No company found for location_id ${location_id}` }, { status: 404 });
   }
 
-  // 4. Resolve kpi_name + rep_field from pipeline config (fall back to snake_case + type defaults)
-  const { data: configRow } = await admin
-    .from("kpi_pipeline_config")
-    .select("kpi_name, rep_field")
-    .eq("company_id", company.id)
-    .eq("kpi_type", kpi_type)
-    .ilike("ghl_kpi_label", kpi.trim())
-    .maybeSingle();
+  if (eventType === "acq_leads") {
+    return handleAcqLead(customData, std, company.id, location_id, contact_id, eventType, admin);
+  }
 
-  const kpi_name = configRow?.kpi_name ?? toSnakeCase(kpi);
-  const rep_field = configRow?.rep_field ?? defaultRepField(kpi_type);
+  if (eventType === "dispo_leads") {
+    return handleDispoLead(customData, std, company.id, location_id, contact_id, admin);
+  }
 
-  console.log("[kpi:ingest] kpi:", kpi, "→ kpi_name:", kpi_name, "| kpi_type:", kpi_type, "| rep_field:", rep_field);
+  return NextResponse.json({ error: "No handler for this event type" }, { status: 500 });
+}
 
-  // 5. Resolve user_id from the rep attribution field
-  const repName = (body[rep_field] as string | undefined)?.trim() ?? null;
-  let userId: string | null = null;
+// ── ACQ Lead handler (08.1 Lead Submission Form + 08.2 CSV Lead Submission) ───
 
-  if (repName) {
-    const { data: userRow } = await admin
+async function handleAcqLead(
+  cd:          Record<string, unknown>,   // customData
+  std:         StandardFields,
+  company_id:  string,
+  location_id: string,
+  contact_id:  string,
+  event_type:  string,
+  admin:       ReturnType<typeof createAdminClient>,
+) {
+  // Sanitize raw value — GHL sends '""' for unset custom fields (not yet created),
+  // which arrives as the literal string '""'. Treat those as null.
+  const clean = (v: unknown): string | null => {
+    if (v === null || v === undefined || v === "" || v === '""') return null;
+    const str = String(v).trim();
+    return str === "" || str === '""' ? null : str;
+  };
+  const s = (k: string) => clean(cd[k]);
+  const n = (k: string): number | null => {
+    const v = clean(cd[k]);
+    if (v === null) return null;
+    const num = Number(v);
+    return isNaN(num) ? null : num;
+  };
+  const d = (k: string, fallback?: string): string | null => {
+    const v = clean(cd[k]) ?? (fallback ? clean(fallback) : null);
+    if (!v) return null;
+    const parsed = new Date(v);
+    return isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  };
+
+  const occurred_at = d("datekpi") ?? new Date().toISOString();
+
+  // Resolve user_id from acq manager name (best-effort)
+  const acqName = s("acqmanager");
+  let user_id: string | null = null;
+  if (acqName) {
+    const { data: matched } = await admin
       .from("users")
       .select("id")
-      .eq("company_id", company.id)
-      .eq("is_active", true)
-      .ilike("full_name", repName)
+      .eq("company_id", company_id)
+      .ilike("full_name", acqName)
       .maybeSingle();
-
-    userId = userRow?.id ?? null;
-    if (!userId) {
-      console.warn("[kpi:ingest] no user matched rep name:", repName, "for company:", company.id);
-    }
+    user_id = matched?.id ?? null;
   }
 
-  // 6. Collect any extra fields that aren't mapped to explicit columns into metadata
-  const metadata: Record<string, unknown> = {};
-  for (const [key, val] of Object.entries(body)) {
-    if (!KNOWN_FIELDS.has(key) && val !== undefined && val !== null && val !== "") {
-      metadata[key] = val;
-    }
-  }
+  const row = {
+    company_id,
+    location_id,
+    contact_id,
+    kpi_name:    "lead",
+    kpi_type:    "ACQ",
+    occurred_at,
 
-  // 7. Insert (idempotent on company_id + external_id)
-  const { data: inserted, error: insertErr } = await admin
+    // Standard fields
+    contact_name:  std.full_name,
+    contact_email: std.email,
+    contact_type:  std.contact_type,
+
+    // customData fields → dedicated columns
+    crm_link:               s("crmlink"),
+    contact_phone:          s("phone"),
+    contact_address:        s("address"),
+    lead_source:            s("leadsource"),
+    campaign:               s("campaign"),
+    call_count:             n("callcount"),
+    stage:                  s("stage"),
+    pipeline:               s("pipeline"),
+    quality:                s("quality"),
+    score:                  n("score"),
+    feedback:               s("feedback"),
+    agent_name:             s("agent"),
+    ghl_user_name:          s("user"),
+    acq_manager:            s("acqmanager"),
+    acq_lead_manager:       s("acqleadmanager"),
+    dispo_manager:          s("dispomanager"),
+    dispo_lead_manager:     s("dispoleadmanager"),
+    transaction_coordinator: s("transactioncoordinator"),
+    underwriter:            s("underwriter"),
+    fus:                    s("fus"),
+    initial_exit_strategy:  s("initialexitstrategy"),
+    final_exit_strategy:    s("finalexitstrategy"),
+    temperature:            s("temperature"),
+    appointment_at:         d("appointmentdateandtime"),
+    reduction:              n("reduction"),
+    actual_profit:          n("actualprofit"),
+    potential_profit:       n("potentialprofit"),
+    marketing_price:        n("marketingprice"),
+
+    user_id,
+
+    metadata: {
+      source_automation: event_type,
+      kpi_raw:           s("kpi"),
+      date_created:      std.date_created,
+    },
+  };
+
+  const { data: inserted, error } = await admin
     .from("kpi_events")
-    .upsert(
-      {
-        company_id:               company.id,
-        location_id:              location_id ?? null,
-        contact_id,
-        kpi_name,
-        kpi_type,
-        occurred_at,
-        contact_name:             body.contact_name              ?? null,
-        contact_email:            body.contact_email             ?? null,
-        contact_phone:            body.contact_phone             ?? null,
-        contact_address:          body.contact_address           ?? null,
-        contact_type:             body.contact_type              ?? null,
-        crm_link:                 body.crm_link                  ?? null,
-        lead_source:              body.lead_source               ?? null,
-        campaign:                 body.campaign                  ?? null,
-        stage:                    body.stage                     ?? null,
-        quality:                  body.quality                   ?? null,
-        agent_name:               body.agent_name                ?? null,
-        ghl_user_name:            body.ghl_user_name             ?? null,
-        acq_manager:              body.acq_manager               ?? null,
-        acq_lead_manager:         body.acq_lead_manager          ?? null,
-        dispo_manager:            body.dispo_manager             ?? null,
-        dispo_lead_manager:       body.dispo_lead_manager        ?? null,
-        transaction_coordinator:  body.transaction_coordinator   ?? null,
-        user_id:                  userId,
-        initial_exit_strategy:    body.initial_exit_strategy     ?? null,
-        final_exit_strategy:      body.final_exit_strategy       ?? null,
-        appointment_at:           body.appointment_at            ?? null,
-        address_interested_in:    body.address_interested_in     ?? null,
-        potential_buyer_state:    body.potential_buyer_state     ?? null,
-        potential_buyer_city:     body.potential_buyer_city      ?? null,
-        current_showing_address:  body.current_showing_address   ?? null,
-        current_showing_phone:    body.current_showing_phone     ?? null,
-        potential_profit:         toNumericOrNull(body.potential_profit),
-        marketing_price:          toNumericOrNull(body.marketing_price),
-        reduction:                toNumericOrNull(body.reduction),
-        external_id:              body.external_id               ?? null,
-        metadata,
-      },
-      {
-        onConflict: "company_id,external_id",
-        ignoreDuplicates: true,
-      }
-    )
+    .insert(row)
     .select("id")
     .single();
 
-  if (insertErr) {
-    // 23505 = unique_violation — the event was already inserted (idempotent retry)
-    if (insertErr.code === "23505") {
-      console.log("[kpi:ingest] duplicate external_id — skipped");
-      return NextResponse.json({ success: true, duplicate: true }, { status: 200 });
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
     }
-    console.error("[kpi:ingest] insert error:", insertErr.message);
-    return NextResponse.json({ error: "Failed to save KPI event" }, { status: 500 });
+    console.error("[kpi:ingest] acq_leads insert error:", error.message);
+    return NextResponse.json({ error: "Failed to save event" }, { status: 500 });
   }
 
-  console.log("[kpi:ingest] saved event id:", inserted?.id, "kpi_name:", kpi_name, "contact:", contact_id);
-  console.log("[kpi:ingest] ────────────────────────────────────────────");
+  console.log(`[kpi:ingest] saved kpi_event ${inserted.id} — type=acq_leads contact=${contact_id} company=${company_id}`);
+  return NextResponse.json({ received: true, event_id: inserted.id }, { status: 200 });
+}
 
-  return NextResponse.json(
-    { success: true, id: inserted?.id, kpi_name, kpi_type },
-    { status: 200 }
-  );
+// ── DISPO lead handler (00.0 - Potential Buyer Created) ───────────────────────
+
+async function handleDispoLead(
+  cd:          Record<string, unknown>,
+  std:         StandardFields,
+  company_id:  string,
+  location_id: string,
+  contact_id:  string,
+  admin:       ReturnType<typeof createAdminClient>,
+) {
+  const clean = (v: unknown): string | null => {
+    if (v === null || v === undefined || v === "" || v === '""') return null;
+    const str = String(v).trim();
+    return str === "" || str === '""' ? null : str;
+  };
+  const s = (k: string) => clean(cd[k]);
+  const n = (k: string): number | null => {
+    const v = clean(cd[k]);
+    if (v === null) return null;
+    const num = Number(v);
+    return isNaN(num) ? null : num;
+  };
+  const d = (k: string): string | null => {
+    const v = clean(cd[k]);
+    if (!v) return null;
+    const parsed = new Date(v);
+    return isNaN(parsed.getTime()) ? null : parsed.toISOString();
+  };
+
+  const occurred_at = d("datekpi") ?? new Date().toISOString();
+
+  // Resolve user_id from dispo manager name (best-effort)
+  const dispoName = s("dispomanager");
+  let user_id: string | null = null;
+  if (dispoName) {
+    const { data: matched } = await admin
+      .from("users")
+      .select("id")
+      .eq("company_id", company_id)
+      .ilike("full_name", dispoName)
+      .maybeSingle();
+    user_id = matched?.id ?? null;
+  }
+
+  const row = {
+    company_id,
+    location_id,
+    contact_id,
+    kpi_name:    "lead",
+    kpi_type:    "DISPO",
+    occurred_at,
+
+    // Standard fields
+    contact_name:  std.full_name,
+    contact_email: std.email,
+    contact_type:  std.contact_type,
+
+    // Shared customData fields (same keys as acq_leads)
+    crm_link:               s("crmlink"),
+    contact_phone:          s("phone"),
+    contact_address:        s("address"),
+    lead_source:            s("leadsource"),
+    campaign:               s("campaign"),
+    call_count:             n("callcount"),
+    stage:                  s("stage"),
+    pipeline:               s("pipeline"),
+    quality:                s("quality"),
+    score:                  n("score"),
+    feedback:               s("feedback"),
+    agent_name:             s("agent"),
+    ghl_user_name:          s("user"),
+    acq_manager:            s("acqmanager"),
+    acq_lead_manager:       s("acqleadmanager"),
+    dispo_manager:          s("dispomanager"),
+    dispo_lead_manager:     s("dispoleadmanager"),
+    transaction_coordinator: s("transactioncoordinator"),
+    underwriter:            s("underwriter"),
+    fus:                    s("fus"),
+    initial_exit_strategy:  s("initialexitstrategy"),
+    final_exit_strategy:    s("finalexitstrategy"),
+    temperature:            s("temperature"),
+    appointment_at:         d("appointmentdateandtime"),
+    reduction:              n("reduction"),
+    actual_profit:          n("actualprofit"),
+    potential_profit:       n("potentialprofit"),
+    marketing_price:        n("marketingprice"),
+
+    // DISPO-specific fields
+    address_interested_in:    s("addressinterested"),
+    potential_buyer_city:     s("potentialbuyercity"),
+    potential_buyer_state:    s("potentialbuyerstate"),
+    current_showing_address:  s("currentshowingaddress"),
+    current_showing_phone:    s("currentshowingphonenumber"),
+
+    user_id,
+
+    metadata: {
+      source_automation: "dispo_leads",
+      kpi_raw:           s("kpi"),
+      date_created:      std.date_created,
+    },
+  };
+
+  const { data: inserted, error } = await admin
+    .from("kpi_events")
+    .insert(row)
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true }, { status: 200 });
+    }
+    console.error("[kpi:ingest] dispo_leads insert error:", error.message);
+    return NextResponse.json({ error: "Failed to save event" }, { status: 500 });
+  }
+
+  console.log(`[kpi:ingest] saved kpi_event ${inserted.id} — type=dispo_leads contact=${contact_id} company=${company_id}`);
+  return NextResponse.json({ received: true, event_id: inserted.id }, { status: 200 });
 }

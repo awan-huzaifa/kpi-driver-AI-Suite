@@ -10,7 +10,7 @@ export default async function NoteTakerPage() {
 
   const { data: profile } = await supabase
     .from("users")
-    .select("id, access_role, company_id")
+    .select("id, access_role, company_id, notify_billing")
     .eq("id", user.id)
     .single();
 
@@ -18,9 +18,8 @@ export default async function NoteTakerPage() {
 
   let query = admin
     .from("note_taker_calls")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(500);
+    .select("id, company_id, call_direction, to_number, from_number, contact_name, contact_phone, agent_phone, agent_name, agent_type, duration_sec, stage, lead_source, crm_link, custom_fields, recording_url, input_tokens, output_tokens, cost_usd, created_at")
+    .order("created_at", { ascending: false });
 
   if (profile?.access_role === "super_admin") {
     // super_admin sees all
@@ -31,13 +30,23 @@ export default async function NoteTakerPage() {
     return (
       <NoteTakerClient
         calls={[]}
+        totalCalls={0}
         companies={[]}
         accessRole={profile?.access_role ?? "user"}
+        showCost={false}
       />
     );
   }
 
   const { data: calls } = await query;
+
+  let countQuery = admin
+    .from("note_taker_calls")
+    .select("id", { count: "exact", head: true });
+  if (profile?.access_role !== "super_admin" && profile?.company_id) {
+    countQuery = countQuery.eq("company_id", profile.company_id);
+  }
+  const { count: totalCalls } = await countQuery;
 
   let companies: { id: string; name: string }[] = [];
   if (profile?.access_role === "super_admin") {
@@ -48,8 +57,10 @@ export default async function NoteTakerPage() {
   return (
     <NoteTakerClient
       calls={calls ?? []}
+      totalCalls={totalCalls ?? 0}
       companies={companies}
       accessRole={profile?.access_role ?? "user"}
+      showCost={profile?.access_role === "super_admin" || (profile?.access_role === "admin" && (profile?.notify_billing ?? false))}
     />
   );
 }

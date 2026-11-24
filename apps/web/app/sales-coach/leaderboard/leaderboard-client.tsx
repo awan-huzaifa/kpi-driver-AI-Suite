@@ -12,16 +12,18 @@ import type { LeaderboardCall } from "./page";
 /* ── Types ──────────────────────────────────────────────── */
 
 interface AgentStats {
-  userId:     string;
-  name:       string;
-  agentType:  string;
-  companyId:  string;
-  avatarUrl:  string | null;
-  avgScore:   number;
-  totalCalls: number;
-  bands:      { elite: number; strong: number; workable: number; weak: number; coaching: number };
-  rank:       number;
-  rankChange: number | null;
+  userId:       string;
+  name:         string;
+  agentType:    string;
+  companyId:    string;
+  avatarUrl:    string | null;
+  avgScore:     number;   // normalized 0-100 (core_score/60*100 for V2, raw score for V1)
+  avgCoreRaw:   number | null; // actual core_score value (out of 60) when V2
+  v2CallCount:  number;
+  totalCalls:   number;
+  bands:        { elite: number; strong: number; workable: number; weak: number; coaching: number };
+  rank:         number;
+  rankChange:   number | null;
 }
 
 interface Props {
@@ -98,16 +100,31 @@ function buildStats(calls: LeaderboardCall[], period: DatePeriod, customFrom: st
     ? calls.filter(c => { const d = new Date(c.created_at); return d >= prevRange.start && d < prevRange.end; })
     : [];
 
-  const map = new Map<string, { totalScore: number; count: number; agent: LeaderboardCall["agent"]; companyId: string; bands: AgentStats["bands"] }>();
+  // V2 calls: rank on core_score (out of 60) normalized to 100. V1 calls: use raw score.
+  function rankScore(c: LeaderboardCall): number {
+    const cs = (c.evaluation as { core_score?: number | null } | null)?.core_score;
+    return cs != null ? (cs / 60) * 100 : c.score;
+  }
+
+  const map = new Map<string, { totalScore: number; totalCoreRaw: number; v2Count: number; count: number; agent: LeaderboardCall["agent"]; companyId: string; bands: AgentStats["bands"] }>();
   for (const c of cur) {
     if (!c.agent) continue;
-    const bk = getBandKey(c.score);
+    const rs = rankScore(c);
+    const cs = (c.evaluation as { core_score?: number | null } | null)?.core_score;
+    const isV2 = cs != null;
+    const bk = getBandKey(rs);
     const ex = map.get(c.user_id);
     if (ex) {
-      ex.totalScore += c.score; ex.count++; ex.bands[bk]++;
+      ex.totalScore += rs; ex.count++; ex.bands[bk]++;
+      if (isV2) { ex.totalCoreRaw += cs!; ex.v2Count++; }
       if (!ex.agent?.avatar_url && c.agent.avatar_url) (ex.agent as any).avatar_url = c.agent.avatar_url;
+    } else {
+      map.set(c.user_id, {
+        totalScore: rs, totalCoreRaw: isV2 ? cs! : 0, v2Count: isV2 ? 1 : 0,
+        count: 1, agent: c.agent, companyId: c.company_id,
+        bands: { elite: 0, strong: 0, workable: 0, weak: 0, coaching: 0, [bk]: 1 },
+      });
     }
-    else map.set(c.user_id, { totalScore: c.score, count: 1, agent: c.agent, companyId: c.company_id, bands: { elite: 0, strong: 0, workable: 0, weak: 0, coaching: 0, [bk]: 1 } });
   }
 
   const sorted = Array.from(map.entries())
@@ -119,8 +136,9 @@ function buildStats(calls: LeaderboardCall[], period: DatePeriod, customFrom: st
     const pm = new Map<string, { total: number; count: number }>();
     for (const c of prev) {
       if (!c.agent) continue;
+      const rs = rankScore(c);
       const ex = pm.get(c.user_id);
-      ex ? (ex.total += c.score, ex.count++) : pm.set(c.user_id, { total: c.score, count: 1 });
+      ex ? (ex.total += rs, ex.count++) : pm.set(c.user_id, { total: rs, count: 1 });
     }
     Array.from(pm.entries())
       .sort(([, a], [, b]) => (b.total / b.count) - (a.total / a.count))
@@ -128,16 +146,18 @@ function buildStats(calls: LeaderboardCall[], period: DatePeriod, customFrom: st
   }
 
   return sorted.map((d, i) => ({
-    userId:     d.userId,
-    name:       d.agent?.full_name ?? "Unknown",
-    agentType:  d.agent?.agent_type ?? "none",
-    companyId:  d.companyId,
-    avatarUrl:  (d.agent as any)?.avatar_url ?? null,
-    avgScore:   Math.round(d.avg * 10) / 10,
-    totalCalls: d.count,
-    bands:      d.bands,
-    rank:       i + 1,
-    rankChange: prevMap.has(d.userId) ? (prevMap.get(d.userId)! - (i + 1)) : null,
+    userId:      d.userId,
+    name:        d.agent?.full_name ?? "Unknown",
+    agentType:   d.agent?.agent_type ?? "none",
+    companyId:   d.companyId,
+    avatarUrl:   (d.agent as any)?.avatar_url ?? null,
+    avgScore:    Math.round(d.avg * 10) / 10,
+    avgCoreRaw:  d.v2Count > 0 ? Math.round((d.totalCoreRaw / d.v2Count) * 10) / 10 : null,
+    v2CallCount: d.v2Count,
+    totalCalls:  d.count,
+    bands:       d.bands,
+    rank:        i + 1,
+    rankChange:  prevMap.has(d.userId) ? (prevMap.get(d.userId)! - (i + 1)) : null,
   }));
 }
 
@@ -211,8 +231,9 @@ function BandPills({ bands }: { bands: AgentStats["bands"] }) {
 }
 
 function PodiumCard({ s, isMe, delay }: { s: AgentStats; isMe: boolean; delay: number }) {
+  const displayScore = s.avgCoreRaw ?? s.avgScore;
   const color = scoreColor(s.avgScore);
-  const score = useCountUp(s.avgScore, 900, delay + 200);
+  const score = useCountUp(displayScore, 900, delay + 200);
   const initials = s.name[0]?.toUpperCase() ?? "?";
   return (
     <motion.div
@@ -238,8 +259,13 @@ function PodiumCard({ s, isMe, delay }: { s: AgentStats; isMe: boolean; delay: n
         <p className="text-sm font-bold text-white">{s.name}{isMe ? " (You)" : ""}</p>
         <div className="flex justify-center mt-1"><Badge variant={s.agentType as any} /></div>
       </div>
-      <div className="text-3xl font-black mt-1" style={{ color }}>{score}</div>
-      <p className="text-[10px] uppercase tracking-widest" style={{ color: "#334155" }}>avg score</p>
+      <div className="flex items-baseline gap-1 mt-1">
+        <span className="text-3xl font-black" style={{ color }}>{score}</span>
+        {s.avgCoreRaw != null && <span className="text-sm font-semibold" style={{ color: "#334155" }}>/60</span>}
+      </div>
+      <p className="text-[10px] uppercase tracking-widest" style={{ color: "#334155" }}>
+        {s.avgCoreRaw != null ? "avg core score" : "avg score"}
+      </p>
       <p className="text-xs" style={{ color: "#475569" }}>{s.totalCalls} Call{s.totalCalls !== 1 ? "s" : ""}</p>
       <div className="mt-1"><RankChange change={s.rankChange} /></div>
     </motion.div>
@@ -349,7 +375,7 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
           <table className="w-full text-sm">
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                {["Rank", "Agent", "Avg Score", "Calls", "Score Bands", "Change"].map((h) => (
+                {["Rank", "Agent", "Avg Core Score", "Calls", "Score Bands", "Change"].map((h) => (
                   <th key={h} className="text-center px-5 py-3 text-xs font-extrabold uppercase tracking-wide" style={{ color: "#e2e8f0" }}>{h}</th>
                 ))}
               </tr>
@@ -391,17 +417,27 @@ export default function LeaderboardClient({ calls, companies, accessRole, curren
                       </td>
 
                       <td className="px-5 py-3.5 text-center">
-                        <div className="flex items-center justify-center gap-3">
-                          <div className="w-20 h-1.5 rounded-full overflow-hidden flex-shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
-                            <motion.div
-                              className="h-full rounded-full"
-                              initial={{ width: 0 }}
-                              animate={{ width: `${s.avgScore}%` }}
-                              transition={{ duration: 0.8, delay: 0.4 + i * 0.04, ease: "easeOut" }}
-                              style={{ background: color }}
-                            />
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center justify-center gap-3">
+                            <div className="w-20 h-1.5 rounded-full overflow-hidden flex-shrink-0" style={{ background: "rgba(255,255,255,0.06)" }}>
+                              <motion.div
+                                className="h-full rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${s.avgScore}%` }}
+                                transition={{ duration: 0.8, delay: 0.4 + i * 0.04, ease: "easeOut" }}
+                                style={{ background: color }}
+                              />
+                            </div>
+                            <div className="flex items-baseline gap-0.5">
+                              <span className="text-sm font-bold" style={{ color }}>{s.avgCoreRaw ?? s.avgScore}</span>
+                              {s.avgCoreRaw != null && <span className="text-[10px]" style={{ color: "#334155" }}>/60</span>}
+                            </div>
                           </div>
-                          <span className="text-sm font-bold" style={{ color }}>{s.avgScore}</span>
+                          {s.v2CallCount > 0 && s.v2CallCount < s.totalCalls && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded" style={{ background: "rgba(48,125,192,0.1)", color: "#78ABD6" }}>
+                              {s.v2CallCount} V2
+                            </span>
+                          )}
                         </div>
                       </td>
 

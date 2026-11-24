@@ -2,7 +2,7 @@ import type { ElementType } from 'react'
 import {
   Mic, Building2, Bot, GraduationCap, BookOpen, NotebookPen, Database, Search,
   LayoutDashboard, Phone, Trophy, BarChart3, BarChart2, Users, Hash, FolderOpen,
-  TrendingUp, MessageSquare, Mail, MousePointerClick, UserCheck, Home, DollarSign, Wallet,
+  TrendingUp, MessageSquare, Mail, MousePointerClick, UserCheck, Home, DollarSign, Wallet, FileText,
 } from 'lucide-react'
 
 export interface Access {
@@ -52,6 +52,7 @@ export const APP_REGISTRY: AppEntry[] = [
       { href: '/sales-coach/live-calls',                label: 'Call Logs',   icon: Phone                               },
       { href: '/sales-coach/leaderboard',               label: 'Leaderboard', icon: Trophy                              },
       { href: '/sales-coach/analytics',                 label: 'Analytics',   icon: BarChart3                           },
+      { href: '/sales-coach/reports',                   label: 'Reports',     icon: FileText, minRole: 'admin'          },
     ],
   },
   {

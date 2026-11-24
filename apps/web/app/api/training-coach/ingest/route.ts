@@ -31,30 +31,33 @@ interface AssistablePayload {
 
 function fallbackScoreResult(agentType: AgentType, reason: string): ScoreResult {
   return {
-    scorable: false,
-    reason,
-    call_id: null,
-    lead_id: null,
-    rep_name: null,
-    user_role: agentType,
-    call_stage: null,
-    call_type: null,
-    call_result: null,
-    opportunity_level: null,
-    rubric_version: null,
-    score: null,
-    score_band: null,
-    category_scores: null,
-    penalties: [],
-    bonuses: [],
-    strengths: [],
-    missed_opportunities: [],
-    coaching_actions: [],
-    score_reasoning: null,
-    evidence_snippets: [],
-    confidence: null,
-    manager_review_needed: false,
-    _usage: { inputTokens: 0, outputTokens: 0, costUsd: 0, model: "" },
+    scorable:          false,
+    ns_code:           "NS-5",
+    call_id:           null,
+    lead_id:           null,
+    rep_name:          null,
+    agent_type:        agentType,
+    call_stage:        null,
+    call_result:       reason,
+    from_block:        null,
+    to_block:          null,
+    tw_applied:        false,
+    disposition_match: false,
+    rubric_version:    null,
+    criteria:          [],
+    metrics: { talk_ratio: null, longest_monologue_s: null, open_questions: null, interruptions: null, silence_after_number_s: null, known_info_reasked: null },
+    core_score:        null,
+    from_score:        null,
+    to_score:          null,
+    raw_score:         null,
+    critical_miss:     { applied: false, block: null, deduction: 0 },
+    penalties:         [],
+    auto_fail:         null,
+    score:             null,
+    score_band:        null,
+    flags:             [],
+    coaching:          null,
+    _usage:            { inputTokens: 0, outputTokens: 0, costUsd: 0, model: "" },
   };
 }
 
@@ -187,55 +190,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 7. Save — idempotent on external_call_id (Assistable may retry webhook deliveries)
-  const { data: call, error: insertErr } = await admin
-    .from("training_calls")
-    .insert({
-      user_id:          user.id,
-      company_id:       company.id,
-      ai_agent_id:      aiAgentId,
-      external_call_id: call_id ?? null,
-      from_phone:       from,
-      direction,
-      duration_sec:     call_time_seconds != null ? Math.round(call_time_seconds) : null,
-      call_stage:       result.call_stage ?? null,
-      scorable:         result.scorable,
-      score:            result.score,
-      call_result:      result.call_result ?? null,
-      call_summary:     call_summary ?? null,
-      transcript:       full_transcript,
-      recording_url:    recording_url ?? null,
-      evaluation: {
-        reason:                result.reason,
-        call_type:             result.call_type,
-        opportunity_level:     result.opportunity_level,
-        rubric_version:        result.rubric_version,
-        score_band:            result.score_band,
-        category_scores:       result.category_scores,
-        penalties:             result.penalties,
-        bonuses:               result.bonuses,
-        strengths:             result.strengths,
-        missed_opportunities:  result.missed_opportunities,
-        coaching_actions:      result.coaching_actions,
-        score_reasoning:       result.score_reasoning,
-        evidence_snippets:     result.evidence_snippets,
-        confidence:            result.confidence,
-        manager_review_needed: result.manager_review_needed,
-      },
-    })
-    .select("id")
-    .single();
-
-  if (insertErr) {
-    // Unique violation on external_call_id → this exact call was already ingested
-    if (insertErr.code === "23505") {
-      return NextResponse.json({ success: true, duplicate: true }, { status: 200 });
-    }
-    console.error("[training-coach:ingest] insert error:", insertErr.message);
-    return NextResponse.json({ error: "Failed to save call" }, { status: 500 });
-  }
-
-  // Fetch per-component charged prices — prefer company override, fall back to global
+  // 7. Calculate cost before insert (so it can be stored on the row)
   const { data: cfgRows } = await admin
     .from("billing_config")
     .select("assistable_charged_per_min, claude_input_charged_per_m, claude_output_charged_per_m, assistable_cost_per_min, claude_input_cost_per_m, claude_output_cost_per_m, company_id")
@@ -258,6 +213,57 @@ export async function POST(req: NextRequest) {
   const providerCostUsd    = callMinutes * costAssistablePerMin
                            + (result._usage.inputTokens  / 1_000_000) * costInputPerM
                            + (result._usage.outputTokens / 1_000_000) * costOutputPerM;
+
+  // 8. Save — idempotent on external_call_id (Assistable may retry webhook deliveries)
+  const { data: call, error: insertErr } = await admin
+    .from("training_calls")
+    .insert({
+      user_id:          user.id,
+      company_id:       company.id,
+      ai_agent_id:      aiAgentId,
+      external_call_id: call_id ?? null,
+      from_phone:       from,
+      direction,
+      duration_sec:     call_time_seconds != null ? Math.round(call_time_seconds) : null,
+      call_stage:       result.call_stage ?? null,
+      scorable:         result.scorable,
+      score:            result.score,
+      call_result:      result.call_result ?? null,
+      call_summary:     call_summary ?? null,
+      transcript:       full_transcript,
+      recording_url:    recording_url ?? null,
+      cost_usd:         deductionUsd,
+      evaluation: {
+        rubric_version:    result.rubric_version,
+        from_block:        result.from_block,
+        to_block:          result.to_block,
+        tw_applied:        result.tw_applied,
+        disposition_match: result.disposition_match,
+        score_band:        result.score_band,
+        core_score:        result.core_score,
+        from_score:        result.from_score,
+        to_score:          result.to_score,
+        raw_score:         result.raw_score,
+        critical_miss:     result.critical_miss,
+        penalties:         result.penalties,
+        auto_fail:         result.auto_fail,
+        flags:             result.flags,
+        criteria:          result.criteria,
+        metrics:           result.metrics,
+        coaching:          result.coaching,
+      },
+    })
+    .select("id")
+    .single();
+
+  if (insertErr) {
+    // Unique violation on external_call_id → this exact call was already ingested
+    if (insertErr.code === "23505") {
+      return NextResponse.json({ success: true, duplicate: true }, { status: 200 });
+    }
+    console.error("[training-coach:ingest] insert error:", insertErr.message);
+    return NextResponse.json({ error: "Failed to save call" }, { status: 500 });
+  }
 
   console.log(`[training-coach:billing] mins=${callMinutes.toFixed(2)} charged=$${deductionUsd.toFixed(5)} cost=$${providerCostUsd.toFixed(5)}`);
 

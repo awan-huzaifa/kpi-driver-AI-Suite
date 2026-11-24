@@ -7,7 +7,7 @@ export async function autoTopupIfNeeded(companyId: string, newBalance: number): 
 
   const { data: company } = await admin
     .from("companies")
-    .select("auto_topup_enabled, auto_topup_threshold, auto_topup_price_id, stripe_customer_id, name")
+    .select("auto_topup_enabled, auto_topup_threshold, auto_topup_price_id, stripe_customer_id, name, last_auto_topup_at")
     .eq("id", companyId)
     .single();
 
@@ -17,6 +17,20 @@ export async function autoTopupIfNeeded(companyId: string, newBalance: number): 
 
   const option = TOP_UP_OPTIONS.find(o => o.priceId === company.auto_topup_price_id);
   if (!option) return;
+
+  // Atomic claim: only one worker can win this UPDATE. If last_auto_topup_at was set
+  // within the last 5 minutes, the WHERE clause matches 0 rows → this worker skips.
+  const { data: claimed } = await admin
+    .from("companies")
+    .update({ last_auto_topup_at: new Date().toISOString() })
+    .eq("id", companyId)
+    .or("last_auto_topup_at.is.null,last_auto_topup_at.lt." + new Date(Date.now() - 5 * 60 * 1000).toISOString())
+    .select("id");
+
+  if (!claimed?.length) {
+    console.log(`[auto-topup] skipped — another top-up already fired within 5 min for company ${companyId}`);
+    return;
+  }
 
   const { paymentMethods, defaultPaymentMethodId } = await listPaymentMethods(company.stripe_customer_id);
   const defaultPm = defaultPaymentMethodId
