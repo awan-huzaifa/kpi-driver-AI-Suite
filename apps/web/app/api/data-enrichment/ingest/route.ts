@@ -123,7 +123,7 @@ export async function POST(req: NextRequest) {
   if (deductErr) console.error("[data-enrichment:ingest] wallet deduction failed:", deductErr.message);
   else void autoTopupIfNeeded(company.id, Number(newBalance));
 
-  void logUsage({
+  await logUsage({
     company_id:        company.id,
     app:               "data_enrichment",
     entity_id:         log.id,

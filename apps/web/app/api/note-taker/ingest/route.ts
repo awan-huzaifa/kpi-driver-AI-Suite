@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (deductionUsd > 0) {
-    void logUsage({
+    await logUsage({
       company_id:        company.id,
       app:               "note_taker",
       entity_id:         call.id,

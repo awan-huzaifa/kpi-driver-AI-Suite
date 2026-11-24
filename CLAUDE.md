@@ -93,6 +93,24 @@ Supabase Postgres. Migrations in `supabase/migrations/` (`001_subscriptions.sql`
 
 Append a dated, terse entry here whenever a non-trivial change ships, so future sessions don't have to re-derive history from chat logs. Newest entry on top. Keep each entry to a few lines — what shipped and why, not a diff.
 
+### 2026-11-24 — Sales Coach V2 scoring system
+
+- **`lib/sales-coach/anthropic/rubrics.ts`** — complete rewrite. Exports `SystemFacts`, `selectFromBlock()` (deterministic TypeScript stage→FROM block lookup, 25+ cases), `SCORER_SYSTEM_PROMPT` (full V2 rubric anchors cached via `cache_control: ephemeral`), `CALL_STAGE_MAP`.
+- **`lib/sales-coach/anthropic/scorer.ts`** — complete rewrite. New `ScoreResult` interface with V2 fields (`from_block`, `to_block`, `tw_applied`, `core_score`, `from_score`, `to_score`, `criteria[]`, `metrics`, `coaching`, `auto_fail`, `flags[]`). Formula: `SCORE = AGENT CORE (60) + FROM (20) + TO (20)`. TW special case (40 pts, replaces FROM+TO). Critical miss cap at 70. Penalties P1-P4. Auto-fails AF1-AF5. Max 6000 tokens.
+- **`app/api/calls/ingest/route.ts`** — added `contact_id` and `disposition` fields. Computes system facts SF1-SF3 from prior call DB query before scoring. Stores full V2 `evaluation` JSONB shape.
+- **`app/api/training-coach/ingest/route.ts`** — updated `fallbackScoreResult()` to V2 shape; stores V2 `evaluation` JSONB.
+- **`supabase/migrations/068_live_calls_contact_id.sql`** — adds `contact_id text` + composite index to `live_calls`. Already applied.
+- **Live calls detail modal** — V2 calls show: FROM/TO block pills, score breakdown bars (Core/FROM/TO), criteria list (color-coded bands), coaching (Worked/Fix/Try This Line), V2 penalty shape. V1 calls retain existing display (category scores, strengths/missed, coaching actions, evidence). Header badges for AUTO-FAIL, Critical Miss, Disposition Mismatch.
+- **Leaderboard** — ranks on `core_score/60*100` (normalized) for V2 calls, raw `score` for V1. Podium and table show actual `core_score /60` for V2 reps. "Avg Core Score" column header.
+
+### 2026-10-02 — KPI Dashboard: GHL webhook ingest (lead submissions)
+
+- `lib/kpi/webhook-registry.ts` — living registry documenting every GHL automation that sends to `/api/kpi/ingest`. Each entry records: GHL folder path, automation name, `type` discriminator value, `kpi_name`/`kpi_type`, status (planned/built/live), and every field with its GHL variable, TypeScript type, required flag, and target column. Adding a new automation = add entry here + add dispatch case in the route.
+- `app/api/kpi/ingest/route.ts` — single endpoint for all KPI webhooks. Auth: `x-webhook-secret`. Dispatches on `body.type`. Unknown types are saved to `kpi_unknown_events` (not dropped silently). Currently handles: `08.1 - Lead Submission Form` and `08.2 - CSV Lead Submission` (both map to `kpi_events` with `kpi_name='lead'`, `kpi_type='ACQ'`). Resolves company via `location_id`. Attempts user_id resolution from `acq` name via `ilike`. Overflow fields (`fus`, `score`, `feedback`, `kpi_raw`, `date_created`, `source_automation`) go into `metadata` JSONB.
+- Migration `057_kpi_unknown_events.sql` — catch-all table for unrecognised webhook types; super_admin SELECT only.
+- `/api/kpi/ingest` was already in `PUBLIC_PATHS` in `middleware.ts` — no change needed.
+- Data lands in `kpi_events` (migration 055) — no new table required.
+
 ### 2026-09-30 — Billing profit tracking (provider_cost_usd)
 
 - Migration `056_provider_cost_usd.sql`: adds `provider_cost_usd numeric(12,6)` to `ai_usage_logs` and `skip_tracing_logs`; adds `de_cost_per_call_usd` to `billing_config` for data enrichment provider rate; creates `get_all_companies_profit_summary()` RPC that unions both tables and returns `(company_id, total_billed, total_cost, profit)`.

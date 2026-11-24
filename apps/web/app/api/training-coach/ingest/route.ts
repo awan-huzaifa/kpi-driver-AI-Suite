@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
 
   console.log(`[training-coach:billing] mins=${callMinutes.toFixed(2)} charged=$${deductionUsd.toFixed(5)} cost=$${providerCostUsd.toFixed(5)}`);
 
-  void logUsage({
+  await logUsage({
     company_id:        company.id,
     app:               "training_coach",
     entity_id:         call.id,

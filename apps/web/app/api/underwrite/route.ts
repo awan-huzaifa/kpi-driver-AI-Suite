@@ -674,7 +674,7 @@ export async function POST(request: NextRequest) {
         + axessoCalls       * AXESSO_COST_USD
         + investorbaseCalls * INVESTORBASE_COST_USD;
 
-      void logUsage({
+      await logUsage({
         company_id:        companyId,
         app:               "underwriting",
         entity_id:         dealId,

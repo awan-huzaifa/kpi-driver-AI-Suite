@@ -317,7 +317,7 @@ export async function POST(req: NextRequest) {
   if (isScorable && user.company_id) {
     console.log(`[ingest:billing] in=${result._usage.inputTokens} out=${result._usage.outputTokens} charged=$${deductionUsd.toFixed(5)} cost=$${providerCostUsd.toFixed(5)}`);
 
-    void logUsage({
+    await logUsage({
       company_id:       user.company_id,
       app:              "sales_coach",
       entity_id:        call.id,
