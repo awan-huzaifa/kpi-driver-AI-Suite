@@ -23,7 +23,9 @@ export function selectFromBlock(
   facts: SystemFacts,
   agentType: "fus" | "acq"
 ): FromBlockResult {
-  const s = (stage ?? "").trim();
+  // GHL sometimes prefixes stages with the agent type, e.g. "ACQ Contacted - Follow Up"
+  // Strip known prefixes so the switch matches the canonical stage name
+  const s = (stage ?? "").trim().replace(/^(ACQ|FUS|TC|CC)\s+/i, "");
 
   // Unlisted / empty → infer
   if (!s) return { block: facts.SF1 ? "S04" : "S01", resurrection: false, low_confidence: true };

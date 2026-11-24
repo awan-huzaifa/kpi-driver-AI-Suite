@@ -270,7 +270,7 @@ export async function POST(req: NextRequest) {
       duration_sec,
       call_stage:    result.call_stage ?? stage ?? null,
       scorable:      result.scorable,
-      score:         result.score,
+      score:         result.score != null ? Math.round(result.score) : null,
       call_result:   result.call_result ?? null,
       transcript,
       recording_url: recording_url ?? null,

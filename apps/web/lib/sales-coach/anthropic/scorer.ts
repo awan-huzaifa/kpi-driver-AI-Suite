@@ -298,7 +298,9 @@ export async function scoreCall(
   console.log("[scorer:tokens] ────────────────────────────────────────");
   // ─────────────────────────────────────────────────────────────────────────
 
-  const raw = response.content[0].type === "text" ? response.content[0].text : "";
+  const textBlock = response.content.find(b => b.type === "text");
+  const raw = textBlock?.type === "text" ? textBlock.text : "";
+  console.log(`[scorer] content blocks: ${response.content.map(b => b.type).join(", ")}`);
   const jsonMatch = raw.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     throw new Error(`Scorer returned no parseable JSON. Raw: ${raw.slice(0, 300)}`);
