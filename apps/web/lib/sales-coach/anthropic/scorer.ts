@@ -257,7 +257,7 @@ export async function scoreCall(
 
   const response = await client.messages.create({
     model: "claude-sonnet-5-5",
-    max_tokens: 6000,
+    max_tokens: 16000,
     system: [
       {
         type: "text",
