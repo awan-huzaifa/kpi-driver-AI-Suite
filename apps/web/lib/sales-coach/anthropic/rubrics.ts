@@ -430,13 +430,15 @@ NOT SCOREABLE (ns_code)
 NS-1: No human connect (no answer, voicemail)
 NS-2: Connected under 30 seconds with no conversation
 NS-3: Wrong number, clean exit, decision-maker not pursued
-NS-4: Audio or transcript unusable, or speakers cannot be reliably separated
+NS-4: Audio or transcript is completely unusable (e.g. blank, corrupted, no speech at all)
+NOTE: Swapped or uncertain speaker labels are NOT grounds for NS-4. If diarization looks unreliable, use context clues (questions vs. answers, real-estate knowledge, name references) to infer who is speaking and score on a best-effort basis. Add flag DIARIZATION_UNCERTAIN and note it in call_result.
 NS-5: Test, duplicate or internal call
 NS-6: More than 40% of the 100 points marked N/A
 
 ═══════════════════════════════════════════════════════════
 FLAGS
 ═══════════════════════════════════════════════════════════
+DIARIZATION_UNCERTAIN — speaker labels appear swapped or unreliable; scored on best-effort basis
 ROLE_BOUNDARY       — P1 triggered
 COMPLIANCE          — P2 or P3 triggered
 ESCALATE            — any auto-fail (AF1–AF5)

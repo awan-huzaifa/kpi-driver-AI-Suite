@@ -363,35 +363,47 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
 
             {/* Meta pills row — always visible */}
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.28, delay: 0.12 }}
-              style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-              {[
-                { label: "Stage",      value: call.call_stage  ?? "—" },
-                { label: "Result",     value: call.call_result ?? "—" },
-                { label: "Agent Type", value: call.agent?.agent_type
-                    ? call.agent.agent_type === "none"
-                      ? (call.agent.access_role === "admin" || call.agent.access_role === "super_admin" ? "Admin" : "User")
-                      : call.agent.agent_type === "dispo_fus" ? "DISPO FUS" : call.agent.agent_type.toUpperCase()
-                    : "—" },
-                // V2 fields
-                ...(ev?.from_block ? [
-                  { label: "FROM Block", value: `${ev.from_block} · ${FROM_NAMES[ev.from_block] ?? ""}` },
-                  { label: "TO Block",   value: ev.to_block ? `${ev.to_block} · ${TO_NAMES[ev.to_block] ?? ""}` : "—" },
-                  { label: "Score Band", value: ev.score_band ?? "—" },
-                ] : [
-                  // V1 fallback
-                  { label: "Opportunity", value: ev?.opportunity_level ?? "—" },
-                  { label: "Call Type",   value: ev?.call_type         ?? "—" },
-                  { label: "Confidence",  value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
-                ]),
-              ].map(({ label, value }) => (
-                <div key={label} style={{
+              style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {/* Top row: compact fields */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+                {[
+                  { label: "Stage",      value: call.call_stage  ?? "—" },
+                  { label: "Agent Type", value: call.agent?.agent_type
+                      ? call.agent.agent_type === "none"
+                        ? (call.agent.access_role === "admin" || call.agent.access_role === "super_admin" ? "Admin" : "User")
+                        : call.agent.agent_type === "dispo_fus" ? "DISPO FUS" : call.agent.agent_type.toUpperCase()
+                      : "—" },
+                  // V2 fields
+                  ...(ev?.from_block ? [
+                    { label: "FROM Block", value: `${ev.from_block} · ${FROM_NAMES[ev.from_block] ?? ""}` },
+                    { label: "TO Block",   value: ev.to_block ? `${ev.to_block} · ${TO_NAMES[ev.to_block] ?? ""}` : "—" },
+                    { label: "Score Band", value: ev.score_band ?? "—" },
+                  ] : [
+                    // V1 fallback
+                    { label: "Opportunity", value: ev?.opportunity_level ?? "—" },
+                    { label: "Call Type",   value: ev?.call_type         ?? "—" },
+                    { label: "Confidence",  value: ev?.confidence != null ? `${Math.round(ev.confidence * 100)}%` : "—" },
+                  ]),
+                ].map(({ label, value }) => (
+                  <div key={label} style={{
+                    padding: "10px 14px", borderRadius: 12,
+                    background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)",
+                  }}>
+                    <p style={{ fontSize: 9, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>{label}</p>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{value}</p>
+                  </div>
+                ))}
+              </div>
+              {/* Result — full width row so long text doesn't distort the grid */}
+              {call.call_result && (
+                <div style={{
                   padding: "10px 14px", borderRadius: 12,
                   background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)",
                 }}>
-                  <p style={{ fontSize: 9, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>{label}</p>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0 }}>{value}</p>
+                  <p style={{ fontSize: 9, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em", margin: "0 0 4px" }}>Result</p>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", margin: 0, lineHeight: 1.6 }}>{call.call_result}</p>
                 </div>
-              ))}
+              )}
             </motion.div>
 
             {/* V2 — Score breakdown bar */}
@@ -1075,11 +1087,15 @@ export default function LiveCallsClient({ calls, totalCalls, companies, accessRo
                   </td>
 
                   {/* Result */}
-                  <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                  <td style={{ padding: "12px 14px", textAlign: "center", maxWidth: 180 }}>
                     <span style={{
-                      fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99,
-                      color: rs.color, background: rs.bg, whiteSpace: "nowrap",
-                    }}>
+                      fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 6,
+                      color: rs.color, background: rs.bg,
+                      display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      maxWidth: "100%",
+                    }}
+                      title={c.call_result ?? undefined}
+                    >
                       {c.call_result ?? "—"}
                     </span>
                   </td>
