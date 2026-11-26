@@ -161,7 +161,7 @@ SCORING TASK:
 4. Score the FROM block: ${fromBlock} with band + evidence quote.
 5. Classify the TO block using the priority order. Check against rep-stated disposition if provided.
 6. Score the TO block with band + evidence quote. If TW triggered, mark tw_applied=true; score both from_score and to_score from TW (each half of the 40 pts).
-7. Compute: core_score = (core earned ÷ core applicable) × 100, from_score = from_earned, to_score = to_earned.
+7. Compute: core_score = (core earned ÷ core applicable) × 60, from_score = from_earned, to_score = to_earned.
 8. raw_score = ((core_earned + from_earned + to_earned) ÷ applicable_total) × 100
 9. Apply critical miss cap: if FROM or TO block scored Fail, cap at 70.
 10. Apply penalties P1–P4. Check auto-fails AF1–AF5.

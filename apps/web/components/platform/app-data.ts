@@ -2,7 +2,7 @@ import type { ElementType } from 'react'
 import {
   Mic, Building2, Bot, GraduationCap, BookOpen, NotebookPen, Database, Search,
   LayoutDashboard, Phone, Trophy, BarChart3, BarChart2, Users, Hash, FolderOpen,
-  TrendingUp, MessageSquare, Mail, MousePointerClick, UserCheck, Home, DollarSign, Wallet, FileText,
+  TrendingUp, MessageSquare, Mail, MousePointerClick, UserCheck, Home, DollarSign, Wallet, FileText, Flag,
 } from 'lucide-react'
 
 export interface Access {
@@ -24,6 +24,7 @@ export type SubNavItem = {
   exact?:   boolean
   minRole?: 'admin' | 'super_admin'
   maxRole?: 'admin'  // hide from roles above this (e.g. hide from super_admin)
+  qaOnly?:  boolean  // only shown if user is_qa or super_admin
 }
 
 export type AppEntry = {
@@ -53,6 +54,7 @@ export const APP_REGISTRY: AppEntry[] = [
       { href: '/sales-coach/leaderboard',               label: 'Leaderboard', icon: Trophy                              },
       { href: '/sales-coach/analytics',                 label: 'Analytics',   icon: BarChart3                           },
       { href: '/sales-coach/reports',                   label: 'Reports',     icon: FileText, minRole: 'admin'          },
+      { href: '/sales-coach/admin/disputes',             label: 'Disputes',    icon: Flag,     minRole: 'admin', qaOnly: true },
     ],
   },
   {

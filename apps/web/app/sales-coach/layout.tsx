@@ -11,7 +11,7 @@ export default async function SalesCoachLayout({ children }: { children: React.R
 
   const { data: profile } = await supabase
     .from("users")
-    .select("full_name, email, access_role, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, app_kpi_dashboard")
+    .select("full_name, email, access_role, is_qa, app_underwriting, app_sales_coach, app_training_coach, app_note_taker, app_data_enrichment, app_skip_tracing, app_kpi_dashboard")
     .eq("id", user.id)
     .single();
 
@@ -32,6 +32,7 @@ export default async function SalesCoachLayout({ children }: { children: React.R
         user={{ email: profile?.email ?? user.email ?? "", fullName: profile?.full_name ?? null }}
         access={access}
         accessRole={profile?.access_role}
+        isQa={profile?.is_qa ?? false}
       />
       <ContentShell>{children}</ContentShell>
     </div>

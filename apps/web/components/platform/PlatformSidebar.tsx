@@ -19,6 +19,7 @@ export interface PlatformSidebarProps {
   user:        { email: string; fullName: string | null }
   access:      Access
   accessRole?: 'admin' | 'super_admin' | 'user'
+  isQa?:       boolean
 }
 
 /* â”€â”€ Bottom / workspace nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -71,8 +72,8 @@ function SubNavLink({ item, pathname }: { item: SubNavItem; pathname: string }) 
 
 /* â”€â”€ App nav item (with accordion) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-function AppNavItem({ app, unlocked, pathname, accessRole }: {
-  app: AppEntry; unlocked: boolean; pathname: string; accessRole?: string
+function AppNavItem({ app, unlocked, pathname, accessRole, isQa }: {
+  app: AppEntry; unlocked: boolean; pathname: string; accessRole?: string; isQa?: boolean
 }) {
   const Icon      = app.icon
   const appBase   = '/' + (app.href.split('/').filter(Boolean)[0] ?? '')
@@ -83,6 +84,7 @@ function AppNavItem({ app, unlocked, pathname, accessRole }: {
   const visibleSubNav = (app.subNav ?? []).filter((item) => {
     if (item.maxRole === 'admin' && isSuperAdmin) return false
     if (item.minRole === 'super_admin') return isSuperAdmin
+    if (item.qaOnly) return isQa || isSuperAdmin
     if (item.minRole === 'admin')       return isAdmin
     return true
   })
@@ -197,7 +199,7 @@ function NavLink({ href, icon: Icon, label, exact }: { href: string; icon: React
 
 /* â”€â”€ Main export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 
-export default function PlatformSidebar({ user, access, accessRole }: PlatformSidebarProps) {
+export default function PlatformSidebar({ user, access, accessRole, isQa }: PlatformSidebarProps) {
   const isAdmin      = accessRole === 'admin' || accessRole === 'super_admin'
   const isSuperAdmin = accessRole === 'super_admin'
   const pathname     = usePathname()
@@ -362,6 +364,7 @@ export default function PlatformSidebar({ user, access, accessRole }: PlatformSi
               unlocked={unlocked}
               pathname={pathname}
               accessRole={accessRole}
+              isQa={isQa}
             />
           )
         })}

@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getResend, FROM_EMAIL } from "@/lib/email/client";
 import { getLocalHour, getLocalDate, getDueReportTypes, getPeriodBounds, REPORT_LABELS } from "@/lib/email/periods";
 import { scAgentTypeTeamTemplate, SC_TYPE_ORDER, extractTeamBullets, scRepTemplate, tcTeamTemplate, tcRepTemplate, uwTemplate, uwTeamTemplate } from "@/lib/email/templates";
+import { detectPatterns } from "@/lib/sales-coach/pattern-tracker";
 
 export const runtime = "nodejs";
 
@@ -159,7 +160,11 @@ export async function GET(req: Request) {
             if (!repCalls.length) continue;
             const email = emailMap.get(u.id);
             if (!email) continue;
-            const repHtml = scRepTemplate(u.full_name ?? "Agent", company.name, period, repCalls as any, reportLabel);
+            // Pattern tracking — only meaningful with enough data (weekly/monthly)
+            const patterns = (reportType === "weekly" || reportType === "monthly")
+              ? detectPatterns(repCalls as any)
+              : [];
+            const repHtml = scRepTemplate(u.full_name ?? "Agent", company.name, period, repCalls as any, reportLabel, patterns);
             const repSubject = `Your Sales Coach Report — ${period.label}`;
             try {
               await getResend().emails.send({ from: FROM_EMAIL, to: email, subject: repSubject, html: repHtml });

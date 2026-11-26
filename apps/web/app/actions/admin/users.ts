@@ -92,6 +92,7 @@ export interface UpdateUserData {
   app_note_taker:      boolean;
   app_data_enrichment: boolean;
   app_skip_tracing:    boolean;
+  is_qa:              boolean;
 }
 
 export async function updateUser(userId: string, data: UpdateUserData) {
@@ -107,6 +108,7 @@ export async function updateUser(userId: string, data: UpdateUserData) {
     app_note_taker:      data.app_note_taker,
     app_data_enrichment: data.app_data_enrichment,
     app_skip_tracing:    data.app_skip_tracing,
+    is_qa:              data.role === "admin" ? data.is_qa : false,
   }).eq("id", userId);
 
   if (caller.access_role === "admin") {

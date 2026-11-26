@@ -6,8 +6,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, PhoneIncoming, PhoneOutgoing, ExternalLink, X,
   TrendingUp, TrendingDown, ChevronDown, Search, ChevronRight,
-  Mic, Target, Clock, Calendar, Download,
+  Mic, Target, Clock, Calendar, Download, Flag,
 } from "lucide-react";
+import { submitDispute } from "@/app/actions/sales-coach/disputes";
+import { getDisputeCategories } from "@/lib/sales-coach/dispute-constants";
 import AudioPlayer from "@/components/ui/AudioPlayer";
 import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
 import { MultiSelect } from "@/components/ui/multi-select";
@@ -118,6 +120,8 @@ interface Props {
   companies:             { id: string; name: string }[];
   accessRole:            AccessRole;
   showCost?:             boolean;
+  currentUserId?:        string;
+  disputedCallMap?:      Record<string, string>;
 }
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
@@ -184,7 +188,13 @@ const CATEGORY_MAX: Record<string, number> = {
 
 /* ── Detail Modal ────────────────────────────────────────────────── */
 
-function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void }) {
+function DetailModal({ call, onClose, currentUserId, localDisputeMap, onDisputeClick }: {
+  call: LiveCall;
+  onClose: () => void;
+  currentUserId?: string;
+  localDisputeMap?: Record<string, string>;
+  onDisputeClick?: () => void;
+}) {
   const [showTranscript, setShowTranscript] = useState(false);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [transcriptLoading, setTranscriptLoading] = useState(false);
@@ -335,6 +345,32 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
                     <ExternalLink size={12} /> CRM
                   </a>
                 )}
+                {/* Dispute button — own scorable calls within 7 days */}
+                {call.user_id === currentUserId && call.scorable && (() => {
+                  const existing = localDisputeMap?.[call.id];
+                  const withinWindow = (Date.now() - new Date(call.created_at).getTime()) < 7 * 24 * 60 * 60 * 1000;
+                  if (!withinWindow && !existing) return null;
+                  if (existing) return (
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11,
+                      fontWeight: 700, padding: "5px 10px", borderRadius: 8,
+                      color: existing === "pending" ? "#FCAF17" : existing === "accepted" ? "#43B749" : "#ED1F24",
+                      background: existing === "pending" ? "rgba(252,175,23,0.1)" : existing === "accepted" ? "rgba(67,183,73,0.1)" : "rgba(237,31,36,0.1)",
+                      border: `1px solid ${existing === "pending" ? "rgba(252,175,23,0.3)" : existing === "accepted" ? "rgba(67,183,73,0.3)" : "rgba(237,31,36,0.3)"}`,
+                    }}>
+                      <Flag size={10} /> Disputed ({existing})
+                    </span>
+                  );
+                  return (
+                    <button onClick={onDisputeClick} style={{
+                      display: "flex", alignItems: "center", gap: 5, fontSize: 12, fontWeight: 600,
+                      color: "#FCAF17", background: "rgba(252,175,23,0.08)", border: "1px solid rgba(252,175,23,0.25)",
+                      padding: "6px 12px", borderRadius: 9, cursor: "pointer",
+                    }}>
+                      <Flag size={12} /> Dispute
+                    </button>
+                  );
+                })()}
                 <button onClick={onClose} style={{
                   width: 32, height: 32, borderRadius: 9, flexShrink: 0,
                   background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)",
@@ -479,16 +515,16 @@ function DetailModal({ call, onClose }: { call: LiveCall; onClose: () => void })
                             </span>
                           </div>
                           {!c.na && (
-                            <div style={{ height: 3, borderRadius: 99, background: "rgba(255,255,255,0.04)", overflow: "hidden" }}>
+                            <div style={{ height: 3, borderRadius: 99, background: "rgba(255,255,255,0.04)", overflow: "hidden", marginBottom: c.evidence?.[0] ? 6 : 0 }}>
                               <div style={{ width: `${pct}%`, height: "100%", borderRadius: 99, background: sc2.color, transition: "width 0.6s ease" }} />
                             </div>
                           )}
+                          {c.evidence?.[0] && (
+                            <span style={{ fontSize: 10, color: "#475569", lineHeight: 1.5, display: "block" }}>
+                              "{c.evidence[0].quote}"
+                            </span>
+                          )}
                         </div>
-                        {c.evidence?.[0] && (
-                          <span style={{ fontSize: 10, color: "#334155", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flexShrink: 0 }}>
-                            "{c.evidence[0].quote}"
-                          </span>
-                        )}
                       </div>
                     );
                   })}
@@ -708,9 +744,16 @@ function SectionHeader({ icon: Icon, label, color }: { icon?: React.ElementType;
 
 /* ── Main component ──────────────────────────────────────────────── */
 
-export default function LiveCallsClient({ calls, totalCalls, companies, accessRole, showCost = false }: Props) {
+export default function LiveCallsClient({ calls, totalCalls, companies, accessRole, showCost = false, currentUserId, disputedCallMap = {} }: Props) {
   const searchParams = useSearchParams();
   const [selected,   setSelected]   = useState<LiveCall | null>(null);
+  const [disputeOpen, setDisputeOpen] = useState(false);
+  const [disputeCategory, setDisputeCategory] = useState<string>("FROM Block");
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputeLoading, setDisputeLoading] = useState(false);
+  const [disputeError, setDisputeError] = useState<string | null>(null);
+  const [disputeSuccess, setDisputeSuccess] = useState(false);
+  const [localDisputeMap, setLocalDisputeMap] = useState<Record<string, string>>(disputedCallMap);
 
   useEffect(() => {
     const callId = searchParams.get("callId");
@@ -1199,7 +1242,116 @@ export default function LiveCallsClient({ calls, totalCalls, companies, accessRo
         </div>
       </motion.div>
 
-      {selected && <DetailModal call={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <DetailModal
+          call={selected}
+          onClose={() => setSelected(null)}
+          currentUserId={currentUserId}
+          localDisputeMap={localDisputeMap}
+          onDisputeClick={() => {
+            setDisputeOpen(true);
+            setDisputeError(null);
+            setDisputeSuccess(false);
+            setDisputeCategory(getDisputeCategories(selected?.agent?.agent_type)[0]);
+            setDisputeReason("");
+          }}
+        />
+      )}
+
+      {/* Dispute submission modal */}
+      {disputeOpen && selected && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 200,
+          background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }} onClick={() => setDisputeOpen(false)}>
+          <div style={{
+            background: "#0F2032", border: "1px solid rgba(48,125,192,0.2)",
+            borderRadius: 18, padding: 28, width: "100%", maxWidth: 480,
+            boxShadow: "0 24px 60px rgba(0,0,0,0.6)",
+          }} onClick={(e) => e.stopPropagation()}>
+            {disputeSuccess ? (
+              <div style={{ textAlign: "center", padding: "16px 0" }}>
+                <p style={{ fontSize: 32, margin: "0 0 12px" }}>✅</p>
+                <p style={{ fontSize: 16, fontWeight: 700, color: "#43B749", margin: "0 0 6px" }}>Dispute Submitted</p>
+                <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 20px" }}>Your QA team has been notified and will review this call.</p>
+                <button onClick={() => setDisputeOpen(false)} style={{
+                  padding: "9px 24px", borderRadius: 10, background: "#307DC0", border: "none",
+                  color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                }}>Close</button>
+              </div>
+            ) : (
+              <>
+                <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e2e8f0", margin: "0 0 4px" }}>Dispute This Score</h3>
+                <p style={{ fontSize: 12, color: "#64748b", margin: "0 0 20px" }}>
+                  Call: {selected.contact_name ?? selected.contact_phone ?? "Unknown"} · Score: {selected.score ?? "—"}
+                </p>
+
+                <div style={{ marginBottom: 14 }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "#475569", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Category</p>
+                  <Select value={disputeCategory} onValueChange={setDisputeCategory}>
+                    <SelectTrigger className="w-full" />
+                    <SelectContent>
+                      {getDisputeCategories(selected?.agent?.agent_type).map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div style={{ marginBottom: 18 }}>
+                  <p style={{ fontSize: 11, fontWeight: 600, color: "#475569", margin: "0 0 8px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Reason</p>
+                  <textarea
+                    value={disputeReason}
+                    onChange={(e) => setDisputeReason(e.target.value)}
+                    placeholder="Explain why this score is incorrect..."
+                    rows={3}
+                    style={{
+                      width: "100%", padding: "10px 14px", borderRadius: 10, resize: "vertical",
+                      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                      color: "#e2e8f0", fontSize: 13, lineHeight: 1.6, outline: "none", boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+
+                {disputeError && <p style={{ fontSize: 12, color: "#ED1F24", margin: "0 0 12px" }}>{disputeError}</p>}
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button onClick={() => setDisputeOpen(false)} style={{
+                    flex: 1, padding: "10px", borderRadius: 10, cursor: "pointer",
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+                    color: "#94a3b8", fontSize: 13, fontWeight: 600,
+                  }}>Cancel</button>
+                  <button
+                    disabled={disputeLoading}
+                    onClick={async () => {
+                      if (!disputeReason.trim()) { setDisputeError("Please provide a reason."); return; }
+                      setDisputeLoading(true); setDisputeError(null);
+                      try {
+                        await submitDispute(selected.id, disputeCategory, disputeReason.trim());
+                        setDisputeSuccess(true);
+                        setLocalDisputeMap((m) => ({ ...m, [selected.id]: "pending" }));
+                      } catch (e) {
+                        setDisputeError(e instanceof Error ? e.message : "Failed to submit");
+                      } finally {
+                        setDisputeLoading(false);
+                      }
+                    }}
+                    style={{
+                      flex: 1, padding: "10px", borderRadius: 10, cursor: disputeLoading ? "not-allowed" : "pointer",
+                      background: "#FCAF17", border: "none", color: "#0D1C2A", fontSize: 13, fontWeight: 700,
+                      opacity: disputeLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {disputeLoading ? "Submitting…" : "Submit Dispute"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {exportOpen && (
         <ExportModal
           onClose={() => setExportOpen(false)}

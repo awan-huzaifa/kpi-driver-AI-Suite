@@ -1,4 +1,5 @@
 import type { PeriodBounds } from './periods'
+import type { PatternFlag } from '@/lib/sales-coach/pattern-tracker'
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
@@ -253,7 +254,38 @@ export function scAgentTypeTeamTemplate(
 
 // ── Sales Coach — Individual (Rep) ───────────────────────────────────────────
 
-export function scRepTemplate(repName: string, companyName: string, period: PeriodBounds, calls: SCCall[], reportLabel: string): string {
+function patternSection(patterns: PatternFlag[]): string {
+  if (!patterns.length) return '';
+  const rows = patterns.map(p => `
+    <tr>
+      <td style="padding:10px 12px;font-size:13px;color:#1e293b;font-weight:700;border-bottom:1px solid #f1f5f9;">${p.id}</td>
+      <td style="padding:10px 12px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9;">${p.label}</td>
+      <td style="padding:10px 12px;font-size:13px;text-align:center;border-bottom:1px solid #f1f5f9;">
+        <span style="display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:800;color:${RED};background:${RED}18;border:1px solid ${RED}40;">
+          ${p.failCount}/${p.totalCalls} calls
+        </span>
+      </td>
+    </tr>
+  `).join('');
+  return `
+    ${sectionTitle('⚠ Recurring Weak Spots', RED)}
+    <p style="margin:0 0 12px;font-size:13px;color:#64748b;line-height:1.5;">
+      These criteria failed in 3 or more of your recent scored calls. Focus here for the biggest score improvement.
+    </p>
+    <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #fecaca;border-radius:8px;overflow:hidden;">
+      <thead>
+        <tr style="background:#fef2f2;">
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #fecaca;">ID</th>
+          <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #fecaca;">Criterion</th>
+          <th style="padding:10px 12px;text-align:center;font-size:11px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;border-bottom:2px solid #fecaca;">Failed In</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
+
+export function scRepTemplate(repName: string, companyName: string, period: PeriodBounds, calls: SCCall[], reportLabel: string, patterns: PatternFlag[] = []): string {
   const scorable = calls.filter(c => c.scorable && c.score !== null)
   const avgScore = scorable.length ? Math.round(scorable.reduce((s, c) => s + c.score!, 0) / scorable.length) : null
 
@@ -313,6 +345,8 @@ export function scRepTemplate(repName: string, companyName: string, period: Peri
         ${actions.map(a => `<li style="font-size:13px;color:#1e293b;margin-bottom:8px;line-height:1.5;">${a}</li>`).join('')}
       </ul>
     ` : ''}
+
+    ${patternSection(patterns)}
   `
 
   return wrap(

@@ -30,6 +30,7 @@ interface UserRow {
   app_data_enrichment:   boolean;
   app_skip_tracing:      boolean;
   is_active:             boolean;
+  is_qa:                 boolean;
   created_at:           string;
   notify_reports:        boolean;
   notify_billing:        boolean;
@@ -68,6 +69,7 @@ const BLANK = {
   role: "user" as "user" | "admin",
   agent_type: "none" as AgentType,
   app_underwriting: false, app_sales_coach: false, app_training_coach: false, app_note_taker: false, app_data_enrichment: false, app_skip_tracing: false,
+  is_qa: false,
   company_id: "",
 };
 
@@ -313,6 +315,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
       app_note_taker:      u.app_note_taker,
       app_data_enrichment: u.app_data_enrichment,
       app_skip_tracing:    u.app_skip_tracing,
+      is_qa:               u.is_qa ?? false,
       company_id:          u.company_id ?? "",
     });
     setEditNotifReports(u.notify_reports ?? true);
@@ -370,6 +373,7 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
         app_note_taker:      editForm.app_note_taker,
         app_data_enrichment: editForm.app_data_enrichment,
         app_skip_tracing:    editForm.app_skip_tracing,
+        is_qa:               editForm.is_qa,
       });
       setEditTarget(null);
     } catch (e) {
@@ -781,6 +785,17 @@ export default function UsersClient({ users, companies, currentUserId, accessRol
                 </Select>
               </div>
             </div>
+
+            {/* QA role toggle — only relevant for admin users */}
+            {editForm.role === "admin" && (
+              <div style={{ paddingTop: 4 }}>
+                <Label style={{ marginBottom: 6, display: "block" }}>QA Role</Label>
+                <AppCheckbox
+                  checked={editForm.is_qa} icon={KeyRound} label="QA — Can review and resolve score disputes"
+                  onChange={(v) => setEditForm({ ...editForm, is_qa: v })}
+                />
+              </div>
+            )}
 
             <div>
               <Label>App Access</Label>

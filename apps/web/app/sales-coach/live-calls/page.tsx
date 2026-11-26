@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import LiveCallsClient from "./live-calls-client";
+import { getMyDisputeMap } from "@/app/actions/sales-coach/disputes";
 
 export default async function LiveCallsPage() {
   const supabase = await createClient();
@@ -48,6 +49,8 @@ export default async function LiveCallsPage() {
     const { data: cos } = await admin.from("companies").select("id, name").order("name");
     companies = cos ?? [];
   }
+  const disputedCallMap = await getMyDisputeMap(user.id);
+
   return (
     <LiveCallsClient
       calls={calls ?? []}
@@ -55,6 +58,8 @@ export default async function LiveCallsPage() {
       companies={companies}
       accessRole={profile?.access_role ?? "user"}
       showCost={profile?.access_role === "super_admin" || (profile?.access_role === "admin" && (profile?.notify_billing ?? false))}
+      currentUserId={user.id}
+      disputedCallMap={disputedCallMap}
     />
   );
 }

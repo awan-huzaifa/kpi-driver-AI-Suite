@@ -84,6 +84,44 @@ async function resolveManualComp(comp: ManualComp): Promise<NormalizedComp> {
   }
 }
 
+// ── Select final comp pool: commons-first, InvestorBase-preferred ─────────────
+function normalizeAddr(addr: string): string {
+  return addr.toLowerCase().replace(/[.,#]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function selectComps(
+  ibComps: NormalizedComp[],
+  rentcastComps: NormalizedComp[],
+  max = 6,
+): { comps: NormalizedComp[]; source: string } {
+  if (ibComps.length === 0 && rentcastComps.length === 0) {
+    return { comps: [], source: "none" };
+  }
+  if (ibComps.length === 0) {
+    return { comps: rentcastComps.slice(0, max), source: "rentcast_only" };
+  }
+
+  const rcSet = new Set(rentcastComps.map((c) => normalizeAddr(c.address)));
+  const commons    = ibComps.filter((c) => rcSet.has(normalizeAddr(c.address)));
+  const ibOnly     = ibComps.filter((c) => !rcSet.has(normalizeAddr(c.address)));
+
+  let selected: NormalizedComp[];
+  let source: string;
+
+  if (commons.length === 0) {
+    // No overlap — use InvestorBase only
+    selected = ibComps.slice(0, max);
+    source   = "ib_only";
+  } else {
+    // Start with commons, fill remaining slots from IB-only pool
+    const remaining = Math.max(0, max - commons.length);
+    selected = [...commons, ...ibOnly.slice(0, remaining)];
+    source   = commons.length === selected.length ? "commons_only" : "commons_plus_ib";
+  }
+
+  return { comps: selected.slice(0, max), source };
+}
+
 // ── ARV fallback when RentCast's AVM/Claude synthesis isn't available ────────
 function fallbackArv(property: PropertyDetails, workflowFlags: string[]): ARVResult {
   if (property.zestimate) {
@@ -363,28 +401,22 @@ export async function POST(request: NextRequest) {
       normalizedComps = baseComps.map((c) => ({ ...c }));
       console.log(`[STEP 3] RE-RUN — using ${normalizedComps.length} stored base comps (all API comps discarded, AVM refreshed above)`);
     } else {
-      // ── STEP 5: Resolve photos for all comps via Axesso in parallel ──────────
-      const allCompsForPhotos = [...rentcastComps, ...ibRetailComps, ...ibInvestorComps];
+      // ── STEP 5: Select comps (commons-first, IB-preferred, max 6) ─────────────
+      const ibAllComps = [...ibRetailComps, ...ibInvestorComps];
+      const { comps: selectedComps, source: compSource } = selectComps(ibAllComps, rentcastComps, 6);
 
-      if (allCompsForPhotos.length > 0) {
-        const photoResults = await Promise.all(allCompsForPhotos.map((c) => fetchPhotosByAddress(c.address)));
-        axessoCalls += allCompsForPhotos.length;
+      console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+      console.log(`[STEP 5] COMP SELECTION — source: ${compSource} | selected: ${selectedComps.length} (IB: ${ibAllComps.length}, RC: ${rentcastComps.length})`);
 
-        const rentcastWithPhotos   = rentcastComps.map((c, i) => ({ ...c, photos: photoResults[i] }));
-        const ibRetailWithPhotos   = ibRetailComps.map((c, i) => ({ ...c, photos: photoResults[rentcastComps.length + i] }));
-        const ibInvestorWithPhotos = ibInvestorComps.map((c, i) => ({ ...c, photos: photoResults[rentcastComps.length + ibRetailComps.length + i] }));
-
-        normalizedComps = [...rentcastWithPhotos, ...ibRetailWithPhotos, ...ibInvestorWithPhotos];
-
-        console.log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        console.log(`[STEP 5] PHOTOS RESOLVED via Axesso — total comps: ${normalizedComps.length}`);
-        console.log(`[STEP 5]   RentCast: ${rentcastWithPhotos.length} | IB retail: ${ibRetailWithPhotos.length} | IB investor: ${ibInvestorWithPhotos.length}`);
-        console.log(`[STEP 5]   Photo counts:`, JSON.stringify(
-          normalizedComps.map((c) => ({ address: c.address, photos: c.photos.length })), null, 2
-        ));
+      // Resolve photos for selected comps only
+      if (selectedComps.length > 0) {
+        const photoResults = await Promise.all(selectedComps.map((c) => fetchPhotosByAddress(c.address)));
+        axessoCalls += selectedComps.length;
+        normalizedComps = selectedComps.map((c, i) => ({ ...c, photos: photoResults[i] }));
+        console.log(`[STEP 5] PHOTOS RESOLVED — ${normalizedComps.length} comps`);
       } else {
         normalizedComps = [];
-        console.log(`[STEP 5] No comps from any source — skipping Axesso photo fetch`);
+        console.log(`[STEP 5] No comps selected — skipping Axesso photo fetch`);
       }
     }
 
@@ -409,7 +441,7 @@ export async function POST(request: NextRequest) {
     if (allComps.length === 0) workflowFlags.push("no_comps_available");
     console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log(`[STEP 7] allComps: ${allComps.length} | forClaude: ${compsForClaude.length} | locked: ${lockedComps.length}`);
-    console.log(`[STEP 7]   RentCast: ${rentcastComps.length} | IB retail: ${ibRetailComps.length} | IB investor: ${ibInvestorComps.length} | manual: ${resolvedManualComps.length}`);
+    console.log(`[STEP 7]   Selected: ${normalizedComps.length} | IB retail: ${ibRetailComps.length} | IB investor: ${ibInvestorComps.length} | RC: ${rentcastComps.length} | manual: ${resolvedManualComps.length}`);
     console.log("[STEP 7] USER INPUTS → condition:", condition, "| multiplier:", marketMultiplier, "| extraItems:", JSON.stringify(extraItems));
 
     // ── STEP 8: Claude Call 1 — Property condition assessment (photos + notes) ─
